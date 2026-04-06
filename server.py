@@ -212,6 +212,30 @@ def api_admin_give():
     supabase.table('user_settings').upsert({'uid': target_uid, 'settings': settings}, on_conflict='uid').execute()
     return jsonify({'ok': True, 'pending': pending})
 
+@app.route('/api/admin/give-all', methods=['POST'])
+def api_admin_give_all():
+    user = session.get('user')
+    if not user or user['email'] not in ADMIN_EMAILS:
+        return jsonify({'error': 'forbidden'}), 403
+    data = request.json
+    field, amount = data['field'], data.get('amount', 0)
+    # Get all user UIDs from saves
+    saves_res = supabase.table('saves').select('uid').execute()
+    uids = [r['uid'] for r in (saves_res.data or [])]
+    count = 0
+    for uid in uids:
+        res = supabase.table('user_settings').select('settings').eq('uid', uid).execute()
+        settings = {}
+        if res.data and len(res.data) > 0:
+            settings = res.data[0].get('settings') or {}
+            if isinstance(settings, str): settings = json.loads(settings)
+        pending = settings.get('pending_rewards', {})
+        pending[field] = pending.get(field, 0) + amount
+        settings['pending_rewards'] = pending
+        supabase.table('user_settings').upsert({'uid': uid, 'settings': settings}, on_conflict='uid').execute()
+        count += 1
+    return jsonify({'ok': True, 'count': count})
+
 @app.route('/api/claim-rewards', methods=['POST'])
 def api_claim_rewards():
     user = session.get('user')

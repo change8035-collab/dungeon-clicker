@@ -3014,7 +3014,12 @@ function renderAdmin(el) {
     content = `
       <div style="font-size:11px;color:#ff6b6b;margin-bottom:12px;">⚠️ 아래 설정은 모든 유저에게 실시간 적용됩니다</div>
 
-      <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--gold);">📊 배율 설정</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:#4CAF50;">🎁 서버 전체 지급</div>
+      <div style="font-size:10px;color:var(--dim);margin-bottom:8px;">※ 모든 유저에게 보류 보상으로 지급됩니다</div>
+      <div class="admin-row"><label>💰 골드</label><input type="text" id="serverGiveGold" value="10000"><button onclick="giveToAllUsers('gold',Number(document.getElementById('serverGiveGold').value))">전체 지급</button></div>
+      <div class="admin-row"><label>💎 보석</label><input type="text" id="serverGiveDia" value="100"><button onclick="giveToAllUsers('dia',Number(document.getElementById('serverGiveDia').value))">전체 지급</button></div>
+
+      <div style="font-size:13px;font-weight:700;margin:16px 0 8px;color:var(--gold);">📊 배율 설정</div>
       <div class="admin-row"><label>EXP 배율</label><input type="text" id="adminExpMul" value="${serverSettings.expMul||1}"><button onclick="applyServerSetting('expMul',Number(document.getElementById('adminExpMul').value))">서버 적용</button></div>
       <div class="admin-row"><label>골드 배율</label><input type="text" id="adminGoldMul" value="${serverSettings.goldMul||1}"><button onclick="applyServerSetting('goldMul',Number(document.getElementById('adminGoldMul').value))">서버 적용</button></div>
       <div class="admin-row"><label>공격력 배율</label><input type="text" id="adminAtkMul" value="${serverSettings.atkMul||1}"><button onclick="applyServerSetting('atkMul',Number(document.getElementById('adminAtkMul').value))">서버 적용</button></div>
@@ -3101,6 +3106,19 @@ function renderUserList(users) {
 function selectUser(uid, name, email) {
   document.getElementById('targetUid').value = uid;
   document.getElementById('targetUserInfo').textContent = '선택: ' + name + ' (' + email + ')';
+}
+
+async function giveToAllUsers(field, amount) {
+  if (!confirm(`모든 유저에게 ${field} +${formatNum(amount)} 지급하시겠습니까?`)) return;
+  try {
+    const res = await fetch('/api/admin/give-all', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ field, amount })
+    });
+    const data = await res.json();
+    if (data.ok) showFloatText(`✅ ${data.count}명에게 ${field} +${formatNum(amount)} 전체 지급!`, '#4CAF50');
+    else alert('지급 실패: ' + (data.error || ''));
+  } catch(e) { alert('지급 실패: ' + e.message); }
 }
 
 async function giveToUser(field, amount) {
