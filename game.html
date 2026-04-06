@@ -2910,24 +2910,30 @@ async function loadCloudSave() {
   }
 }
 
-async function saveCloudGame() {
+let _saveTimer = null;
+function saveCloudGame() {
   if (!currentUser) return;
   saveGame();
-  try {
-    const cp = getCombatPower();
-    const info = getClassInfo(G.selectedClass, getLevel());
-    await fetch('/api/save', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        gameState: G,
-        combatPower: cp, level: getLevel(), stage: Math.max(...Object.values(G.classMaxStages || {1:1})),
-        className: info.name, classStage: info.stageLabel
-      })
-    });
-  } catch(e) {
-    console.warn('Cloud save failed:', e);
-  }
+  // 디바운스: 1초 내 중복 호출 방지
+  if (_saveTimer) clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(async () => {
+    _saveTimer = null;
+    try {
+      const cp = getCombatPower();
+      const info = getClassInfo(G.selectedClass, getLevel());
+      await fetch('/api/save', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          gameState: G,
+          combatPower: cp, level: getLevel(), stage: Math.max(...Object.values(G.classMaxStages || {1:1})),
+          className: info.name, classStage: info.stageLabel
+        })
+      });
+    } catch(e) {
+      console.warn('Cloud save failed:', e);
+    }
+  }, 1000);
 }
 
 // ==================== COMBAT POWER ====================
