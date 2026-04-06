@@ -3184,7 +3184,6 @@ async function renderRanking(el) {
       html += `
         <div class="rank-item ${isMe ? 'me' : ''}">
           <div class="rank-pos ${i<3?['gold','silver','bronze'][i]:''}">${medal}</div>
-          ${r.photo ? `<img class="rank-img" src="${r.photo}">` : '<div class="rank-img" style="background:#333;border-radius:50%;"></div>'}
           <div class="rank-info">
             <div class="rank-name">${r.name||'?'} ${isMe ? '(나)' : ''}</div>
             <div style="font-size:10px;color:var(--dim);">Lv.${r.level||1} ${r.class_name||''} ${r.class_stage||''}</div>
