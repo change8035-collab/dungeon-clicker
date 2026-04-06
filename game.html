@@ -2729,7 +2729,7 @@ async function checkAuth() {
     const data = await res.json();
     if (data.loggedIn) {
       currentUser = data;
-      isAdmin = data.isAdmin;
+      isAdmin = data.is_admin || data.isAdmin;
       document.getElementById('loginOverlay').style.display = 'none';
       document.getElementById('app').style.display = '';
       document.getElementById('userPhoto').src = data.photo || '';
