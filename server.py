@@ -13,18 +13,50 @@ ADMIN_NICKS = os.environ.get('ADMIN_NICKS', '관리자').split(',')
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+def get_client_ip():
+    return request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip()
+
 def get_user():
-    """Get user from X-User-Id header (sent from client localStorage)"""
+    """Get user by uid header"""
     uid = request.headers.get('X-User-Id', '')
-    if not uid: return None
-    res = supabase.table('saves').select('uid,name').eq('uid', uid).execute()
-    if res.data and len(res.data) > 0:
-        user = res.data[0]
-        user['is_admin'] = user.get('name', '') in ADMIN_NICKS
-        return user
+    if uid:
+        res = supabase.table('saves').select('uid,name,email').eq('uid', uid).execute()
+        if res.data and len(res.data) > 0:
+            user = res.data[0]
+            ip = get_client_ip()
+            # Admin check: nickname must match AND IP must match stored admin IP
+            is_admin = user.get('name', '') in ADMIN_NICKS
+            if is_admin:
+                stored_ip = user.get('email', '')  # reuse email field for admin IP
+                if not stored_ip:
+                    # First login as admin - store IP
+                    supabase.table('saves').update({'email': ip}).eq('uid', uid).execute()
+                elif stored_ip != ip:
+                    is_admin = False  # Different IP, deny admin
+            user['is_admin'] = is_admin
+            return user
     return None
 
-# ── Auth: Register / Check nickname ──
+# ── Auth: Auto-login by IP or register ──
+@app.route('/api/auto-login', methods=['POST'])
+def api_auto_login():
+    """Try to find existing account by uid in localStorage, or create new one"""
+    data = request.json or {}
+    uid = data.get('uid', '')
+    # If uid provided, check if exists
+    if uid:
+        res = supabase.table('saves').select('uid,name').eq('uid', uid).execute()
+        if res.data and len(res.data) > 0:
+            user = res.data[0]
+            return jsonify({'ok': True, 'uid': user['uid'], 'nickname': user['name'], 'is_admin': user['name'] in ADMIN_NICKS})
+    # No uid or not found - create new account
+    new_uid = secrets.token_hex(16)
+    nickname = '모험가_' + new_uid[:6]
+    supabase.table('saves').insert({
+        'uid': new_uid, 'name': nickname, 'email': '', 'photo': '', 'game_state': {}
+    }).execute()
+    return jsonify({'ok': True, 'uid': new_uid, 'nickname': nickname, 'is_admin': False, 'new': True})
+
 @app.route('/api/register', methods=['POST'])
 def api_register():
     data = request.json

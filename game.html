@@ -290,16 +290,10 @@ body { background:var(--bg); color:var(--text); font-family:'Noto Sans KR',sans-
 </script>
 </head>
 <body>
-<!-- LOGIN OVERLAY -->
+<!-- LOADING OVERLAY -->
 <div class="login-overlay" id="loginOverlay">
   <h1>⚔️ 던전 클리커</h1>
-  <p>무한의 탑에 도전하라!</p>
-  <div id="nickForm" style="display:flex;flex-direction:column;align-items:center;gap:12px;">
-    <input id="nickInput" type="text" placeholder="닉네임 입력 (2~12자)" maxlength="12"
-      style="padding:12px 20px;border-radius:10px;border:2px solid var(--accent);background:#1a1a2e;color:#fff;font-size:16px;text-align:center;width:220px;font-family:inherit;">
-    <div id="nickError" style="color:#ff4444;font-size:12px;display:none;"></div>
-    <button onclick="doRegister()" style="background:linear-gradient(135deg,var(--accent),#6c3ec1);color:#fff;border:none;padding:12px 40px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;">시작하기</button>
-  </div>
+  <p>접속 중...</p>
 </div>
 
 <div id="app" style="display:none;">
@@ -307,7 +301,6 @@ body { background:var(--bg); color:var(--text); font-family:'Noto Sans KR',sans-
   <div class="user-bar" id="userBar">
     <span class="uname" id="userName" onclick="changeNickname()" style="cursor:pointer;" title="클릭하여 닉네임 변경">-</span>
     <span class="cp">⚔️ <span id="combatPower">0</span></span>
-    <button onclick="doLogout()">로그아웃</button>
   </div>
   <!-- TOP BAR -->
   <div class="top-bar">
@@ -2939,20 +2932,22 @@ function doLogout() {
 }
 
 async function checkAuth() {
-  if (!userUid) {
-    document.getElementById('loginOverlay').style.display = '';
-    document.getElementById('app').style.display = 'none';
-    return;
-  }
   try {
-    const res = await authFetch('/api/me');
+    // Auto login: send uid from localStorage, server will create account if needed
+    const res = await fetch('/api/auto-login', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ uid: userUid })
+    });
     const data = await res.json();
-    if (data.loggedIn) {
-      currentUser = data;
+    if (data.ok) {
+      userUid = data.uid;
+      localStorage.setItem('userUid', data.uid);
+      currentUser = { uid: data.uid, name: data.nickname, is_admin: data.is_admin };
       isAdmin = data.is_admin;
+
       document.getElementById('loginOverlay').style.display = 'none';
       document.getElementById('app').style.display = '';
-      document.getElementById('userName').textContent = data.name;
+      document.getElementById('userName').textContent = data.nickname;
 
       if (isAdmin) {
         const tabBar = document.querySelector('.tab-bar');
@@ -2966,21 +2961,23 @@ async function checkAuth() {
       }
 
       await loadServerSettings();
-      await loadCloudSave();
+      if (!data.new) await loadCloudSave();
       spawnMonster();
       updateAllUI();
       if (!window._gameLoopStarted) {
         window._gameLoopStarted = true;
         gameLoop();
       }
-    } else {
-      localStorage.removeItem('userUid');
-      userUid = '';
-      document.getElementById('loginOverlay').style.display = '';
-      document.getElementById('app').style.display = 'none';
     }
   } catch(e) {
-    console.error('Auth check failed:', e);
+    console.error('Auth failed:', e);
+    // 오프라인이면 로컬로 시작
+    document.getElementById('loginOverlay').style.display = 'none';
+    document.getElementById('app').style.display = '';
+    loadGame();
+    spawnMonster();
+    updateAllUI();
+    if (!window._gameLoopStarted) { window._gameLoopStarted = true; gameLoop(); }
   }
 }
 checkAuth();
