@@ -2890,17 +2890,22 @@ async function doRegister() {
     errEl.textContent = '닉네임은 2~12자로 입력해주세요'; errEl.style.display = ''; return;
   }
   errEl.style.display = 'none';
+  errEl.textContent = '등록 중...'; errEl.style.display = ''; errEl.style.color = '#4fc3f7';
   try {
     const res = await fetch('/api/register', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ nickname: nick })
     });
     const data = await res.json();
-    if (data.error) { errEl.textContent = data.error; errEl.style.display = ''; return; }
+    if (data.error) { errEl.textContent = data.error; errEl.style.color = '#ff4444'; return; }
     localStorage.setItem('userUid', data.uid);
     userUid = data.uid;
-    location.reload();
-  } catch(e) { errEl.textContent = '서버 오류'; errEl.style.display = ''; }
+    errEl.textContent = '✅ 등록 완료! 로딩 중...'; errEl.style.color = '#4CAF50';
+    setTimeout(() => location.reload(), 500);
+  } catch(e) {
+    errEl.textContent = '서버 연결 실패 — 잠시 후 다시 시도해주세요';
+    errEl.style.color = '#ff4444';
+  }
 }
 
 // Enter키로 시작
