@@ -381,7 +381,7 @@ const RARITIES = [
 const EQUIP_SLOTS = [
   { id:'weapon', name:'무기', icon:'⚔️', statType:'atk' },
   { id:'helmet', name:'투구', icon:'🪖', statType:'critDmg' },
-  { id:'armor', name:'갑옷', icon:'🛡️', statType:'hp' },
+  { id:'armor', name:'갑옷', icon:'🛡️', statType:'crit' },
   { id:'boots', name:'신발', icon:'👢', statType:'spd' },
   { id:'ring', name:'반지', icon:'💍', statType:'crit' },
   { id:'necklace', name:'목걸이', icon:'📿', statType:'atk' },
@@ -404,9 +404,9 @@ function itemName(item) {
 }
 function getEquipIcon(item, size) {
   const s = size || 36;
-  // Always regenerate sprite path to reflect current rarity (for SSS rainbow etc)
-  if (item.slot && item.rarityId) {
-    item.sprite = getEquipSprite(item.slot, item.rarityId);
+  // Only generate sprite if missing (preserve saved sprite)
+  if (!item.sprite && item.slot && item.rarityId) {
+    item.sprite = getEquipSprite(item.slot, item.rarityId, item.id);
   }
   if (item.sprite) return '<img src="'+item.sprite+'" style="width:'+s+'px;height:'+s+'px;object-fit:contain;border-radius:4px;">';
   return '<span style="font-size:'+(s-8)+'px;">'+item.icon+'</span>';
