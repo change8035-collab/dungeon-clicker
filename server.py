@@ -7,6 +7,8 @@ app = Flask(__name__, static_folder='.', static_url_path='')
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['PREFERRED_URL_SCHEME'] = 'https'
+app.config['PERMANENT_SESSION_LIFETIME'] = 60 * 60 * 24 * 30  # 30일
+app.config['SESSION_COOKIE_SECURE'] = True
 
 # Trust proxy headers on Render
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -75,6 +77,7 @@ def callback():
             headers={'Authorization': 'Bearer ' + tokens['access_token']})
         user_info = user_res.json()
 
+        session.permanent = True  # 30일 유지
         session['user'] = {
             'uid': user_info['id'],
             'email': user_info.get('email', ''),
