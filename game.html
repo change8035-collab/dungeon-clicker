@@ -1,0 +1,3122 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+<title>⚔️ 던전 클리커</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; }
+:root {
+  --bg: #0f0e17; --card: #1a1930; --card2: #232145;
+  --accent: #ff8906; --green: #2cb67d; --red: #e74c3c;
+  --purple: #7f5af0; --blue: #2ec4b6; --gold: #f1c40f;
+  --text: #fffffe; --dim: #94a1b2;
+}
+body { background:var(--bg); color:var(--text); font-family:'Noto Sans KR',sans-serif; overflow:hidden; height:100vh; }
+
+/* ===== LAYOUT ===== */
+#app { display:flex; flex-direction:column; height:100vh; max-width:480px; margin:0 auto; position:relative; }
+
+/* TOP BAR */
+.top-bar { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:var(--card); border-bottom:1px solid #2a2850; }
+.top-bar .res { display:flex; align-items:center; gap:4px; font-size:13px; font-weight:700; }
+.top-bar .res.gold { color:var(--gold); }
+.top-bar .res.dia { color:var(--purple); }
+.top-bar .res.ruby { color:var(--red); }
+
+/* BATTLE AREA */
+.battle-area { flex:0 0 280px; position:relative; background:linear-gradient(180deg,#1a1840 0%,#0f1528 100%); overflow:hidden; border-bottom:2px solid #2a2850; }
+.stage-info { position:absolute; top:8px; left:0; width:100%; text-align:center; font-size:13px; color:var(--dim); z-index:5; }
+.stage-info span { color:var(--accent); font-weight:700; }
+
+/* Character */
+.char-container { position:absolute; bottom:50px; left:20px; text-align:center; z-index:3; }
+.char-sprite { font-size:56px; animation:charBob 1s ease-in-out infinite; filter:drop-shadow(0 0 10px rgba(127,90,240,0.4)); }
+#charCanvas { animation:charBob 1s ease-in-out infinite; filter:drop-shadow(0 0 10px rgba(127,90,240,0.4)); transform-origin:bottom center; }
+@keyframes charBob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+@keyframes floatUp { 0%{opacity:1;transform:translate(-50%,-50%) scale(1)} 30%{opacity:1;transform:translate(-50%,-70%) scale(1.1)} 100%{opacity:0;transform:translate(-50%,-120%) scale(0.9)} }
+/* Attack motions */
+#charCanvas.atk-slash {
+  animation:atkSlash 0.25s ease-out forwards !important;
+}
+@keyframes atkSlash {
+  0%{transform:translateX(0) translateY(0) rotate(0deg) scale(1)}
+  25%{transform:translateX(8px) translateY(-8px) rotate(-8deg) scale(1.05)}
+  50%{transform:translateX(35px) translateY(-4px) rotate(12deg) scale(1.1); filter:drop-shadow(0 0 18px rgba(255,200,50,0.6)) brightness(1.15)}
+  75%{transform:translateX(20px) translateY(2px) rotate(5deg) scale(1.02)}
+  100%{transform:translateX(0) translateY(0) rotate(0deg) scale(1)}
+}
+#charCanvas.atk-shoot {
+  animation:atkShoot 0.3s ease-out forwards !important;
+}
+@keyframes atkShoot {
+  0%{transform:translateX(0) translateY(0) scale(1)}
+  20%{transform:translateX(-8px) translateY(-3px) scale(1.04); filter:drop-shadow(0 0 12px rgba(100,220,100,0.5))}
+  40%{transform:translateX(5px) translateY(-2px) scale(0.98)}
+  60%{transform:translateX(15px) translateY(0) scale(1.02); filter:drop-shadow(0 0 16px rgba(100,255,100,0.6)) brightness(1.1)}
+  100%{transform:translateX(0) translateY(0) scale(1)}
+}
+#charCanvas.atk-stab {
+  animation:atkStab 0.2s ease-out forwards !important;
+}
+@keyframes atkStab {
+  0%{transform:translateX(0) translateY(0) scale(1) rotate(0deg)}
+  15%{transform:translateX(-5px) translateY(-10px) scale(0.95) rotate(-5deg)}
+  40%{transform:translateX(40px) translateY(-6px) scale(1.08) rotate(3deg); filter:drop-shadow(0 0 14px rgba(180,100,255,0.6)) brightness(1.15)}
+  60%{transform:translateX(30px) translateY(0) scale(1.02) rotate(1deg)}
+  100%{transform:translateX(0) translateY(0) scale(1) rotate(0deg)}
+}
+/* Critical hit flash */
+#charCanvas.atk-crit {
+  filter:drop-shadow(0 0 24px rgba(255,255,100,0.8)) brightness(1.3) !important;
+}
+/* Screen shake on hit */
+@keyframes screenShake {
+  0%{transform:translate(0,0)} 20%{transform:translate(-3px,2px)} 40%{transform:translate(3px,-2px)}
+  60%{transform:translate(-2px,1px)} 80%{transform:translate(2px,-1px)} 100%{transform:translate(0,0)}
+}
+.shake { animation:screenShake 0.15s ease-out !important; }
+.char-name { font-size:11px; color:var(--blue); margin-top:2px; }
+.char-level { font-size:10px; color:var(--dim); }
+
+/* Monster */
+.monster-container { position:absolute; bottom:50px; right:30px; text-align:center; z-index:3; }
+.monster-sprite { transition:transform 0.1s, filter 0.1s; filter:drop-shadow(0 0 8px rgba(231,76,60,0.3)); object-fit:contain; }
+.monster-sprite.hit { transform:scale(0.88) translateX(-8px); filter:drop-shadow(0 0 16px rgba(255,30,30,0.7)) brightness(1.6) saturate(1.3); transition:transform 0.08s ease-out, filter 0.08s; }
+.monster-name { font-size:11px; color:var(--red); margin-top:2px; }
+.monster-hp-bar { width:100px; height:8px; background:#333; border-radius:4px; overflow:hidden; margin:4px auto 0; }
+.monster-hp-fill { height:100%; background:linear-gradient(90deg,var(--red),#ff6b6b); transition:width 0.15s; border-radius:4px; }
+
+/* Battle effects */
+.dmg-text { position:absolute; font-weight:900; font-size:18px; color:var(--gold); z-index:10; pointer-events:none;
+  animation:dmgFloat 0.7s ease-out forwards; text-shadow:0 0 4px rgba(0,0,0,0.8); }
+@keyframes dmgFloat { 0%{opacity:1;transform:translateY(0) scale(1)} 100%{opacity:0;transform:translateY(-40px) scale(0.7)} }
+.dmg-text.crit { font-size:26px; color:#ff4444; }
+
+/* EXP bar */
+.exp-section { position:absolute; bottom:0; left:0; width:100%; padding:4px 12px 6px; background:rgba(15,14,23,0.8); z-index:5; }
+.exp-bar { width:100%; height:10px; background:#1a1a3e; border-radius:5px; overflow:hidden; }
+.exp-fill { height:100%; background:linear-gradient(90deg,var(--blue),var(--green)); transition:width 0.3s; border-radius:5px; }
+.exp-label { display:flex; justify-content:space-between; font-size:10px; color:var(--dim); margin-top:2px; }
+
+/* ===== BOTTOM TABS ===== */
+.tab-content { flex:1; overflow-y:auto; background:var(--bg); }
+.tab-bar { display:flex; background:var(--card); border-top:1px solid #2a2850; padding-bottom:env(safe-area-inset-bottom); }
+.tab-btn { flex:1; padding:8px 0 6px; text-align:center; cursor:pointer; border:none; background:none; color:var(--dim); font-size:10px; font-family:inherit; transition:all 0.2s; }
+.tab-btn .tab-icon { font-size:20px; display:block; }
+.tab-btn.active { color:var(--accent); }
+.tab-btn.active .tab-icon { transform:scale(1.1); }
+
+/* ===== TAB: LAMP (뽑기) ===== */
+.lamp-section { padding:16px 12px; }
+.lamp-title { text-align:center; font-size:16px; font-weight:900; color:var(--gold); margin-bottom:12px; }
+.lamp-visual { text-align:center; margin:10px 0 16px; }
+.lamp-emoji { font-size:72px; cursor:pointer; transition:transform 0.15s; display:inline-block; }
+.lamp-emoji:active { transform:scale(0.9) rotate(-5deg); }
+.lamp-level { font-size:12px; color:var(--dim); margin-top:4px; }
+.lamp-buttons { display:flex; gap:8px; }
+.lamp-btn { flex:1; padding:12px; border-radius:12px; border:none; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; transition:all 0.2s; }
+.lamp-btn:active { transform:scale(0.95); }
+.lamp-btn.single { background:linear-gradient(135deg,var(--accent),#e67e22); color:#fff; }
+.lamp-btn.multi { background:linear-gradient(135deg,var(--purple),#6c3ec1); color:#fff; }
+.lamp-btn .cost { font-size:11px; font-weight:400; opacity:0.9; display:block; margin-top:2px; }
+.lamp-btn:disabled { opacity:0.4; }
+.lamp-upgrade { margin-top:12px; text-align:center; }
+.lamp-upgrade button { background:var(--card2); border:1px solid var(--accent); color:var(--accent); padding:8px 20px; border-radius:8px; font-family:inherit; font-weight:700; font-size:12px; cursor:pointer; }
+.lamp-upgrade button:disabled { opacity:0.4; }
+
+/* Pull result */
+.pull-result { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.92); z-index:1000; display:none; flex-direction:column; align-items:center; justify-content:center; padding:16px; }
+.pull-result.show { display:flex; }
+.pull-result-title { font-size:22px; font-weight:900; color:var(--gold); letter-spacing:2px; text-shadow:0 0 16px rgba(255,200,0,0.6); margin-bottom:14px; }
+.pull-items { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; justify-content:center; width:100%; max-width:360px; margin:0 0 16px; }
+.pull-item { text-align:center; padding:6px 4px 5px; border-radius:10px; border:2px solid #444; animation:pullPop 0.35s cubic-bezier(0.34,1.56,0.64,1) backwards; position:relative; }
+.pull-item img.pull-icon { width:56px; height:56px; object-fit:contain; border-radius:6px; display:block; margin:0 auto 4px; }
+.pull-item .item-name { font-size:8px; line-height:1.2; margin-top:2px; word-break:keep-all; color:#ddd; }
+.pull-item .item-rarity { font-size:7px; font-weight:700; margin-top:1px; }
+.pull-item.new-item::after { content:'NEW'; position:absolute; top:-5px; right:-5px; background:#f55; color:#fff; font-size:7px; font-weight:900; padding:1px 4px; border-radius:4px; }
+@keyframes pullPop { 0%{transform:scale(0);opacity:0} 100%{transform:scale(1);opacity:1} }
+.pull-result .close-btn { background:var(--accent); color:#fff; border:none; padding:12px 40px; border-radius:12px; font-weight:700; font-size:15px; cursor:pointer; font-family:inherit; letter-spacing:1px; }
+.pull-summary { font-size:11px; color:#aaa; margin-bottom:10px; }
+
+/* Rarity colors */
+.rarity-common { border-color:#888; background:#2a2a3a; color:#ccc; }
+.rarity-uncommon { border-color:var(--green); background:#1a3a2a; color:var(--green); }
+.rarity-rare { border-color:var(--blue); background:#1a2a3a; color:var(--blue); }
+.rarity-epic { border-color:var(--purple); background:#2a1a3a; color:var(--purple); }
+.rarity-legendary { border-color:var(--gold); background:#3a2a1a; color:var(--gold); }
+.rarity-mythic { border-color:#ff4444; background:#3a1a1a; color:#ff4444; }
+.rarity-mythic_s { border-color:#ff2222; background:#3a1010; color:#ff2222; }
+.rarity-mythic_sp { border-color:#ff0000; background:#3a0808; color:#ff0000; }
+.rarity-mythic_ss { border-color:#cc0000; background:#350505; color:#cc0000; }
+.rarity-mythic_ssp { border-color:#aa0000; background:#300303; color:#aa0000; }
+.rarity-mythic_sss { border-color:#880000; background:#2a0101; color:#880000; }
+
+/* ===== TAB: EQUIP ===== */
+.equip-section { padding:12px; }
+.equip-title { font-size:14px; font-weight:700; margin-bottom:10px; }
+.equip-slots { display:grid; grid-template-columns:repeat(2,1fr); gap:6px; margin-bottom:16px; }
+.equip-slot { background:var(--card2); border:2px solid #333; border-radius:10px; padding:10px; display:flex; align-items:center; gap:8px; cursor:pointer; min-height:56px; transition:border-color 0.2s; }
+.equip-slot:hover { border-color:var(--accent); }
+.equip-slot .slot-icon { font-size:28px; width:36px; text-align:center; }
+.equip-slot .slot-info { flex:1; min-width:0; }
+.equip-slot .slot-label { font-size:10px; color:var(--dim); }
+.equip-slot .slot-name { font-size:11px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.equip-slot .slot-stat { font-size:10px; color:var(--green); }
+.equip-slot.empty .slot-name { color:#555; }
+
+/* Inventory */
+.inv-title { font-size:14px; font-weight:700; margin:12px 0 8px; display:flex; justify-content:space-between; align-items:center; }
+.inv-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; padding-bottom:20px; }
+.inv-item { background:var(--card2); border:2px solid #333; border-radius:8px; padding:8px 4px; text-align:center; cursor:pointer; transition:all 0.15s; position:relative; }
+.inv-item:active { transform:scale(0.93); }
+.inv-item .item-icon { font-size:24px; }
+.inv-item .item-name { font-size:9px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.inv-item .item-stat { font-size:9px; color:var(--green); }
+.inv-item.equipped::after { content:'E'; position:absolute; top:2px; right:4px; font-size:8px; background:var(--accent); color:#fff; border-radius:3px; padding:0 3px; }
+.sell-btn { width:100%; padding:10px; border-radius:10px; border:none; background:var(--red); color:#fff; font-weight:700; font-size:13px; cursor:pointer; margin-top:8px; font-family:inherit; }
+
+/* Sub tabs inside pull */
+.sub-tabs { display:flex; gap:0; margin-bottom:14px; background:var(--card); border-radius:10px; overflow:hidden; border:1px solid #2a2850; }
+.sub-tab { flex:1; padding:10px 0; text-align:center; font-size:13px; font-weight:700; cursor:pointer; border:none; background:none; color:var(--dim); font-family:inherit; transition:all 0.2s; }
+.sub-tab.active { background:var(--card2); color:var(--accent); box-shadow:inset 0 -2px 0 var(--accent); }
+
+/* ===== TAB: SKILLS ===== */
+.skills-section { padding:12px; }
+.skill-slot { background:var(--card2); border-radius:10px; padding:12px; margin-bottom:8px; display:flex; align-items:center; gap:10px; }
+.skill-slot .sk-icon { font-size:32px; width:40px; text-align:center; }
+.skill-slot .sk-info { flex:1; }
+.skill-slot .sk-name { font-weight:700; font-size:13px; }
+.skill-slot .sk-desc { font-size:11px; color:var(--dim); margin-top:2px; }
+.skill-slot .sk-lv { font-size:10px; color:var(--blue); }
+.skill-slot button { background:var(--green); color:#fff; border:none; padding:6px 14px; border-radius:8px; font-weight:700; font-size:11px; cursor:pointer; font-family:inherit; white-space:nowrap; }
+.skill-slot button:disabled { opacity:0.4; }
+
+/* ===== TAB: MORE ===== */
+.more-section { padding:12px; }
+.stat-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #1a1a3e; font-size:13px; }
+.stat-row .label { color:var(--dim); }
+.stat-row .val { font-weight:700; }
+.more-btn { width:100%; padding:12px; border-radius:10px; border:none; font-weight:700; font-size:14px; cursor:pointer; margin-top:8px; font-family:inherit; }
+.more-btn.prestige { background:linear-gradient(135deg,var(--gold),var(--accent)); color:#1a1a2e; }
+.more-btn.ad { background:linear-gradient(135deg,#ff79c6,#ff6b6b); color:#fff; }
+.more-btn:disabled { opacity:0.4; }
+
+/* ===== ITEM POPUP ===== */
+.item-popup { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:500; display:none; flex-direction:column; align-items:center; justify-content:center; }
+.item-popup.show { display:flex; }
+.item-popup-card { background:var(--card); border-radius:16px; padding:20px; width:280px; text-align:center; }
+.item-popup-card .ip-icon { font-size:48px; }
+.item-popup-card .ip-name { font-size:18px; font-weight:900; margin:6px 0; }
+.item-popup-card .ip-rarity { font-size:12px; margin-bottom:8px; }
+.item-popup-card .ip-stat { font-size:14px; color:var(--green); margin:4px 0; }
+.item-popup-card .ip-buttons { display:flex; gap:8px; margin-top:14px; }
+.item-popup-card .ip-btn { flex:1; padding:10px; border:none; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer; font-family:inherit; }
+.ip-btn.equip { background:var(--green); color:#fff; }
+.ip-btn.sell { background:var(--red); color:#fff; }
+.ip-btn.close { background:#444; color:#fff; }
+
+/* Class preview canvas in hero tab */
+.class-preview-canvas { image-rendering:auto; display:block; margin:0 auto; }
+
+/* ===== TAB: FUSION (합성) ===== */
+.fusion-section { padding:12px; }
+.fusion-title { font-size:14px; font-weight:700; margin-bottom:10px; text-align:center; color:var(--gold); }
+.fusion-slots { display:flex; gap:12px; justify-content:center; align-items:center; margin:16px 0; }
+.fusion-slot { width:100px; height:120px; background:var(--card2); border:2px dashed #555; border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; }
+.fusion-slot:hover { border-color:var(--accent); }
+.fusion-slot.filled { border-style:solid; }
+.fusion-slot .fs-icon { font-size:32px; }
+.fusion-slot .fs-name { font-size:10px; margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:90px; text-align:center; }
+.fusion-slot .fs-rarity { font-size:9px; margin-top:2px; }
+.fusion-slot .fs-empty { font-size:12px; color:var(--dim); }
+.fusion-plus { font-size:28px; font-weight:900; color:var(--dim); }
+.fusion-result { text-align:center; margin:16px 0; }
+.fusion-btn { display:block; width:80%; margin:0 auto; padding:14px; border-radius:12px; border:none; background:linear-gradient(135deg,var(--gold),var(--accent)); color:#1a1a2e; font-weight:900; font-size:16px; cursor:pointer; font-family:inherit; transition:all 0.2s; }
+.fusion-btn:disabled { opacity:0.4; }
+.fusion-btn:active { transform:scale(0.95); }
+.fusion-pick-list { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:12px; padding-bottom:20px; }
+.fusion-pick-item { background:var(--card2); border:2px solid #333; border-radius:8px; padding:8px 4px; text-align:center; cursor:pointer; transition:all 0.15s; }
+.fusion-pick-item:active { transform:scale(0.93); }
+.fusion-pick-item.selected { border-color:var(--gold); box-shadow:0 0 8px rgba(241,196,15,0.4); }
+.fusion-pick-item .item-icon { font-size:24px; }
+.fusion-pick-item .item-name { font-size:9px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fusion-pick-item .item-stat { font-size:9px; color:var(--green); }
+
+/* Enhance button in item popup */
+.ip-btn.enhance { background:linear-gradient(135deg,var(--gold),var(--accent)); color:#1a1a2e; }
+/* Login screen */
+.login-overlay { position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px; }
+.login-overlay h1 { font-size:28px;color:var(--gold);text-shadow:0 0 20px rgba(255,200,0,0.5); }
+.login-overlay p { color:var(--dim);font-size:13px; }
+.login-btn { background:#fff;color:#333;border:none;padding:14px 36px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:10px;font-family:inherit;box-shadow:0 4px 16px rgba(0,0,0,0.3); }
+.login-btn:hover { background:#f0f0f0; }
+.login-btn img { width:22px;height:22px; }
+/* User bar */
+.user-bar { display:flex;align-items:center;gap:8px;padding:4px 12px;background:var(--card);border-bottom:1px solid #2a2850;font-size:11px; }
+.user-bar img { width:24px;height:24px;border-radius:50%; }
+.user-bar .uname { color:var(--text);font-weight:700;flex:1; }
+.user-bar .cp { color:var(--gold);font-weight:700;font-size:12px; }
+.user-bar button { background:none;border:1px solid #555;color:#aaa;padding:2px 8px;border-radius:4px;font-size:10px;cursor:pointer;font-family:inherit; }
+/* Ranking tab */
+.rank-list { padding:8px; }
+.rank-item { display:flex;align-items:center;gap:8px;padding:8px;background:var(--card2);border-radius:8px;margin-bottom:4px; }
+.rank-item.me { border:2px solid var(--gold); }
+.rank-pos { width:28px;text-align:center;font-weight:900;font-size:16px; }
+.rank-pos.gold { color:#ffd700; } .rank-pos.silver { color:#c0c0c0; } .rank-pos.bronze { color:#cd7f32; }
+.rank-info { flex:1; }
+.rank-name { font-size:12px;font-weight:700; }
+.rank-cp { font-size:11px;color:var(--gold); }
+.rank-img { width:28px;height:28px;border-radius:50%; }
+/* Admin tab */
+.admin-section { padding:12px; }
+.admin-row { display:flex;align-items:center;gap:8px;margin-bottom:8px; }
+.admin-row label { font-size:12px;color:var(--dim);width:100px; }
+.admin-row input { flex:1;background:var(--card2);border:1px solid #444;color:var(--text);padding:6px 10px;border-radius:6px;font-size:13px;font-family:inherit; }
+.admin-row button { background:var(--accent);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:700;font-family:inherit; }
+</style>
+
+<!-- Auth via Flask server -->
+<script>
+  let currentUser = null;
+  let isAdmin = false;
+  let serverSettings = {};
+  let userSettings = {};
+</script>
+</head>
+<body>
+<!-- LOGIN OVERLAY -->
+<div class="login-overlay" id="loginOverlay">
+  <h1>⚔️ 던전 클리커</h1>
+  <p>무한의 탑에 도전하라!</p>
+  <button class="login-btn" onclick="location.href='/login'">
+    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">
+    Google 계정으로 로그인
+  </button>
+</div>
+
+<div id="app" style="display:none;">
+  <!-- USER BAR -->
+  <div class="user-bar" id="userBar">
+    <img id="userPhoto" src="" alt="">
+    <span class="uname" id="userName">-</span>
+    <span class="cp">⚔️ <span id="combatPower">0</span></span>
+    <button onclick="googleLogout()">로그아웃</button>
+  </div>
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="res gold">💰 <span id="goldDisplay">0</span></div>
+    <div class="res dia">💎 <span id="diaDisplay">0</span></div>
+    <div class="res ruby">❤️ Lv.<span id="levelDisplay">1</span></div>
+  </div>
+
+  <!-- BATTLE AREA -->
+  <div class="battle-area" id="battleArea">
+    <div class="stage-info">🏰 스테이지 <span id="stageDisplay">1-1</span></div>
+    <div class="char-container" id="charContainer">
+      <canvas id="charCanvas" width="240" height="210" style="width:120px;height:105px;image-rendering:auto;"></canvas>
+      <div class="char-name" id="charName">견습 기사</div>
+      <div class="char-level" id="charLevelLabel">Lv.1</div>
+    </div>
+    <canvas id="effectCanvas" width="480" height="280" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:8;pointer-events:none;"></canvas>
+    <div class="monster-container" id="monsterContainer">
+      <img class="monster-sprite" id="monsterSprite" src="" style="width:80px;height:80px;object-fit:contain;" />
+      <div class="monster-name" id="monsterName">슬라임</div>
+      <div class="monster-hp-bar"><div class="monster-hp-fill" id="monsterHpFill" style="width:100%"></div></div>
+    </div>
+    <div class="exp-section">
+      <div class="exp-bar"><div class="exp-fill" id="expFill" style="width:0%"></div></div>
+      <div class="exp-label"><span id="expLabel">EXP 0/10</span><span id="dpsLabel">DPS: 0</span></div>
+    </div>
+  </div>
+
+  <!-- TAB CONTENT -->
+  <div class="tab-content" id="tabContent"></div>
+
+  <!-- TAB BAR -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="lamp"><span class="tab-icon">🌸</span>뽑기</button>
+    <button class="tab-btn" data-tab="equip"><span class="tab-icon">🎒</span>장비</button>
+    <button class="tab-btn" data-tab="fusion"><span class="tab-icon">🔮</span>합성</button>
+    <button class="tab-btn" data-tab="skills"><span class="tab-icon">⚡</span>스킬</button>
+    <button class="tab-btn" data-tab="ranking"><span class="tab-icon">🏆</span>랭킹</button>
+    <button class="tab-btn" data-tab="more"><span class="tab-icon">📋</span>더보기</button>
+  </div>
+</div>
+
+<!-- PULL RESULT -->
+<div class="pull-result" id="pullResult">
+  <div class="pull-result-title" id="pullResultTitle">✨ 획득!</div>
+  <div class="pull-summary" id="pullSummary"></div>
+  <div class="pull-items" id="pullItems"></div>
+  <button class="close-btn" onclick="closePullResult()">확인</button>
+</div>
+
+<!-- ITEM POPUP -->
+<div class="item-popup" id="itemPopup">
+  <div class="item-popup-card" id="itemPopupCard"></div>
+</div>
+
+<script>
+// ==================== DATA ====================
+const RARITIES = [
+  { id:'common', name:'일반', color:'#888', weight:50, statMul:1 },
+  { id:'uncommon', name:'고급', color:'#2cb67d', weight:28, statMul:1.5 },
+  { id:'rare', name:'희귀', color:'#2ec4b6', weight:13, statMul:2.5 },
+  { id:'epic', name:'영웅', color:'#7f5af0', weight:6, statMul:4 },
+  { id:'legendary', name:'전설', color:'#f1c40f', weight:2.5, statMul:7 },
+  { id:'mythic', name:'신화', color:'#ff4444', weight:0.5, statMul:12 },
+  { id:'mythic_s', name:'신화 S', color:'#ff2222', weight:0, statMul:15 },
+  { id:'mythic_sp', name:'신화 S+', color:'#ff0000', weight:0, statMul:20 },
+  { id:'mythic_ss', name:'신화 SS', color:'#cc0000', weight:0, statMul:28 },
+  { id:'mythic_ssp', name:'신화 SS+', color:'#aa0000', weight:0, statMul:38 },
+  { id:'mythic_sss', name:'신화 SSS', color:'#880000', weight:0, statMul:50 },
+];
+
+const EQUIP_SLOTS = [
+  { id:'weapon', name:'무기', icon:'⚔️', statType:'atk' },
+  { id:'helmet', name:'투구', icon:'🪖', statType:'critDmg' },
+  { id:'armor', name:'갑옷', icon:'🛡️', statType:'hp' },
+  { id:'boots', name:'신발', icon:'👢', statType:'spd' },
+  { id:'ring', name:'반지', icon:'💍', statType:'crit' },
+  { id:'necklace', name:'목걸이', icon:'📿', statType:'atk' },
+];
+
+// Equipment sprite path generator
+function getEquipSprite(slotId, rarityId, nameIdx) {
+  // mythic 이상(S, S+, SS 등)은 모두 mythic 아이콘 사용
+  const rarityBase = rarityId === 'mythic_sss' ? 'mythic_sss' : (rarityId.startsWith('mythic') ? 'mythic' : rarityId);
+  const variant = (nameIdx != null ? nameIdx % 3 : Math.floor(Math.random()*3)) + 1;
+  return 'assets/equip/' + slotId + '_' + rarityBase + '_' + variant + '.png';
+}
+// 아이템 이름에 신화 등급 접미사 자동 부착
+const _MYTHIC_TAG = { mythic_s:' S', mythic_sp:' S+', mythic_ss:' SS', mythic_ssp:' SS+', mythic_sss:' SSS' };
+function itemName(item) {
+  const tag = _MYTHIC_TAG[item.rarityId] || '';
+  // 이미 태그가 붙어있으면 중복 방지
+  if (tag && item.name.endsWith(tag.trim())) return item.name;
+  return item.name + tag;
+}
+function getEquipIcon(item, size) {
+  const s = size || 36;
+  // Always regenerate sprite path to reflect current rarity (for SSS rainbow etc)
+  if (item.slot && item.rarityId) {
+    item.sprite = getEquipSprite(item.slot, item.rarityId);
+  }
+  if (item.sprite) return '<img src="'+item.sprite+'" style="width:'+s+'px;height:'+s+'px;object-fit:contain;border-radius:4px;">';
+  return '<span style="font-size:'+(s-8)+'px;">'+item.icon+'</span>';
+}
+
+// 등급별 3종 이름 (common, uncommon, rare, epic, legendary, mythic)
+const WEAPON_NAMES = {
+  common:['나무검','돌칼','녹슨검'], uncommon:['철검','강철검','장검'],
+  rare:['미스릴검','룬검','마법검'], epic:['불꽃검','번개검','암흑검'],
+  legendary:['용살검','마왕검','천공검'], mythic:['신성검','천상검','창세검']
+};
+const HELMET_NAMES = {
+  common:['천두건','가죽모자','낡은투구'], uncommon:['철투구','청동관','사슬투구'],
+  rare:['미스릴관','마법모자','룬투구'], epic:['용기사관','현자관','암흑관'],
+  legendary:['왕관','황금투구','전설관'], mythic:['신성관','천상관','창세관']
+};
+const ARMOR_NAMES = {
+  common:['천옷','가죽옷','낡은갑옷'], uncommon:['철갑옷','사슬갑옷','강철갑옷'],
+  rare:['미스릴갑옷','마법로브','룬갑옷'], epic:['용비늘갑옷','현자로브','암흑갑옷'],
+  legendary:['왕의갑옷','황금갑옷','전설갑옷'], mythic:['신성갑옷','천상갑옷','창세갑옷']
+};
+const BOOTS_NAMES = {
+  common:['샌들','가죽신발','낡은부츠'], uncommon:['철부츠','사슬부츠','강철부츠'],
+  rare:['미스릴부츠','마법신발','룬부츠'], epic:['질풍부츠','현자부츠','암흑부츠'],
+  legendary:['왕의부츠','황금부츠','전설부츠'], mythic:['신성부츠','천상부츠','창세부츠']
+};
+const RING_NAMES = {
+  common:['구리반지','나무반지','돌반지'], uncommon:['은반지','청동반지','철반지'],
+  rare:['금반지','루비반지','사파이어반지'], epic:['에메랄드반지','자수정반지','오팔반지'],
+  legendary:['다이아반지','용의반지','전설반지'], mythic:['신성반지','천상반지','창세반지']
+};
+const NECK_NAMES = {
+  common:['가죽끈','구슬목걸이','뼈목걸이'], uncommon:['은목걸이','청동목걸이','사슬목걸이'],
+  rare:['금목걸이','루비목걸이','사파이어목걸이'], epic:['에메랄드목걸이','자수정목걸이','오팔목걸이'],
+  legendary:['다이아목걸이','용의목걸이','전설목걸이'], mythic:['신성목걸이','천상목걸이','창세목걸이']
+};
+const SLOT_NAMES = { weapon:WEAPON_NAMES, helmet:HELMET_NAMES, armor:ARMOR_NAMES, boots:BOOTS_NAMES, ring:RING_NAMES, necklace:NECK_NAMES };
+
+const MONSTERS = [
+  { name:'아기 슬라임', sprite:'assets/monsters/slime_1.png', hpMul:1, atkMul:1, goldMul:1 },
+  { name:'슬라임', sprite:'assets/monsters/slime_2.png', hpMul:1.1, atkMul:1, goldMul:1.1 },
+  { name:'독 슬라임', sprite:'assets/monsters/slime_3.png', hpMul:1.2, atkMul:1.1, goldMul:1.1 },
+  { name:'킹 슬라임', sprite:'assets/monsters/slime_4.png', hpMul:1.5, atkMul:1.2, goldMul:1.2 },
+  { name:'고블린', sprite:'assets/monsters/orc_1.png', hpMul:1.3, atkMul:1.1, goldMul:1.2 },
+  { name:'고블린 파이터', sprite:'assets/monsters/orc_2.png', hpMul:1.5, atkMul:1.2, goldMul:1.3 },
+  { name:'오크', sprite:'assets/monsters/orc_3.png', hpMul:1.8, atkMul:1.3, goldMul:1.4 },
+  { name:'오크 전사', sprite:'assets/monsters/orc_4.png', hpMul:2, atkMul:1.5, goldMul:1.5 },
+  { name:'해골 졸병', sprite:'assets/monsters/skeleton_1.png', hpMul:1.2, atkMul:1.3, goldMul:1.3 },
+  { name:'스켈레톤', sprite:'assets/monsters/skeleton_2.png', hpMul:1.4, atkMul:1.4, goldMul:1.4 },
+  { name:'스켈레톤 전사', sprite:'assets/monsters/skeleton_4.png', hpMul:1.8, atkMul:1.6, goldMul:1.5 },
+  { name:'스켈레톤 나이트', sprite:'assets/monsters/skeleton_5.png', hpMul:2.2, atkMul:1.8, goldMul:1.7 },
+  { name:'오크 대장', sprite:'assets/monsters/orc_5.png', hpMul:2.5, atkMul:2, goldMul:1.8 },
+  { name:'데스 나이트', sprite:'assets/monsters/skeleton_6.png', hpMul:2.8, atkMul:2, goldMul:2 },
+];
+
+const BOSSES = [
+  { name:'👑 골든 킹 슬라임', sprite:'assets/monsters/slime_5.png', hpMul:8, atkMul:2.5, goldMul:8 },
+  { name:'🐉 골든 드래곤', sprite:'assets/monsters/slime_6.png', hpMul:15, atkMul:4, goldMul:12 },
+  { name:'💀 리치', sprite:'assets/monsters/skeleton_7.png', hpMul:12, atkMul:5, goldMul:10 },
+  { name:'☠️ 죽음의 용', sprite:'assets/monsters/skeleton_8.png', hpMul:18, atkMul:5, goldMul:15 },
+];
+
+// ==================== CLASS SYSTEM ====================
+const CLASSES = {
+  knight: {
+    id: 'knight', name: '기사', baseAtk: 10, baseHp: 100,
+    atkPerLv: 2.0, hpPerLv: 10,
+    unlockCost: 0, // starts unlocked
+    stages: [
+      { lv: 1, name: '견습 기사', statMul: 1.0 },
+      { lv: 20, name: '정규 기사', statMul: 1.8 },
+      { lv: 50, name: '정예 기사', statMul: 3.0 },
+      { lv: 100, name: '전설 기사', statMul: 5.0 },
+      { lv: 200, name: '신화 기사', statMul: 9.0 },
+    ]
+  },
+  archer: {
+    id: 'archer', name: '궁수', baseAtk: 14, baseHp: 70,
+    atkPerLv: 2.5, hpPerLv: 7,
+    unlockCost: 5000,
+    stages: [
+      { lv: 1, name: '견습 궁수', statMul: 1.0 },
+      { lv: 20, name: '정규 궁수', statMul: 1.8 },
+      { lv: 50, name: '정예 궁수', statMul: 3.0 },
+      { lv: 100, name: '전설 궁수', statMul: 5.0 },
+      { lv: 200, name: '신화 궁수', statMul: 9.0 },
+    ]
+  },
+  rogue: {
+    id: 'rogue', name: '도적', baseAtk: 18, baseHp: 50,
+    atkPerLv: 3.0, hpPerLv: 5,
+    unlockCost: 5000,
+    stages: [
+      { lv: 1, name: '견습 도적', statMul: 1.0 },
+      { lv: 20, name: '정규 도적', statMul: 1.8 },
+      { lv: 50, name: '정예 도적', statMul: 3.0 },
+      { lv: 100, name: '전설 도적', statMul: 5.0 },
+      { lv: 200, name: '신화 도적', statMul: 9.0 },
+    ]
+  }
+};
+
+const STAGE_LABELS = ['견습', '정규', '정예', '전설', '신화'];
+
+function getClassStage(classId, level) {
+  const cls = CLASSES[classId];
+  let stageIdx = 0;
+  for (let i = 0; i < cls.stages.length; i++) {
+    if (level >= cls.stages[i].lv) stageIdx = i;
+  }
+  return stageIdx; // 0-indexed (stage 1-5 => 0-4)
+}
+
+function getClassInfo(classId, level) {
+  const cls = CLASSES[classId];
+  const stageIdx = getClassStage(classId, level);
+  const stage = cls.stages[stageIdx];
+  return {
+    name: stage.name,
+    stage: stageIdx + 1,
+    stageLabel: STAGE_LABELS[stageIdx],
+    statMul: stage.statMul,
+    cls: cls
+  };
+}
+
+// ==================== SPRITE SHEET SYSTEM ====================
+// Individual sprite images (pre-cropped with transparent backgrounds)
+const charSprites = {};
+const effectSprites = {};
+let spritesLoaded = 0;
+const totalSprites = 3 * 5 + 3 * 6; // 15 chars + 18 effects
+function onSpriteLoad() {
+  spritesLoaded++;
+  if (spritesLoaded >= totalSprites) {
+    // All sprites loaded, redraw character
+    updateAllUI();
+  }
+}
+['knight','archer','rogue'].forEach(cls => {
+  for (let s = 1; s <= 5; s++) {
+    const key = cls + '_' + s;
+    const ci = new Image();
+    ci.onload = onSpriteLoad;
+    ci.src = 'assets/characters/' + key + '.png';
+    charSprites[key] = ci;
+  }
+  for (let s = 1; s <= 6; s++) {
+    const key = cls + '_' + s;
+    const ei = new Image();
+    ei.onload = onSpriteLoad;
+    ei.src = 'assets/effects/' + key + '.png';
+    effectSprites[key] = ei;
+  }
+});
+
+function drawCharacter(canvas, classId, stageNum) {
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const img = charSprites[classId + '_' + stageNum];
+  if (!img || !img.complete || !img.naturalWidth) {
+    // Image not loaded yet, retry in 200ms
+    setTimeout(() => drawCharacter(canvas, classId, stageNum), 200);
+    return;
+  }
+
+  // Fit image centered in canvas, maintaining aspect ratio
+  const scale = Math.min(canvas.width / img.naturalWidth, canvas.height / img.naturalHeight) * 0.9;
+  const w = img.naturalWidth * scale;
+  const h = img.naturalHeight * scale;
+  const x = (canvas.width - w) / 2;
+  const y = canvas.height - h - 2; // align to bottom
+  ctx.drawImage(img, x, y, w, h);
+  // Clear STAGE text area at top
+  ctx.clearRect(0, 0, canvas.width, 20);
+}
+
+let effectAnimId = null;
+function drawEffectSprite(classId, stage) {
+  const canvas = document.getElementById('effectCanvas');
+  if (!canvas) { console.warn('EFFECT: no canvas'); return; }
+  const ctx = canvas.getContext('2d');
+
+  // Map 5 game stages to 6 effect images: 1→1, 2→2, 3→3, 4→4, 5→6
+  const stageMap = {1:1, 2:2, 3:3, 4:4, 5:6};
+  const effIdx = stageMap[stage] || stage;
+  const img = effectSprites[classId + '_' + effIdx] || effectSprites[classId + '_' + stage] || effectSprites[classId + '_1'];
+  if (!img || !img.complete || !img.naturalWidth) { console.warn('EFFECT: img not loaded', classId, stage, effIdx, img?.src); return; }
+
+  // Cancel previous animation and restart immediately
+  if (effectAnimId) cancelAnimationFrame(effectAnimId);
+
+  const startX = canvas.width * 0.18;
+  const startY = classId === 'archer' ? canvas.height * 0.55 : classId === 'rogue' ? canvas.height * 0.48 : canvas.height * 0.4;
+  const endX = canvas.width * 0.72;
+  const endY = classId === 'archer' ? canvas.height * 0.5 : classId === 'rogue' ? canvas.height * 0.43 : canvas.height * 0.35;
+  const size = classId === 'archer' ? 22 : classId === 'rogue' ? 50 : 80;
+
+  // Effect always flies for 300ms regardless of attack speed
+  const totalMs = 300;
+  const totalFrames = Math.round(totalMs / 16);
+
+  let t = 0;
+  const effectSeed = Math.random() * Math.PI * 2;
+
+  function drawFrame() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    t += 1 / totalFrames;
+    if (t > 1.3) {
+      effectAnimId = null;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      return;
+    }
+
+    const travel = Math.min(t, 1);
+    const eased = 1 - Math.pow(1 - travel, 3);
+
+    const x = startX + (endX - startX) * eased;
+    // Archer arrows: slight random Y wobble each shot
+    const yOffset = classId === 'archer' ? (Math.sin(t * 8 + effectSeed) * 12) : 0;
+    const y = startY + (endY - startY) * eased + yOffset;
+
+    // Scale: starts small, grows to full at impact, then slightly bigger + fade
+    let scale, alpha;
+    if (t <= 1) {
+      scale = 0.5 + eased * 0.5;
+      alpha = 0.7 + eased * 0.3;
+    } else {
+      // Impact: flash bigger then fade
+      const fade = (t - 1) / 0.5;
+      scale = 1 + fade * 0.3;
+      alpha = 1 - fade;
+    }
+
+    const s = size * scale;
+    // Maintain original aspect ratio
+    const iw = img.naturalWidth || 1;
+    const ih = img.naturalHeight || 1;
+    const ratio = iw / ih;
+    const dh = s;
+    const dw = s * ratio;
+    ctx.globalAlpha = Math.max(0, alpha);
+    ctx.drawImage(img, x - dw/2, y - dh/2, dw, dh);
+    ctx.globalAlpha = 1;
+
+    effectAnimId = requestAnimationFrame(drawFrame);
+  }
+  effectAnimId = requestAnimationFrame(drawFrame);
+}
+
+// Removed old canvas-drawn functions - using sprite sheets
+function _unused_drawKnight(ctx, stage, pal, p) {
+  const cx = 36; // center x for body
+  const by = 32; // body top y
+
+  // Cape (stage 4-5)
+  if (pal.cape) {
+    ctx.fillStyle = pal.cape;
+    ctx.fillRect(cx - p, by + p, p * 6, p * 8);
+    ctx.globalAlpha = 0.6;
+    ctx.fillRect(cx - p, by + p * 9, p * 6, p * 2);
+    ctx.globalAlpha = 1;
+  }
+
+  // Legs
+  ctx.fillStyle = pal.legs;
+  ctx.fillRect(cx, by + p * 8, p * 2, p * 4); // left leg
+  ctx.fillRect(cx + p * 3, by + p * 8, p * 2, p * 4); // right leg
+
+  // Boots
+  ctx.fillStyle = pal.boots;
+  ctx.fillRect(cx - p, by + p * 11, p * 3, p * 2); // left boot
+  ctx.fillRect(cx + p * 3, by + p * 11, p * 3, p * 2); // right boot
+
+  // Body / Armor
+  ctx.fillStyle = pal.body;
+  ctx.fillRect(cx, by + p * 2, p * 5, p * 6);
+  // Body detail
+  ctx.fillStyle = pal.body2;
+  ctx.fillRect(cx + p, by + p * 3, p * 3, p * 4);
+
+  // Shoulder pads (stage 2+)
+  if (stage >= 2) {
+    ctx.fillStyle = pal.body;
+    ctx.fillRect(cx - p, by + p * 2, p, p * 2);
+    ctx.fillRect(cx + p * 5, by + p * 2, p, p * 2);
+  }
+
+  // Belt (stage 3+)
+  if (stage >= 3) {
+    ctx.fillStyle = '#8a7030';
+    ctx.fillRect(cx, by + p * 7, p * 5, p);
+    ctx.fillStyle = '#f0c040';
+    ctx.fillRect(cx + p * 2, by + p * 7, p, p); // buckle
+  }
+
+  // Head
+  if (pal.helmet && stage >= 2) {
+    // Helmet
+    ctx.fillStyle = pal.helmet;
+    ctx.fillRect(cx, by - p * 3, p * 5, p * 5);
+    // Visor slit
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(cx + p, by - p, p * 3, p);
+    // Eye glow for stage 4-5
+    if (stage >= 4 && pal.glow) {
+      ctx.fillStyle = pal.glow;
+      ctx.fillRect(cx + p, by - p, p, p);
+      ctx.fillRect(cx + p * 3, by - p, p, p);
+    }
+    // Plume (stage 3)
+    if (pal.plume) {
+      ctx.fillStyle = pal.plume;
+      ctx.fillRect(cx + p * 2, by - p * 5, p, p * 3);
+      ctx.fillRect(cx + p * 3, by - p * 4, p, p * 2);
+    }
+    // Crown (stage 5)
+    if (pal.crown) {
+      ctx.fillStyle = pal.crown;
+      ctx.fillRect(cx, by - p * 4, p, p * 2);
+      ctx.fillRect(cx + p * 2, by - p * 5, p, p * 2);
+      ctx.fillRect(cx + p * 4, by - p * 4, p, p * 2);
+    }
+  } else {
+    // Bare head
+    ctx.fillStyle = pal.skin;
+    ctx.fillRect(cx + p, by - p * 2, p * 3, p * 4);
+    // Hair
+    ctx.fillStyle = pal.hair;
+    ctx.fillRect(cx, by - p * 3, p * 5, p * 2);
+    ctx.fillRect(cx, by - p * 2, p, p * 2);
+    // Eyes
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(cx + p, by - p, p, p);
+    ctx.fillRect(cx + p * 3, by - p, p, p);
+    // Mouth
+    ctx.fillStyle = '#d09070';
+    ctx.fillRect(cx + p * 2, by + p, p, p);
+  }
+
+  // Weapon (sword) - right side
+  ctx.fillStyle = pal.weaponEdge;
+  ctx.fillRect(cx + p * 6, by - p * 2, p, p * 6);
+  ctx.fillStyle = pal.weapon;
+  ctx.fillRect(cx + p * 6, by + p * 4, p, p * 2); // handle
+  if (stage >= 3) {
+    // Larger sword
+    ctx.fillStyle = pal.weaponEdge;
+    ctx.fillRect(cx + p * 6, by - p * 4, p, p * 2);
+    ctx.fillRect(cx + p * 5, by + p * 3, p * 3, p); // crossguard
+  }
+  if (stage >= 5) {
+    // Flame effect on sword
+    ctx.fillStyle = 'rgba(255,100,0,0.7)';
+    ctx.fillRect(cx + p * 5, by - p * 4, p, p * 2);
+    ctx.fillRect(cx + p * 7, by - p * 3, p, p * 2);
+    ctx.fillStyle = 'rgba(255,200,0,0.6)';
+    ctx.fillRect(cx + p * 6, by - p * 5, p, p);
+  }
+
+  // Shield - left side
+  if (stage >= 2 && pal.shield) {
+    ctx.fillStyle = pal.shield;
+    const sw = stage >= 3 ? p * 3 : p * 2;
+    const sh = stage >= 3 ? p * 5 : p * 4;
+    ctx.fillRect(cx - p * 3, by + p, sw, sh);
+    // Shield emblem (stage 4+)
+    if (stage >= 4) {
+      ctx.fillStyle = pal.glow || '#fff';
+      ctx.fillRect(cx - p * 2, by + p * 2, p, p * 2);
+    }
+    // Shield border
+    ctx.strokeStyle = pal.body2;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cx - p * 3, by + p, sw, sh);
+  }
+}
+
+function drawArcher(ctx, stage, pal, p) {
+  const cx = 36;
+  const by = 32;
+
+  // Cape (stage 5)
+  if (pal.cape) {
+    ctx.fillStyle = pal.cape;
+    ctx.fillRect(cx - p, by + p, p * 6, p * 7);
+    ctx.globalAlpha = 0.5;
+    ctx.fillRect(cx, by + p * 8, p * 4, p * 3);
+    ctx.globalAlpha = 1;
+  }
+
+  // Legs
+  ctx.fillStyle = pal.legs;
+  ctx.fillRect(cx + p, by + p * 8, p * 2, p * 3);
+  ctx.fillRect(cx + p * 3, by + p * 8, p * 2, p * 3);
+
+  // Boots
+  ctx.fillStyle = pal.boots;
+  ctx.fillRect(cx, by + p * 10, p * 3, p * 2);
+  ctx.fillRect(cx + p * 3, by + p * 10, p * 3, p * 2);
+
+  // Body
+  ctx.fillStyle = pal.body;
+  ctx.fillRect(cx, by + p * 2, p * 5, p * 6);
+  ctx.fillStyle = pal.body2;
+  ctx.fillRect(cx + p, by + p * 3, p * 3, p * 3);
+
+  // Quiver (stage 3+)
+  if (pal.quiver) {
+    ctx.fillStyle = pal.quiver;
+    ctx.fillRect(cx - p * 2, by + p, p, p * 5);
+    ctx.fillStyle = pal.arrow || '#c0a060';
+    ctx.fillRect(cx - p * 2, by - p, p, p * 2);
+    ctx.fillRect(cx - p * 2 + 2, by - p * 2, 2, p);
+  }
+
+  // Head
+  if (pal.hood) {
+    // Hood
+    ctx.fillStyle = pal.hood;
+    ctx.fillRect(cx, by - p * 3, p * 5, p * 2);
+    ctx.fillRect(cx, by - p * 2, p * 5, p * 3);
+    // Face visible area
+    ctx.fillStyle = pal.skin || '#f0c090';
+    ctx.fillRect(cx + p, by - p, p * 3, p * 2);
+    // Eyes
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(cx + p, by - p, p, p);
+    ctx.fillRect(cx + p * 3, by - p, p, p);
+    if (stage >= 4 && pal.glow) {
+      ctx.fillStyle = pal.glow;
+      ctx.fillRect(cx + p, by - p, p, p);
+      ctx.fillRect(cx + p * 3, by - p, p, p);
+    }
+    // Crown (stage 5)
+    if (pal.crown) {
+      ctx.fillStyle = pal.crown;
+      ctx.fillRect(cx, by - p * 4, p, p);
+      ctx.fillRect(cx + p * 2, by - p * 5, p, p * 2);
+      ctx.fillRect(cx + p * 4, by - p * 4, p, p);
+    }
+  } else if (pal.crown) {
+    // Stage 5 no hood
+    ctx.fillStyle = pal.skin;
+    ctx.fillRect(cx + p, by - p * 2, p * 3, p * 4);
+    ctx.fillStyle = pal.crown;
+    ctx.fillRect(cx, by - p * 3, p * 5, p * 2);
+    ctx.fillRect(cx, by - p * 4, p, p);
+    ctx.fillRect(cx + p * 2, by - p * 5, p, p * 2);
+    ctx.fillRect(cx + p * 4, by - p * 4, p, p);
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(cx + p, by - p, p, p);
+    ctx.fillRect(cx + p * 3, by - p, p, p);
+  } else {
+    // Bare head
+    ctx.fillStyle = pal.skin;
+    ctx.fillRect(cx + p, by - p * 2, p * 3, p * 4);
+    ctx.fillStyle = pal.hair;
+    ctx.fillRect(cx, by - p * 3, p * 5, p * 2);
+    ctx.fillRect(cx + p * 4, by - p * 2, p, p * 2);
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(cx + p, by - p, p, p);
+    ctx.fillRect(cx + p * 3, by - p, p, p);
+    ctx.fillStyle = '#d09070';
+    ctx.fillRect(cx + p * 2, by + p, p, p);
+  }
+
+  // Bow - right side
+  ctx.strokeStyle = pal.bow;
+  ctx.lineWidth = stage >= 3 ? 3 : 2;
+  ctx.beginPath();
+  const bowX = cx + p * 7;
+  const bowH = stage >= 3 ? p * 7 : p * 5;
+  ctx.moveTo(bowX, by - p);
+  ctx.quadraticCurveTo(bowX + p * 2, by + bowH / 2 - p, bowX, by + bowH - p);
+  ctx.stroke();
+  // String
+  ctx.strokeStyle = pal.bowString;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(bowX, by - p);
+  ctx.lineTo(bowX, by + bowH - p);
+  ctx.stroke();
+  // Arrow
+  if (stage >= 2 && pal.arrow) {
+    ctx.fillStyle = pal.arrow;
+    ctx.fillRect(bowX - p * 2, by + p * 2, p * 3, 2);
+    // Arrowhead
+    ctx.fillRect(bowX - p * 3, by + p * 2 - 2, p, 6);
+  }
+
+  // Glow arrows (stage 4-5)
+  if (stage >= 4 && pal.glow) {
+    ctx.fillStyle = pal.glow;
+    ctx.globalAlpha = 0.6;
+    ctx.fillRect(bowX - p * 3, by + p * 2 - 2, p, 6);
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawRogue(ctx, stage, pal, p) {
+  const cx = 36;
+  const by = 32;
+
+  // Cape (stage 5)
+  if (pal.cape) {
+    ctx.fillStyle = pal.cape;
+    ctx.globalAlpha = 0.7;
+    ctx.fillRect(cx - p, by + p, p * 7, p * 8);
+    ctx.globalAlpha = 1;
+  }
+
+  // Legs
+  ctx.fillStyle = pal.legs;
+  ctx.fillRect(cx + p, by + p * 8, p * 2, p * 3);
+  ctx.fillRect(cx + p * 3, by + p * 8, p * 2, p * 3);
+
+  // Boots
+  ctx.fillStyle = pal.boots;
+  ctx.fillRect(cx, by + p * 10, p * 3, p * 2);
+  ctx.fillRect(cx + p * 3, by + p * 10, p * 3, p * 2);
+
+  // Body
+  ctx.fillStyle = pal.body;
+  ctx.fillRect(cx, by + p * 2, p * 5, p * 6);
+  ctx.fillStyle = pal.body2;
+  ctx.fillRect(cx + p, by + p * 3, p * 3, p * 4);
+
+  // Belt with daggers holster
+  if (stage >= 2) {
+    ctx.fillStyle = '#504030';
+    ctx.fillRect(cx, by + p * 7, p * 5, p);
+  }
+
+  // Head
+  if (pal.hood) {
+    ctx.fillStyle = pal.hood;
+    ctx.fillRect(cx, by - p * 3, p * 5, p * 2);
+    ctx.fillRect(cx, by - p * 2, p * 5, p * 3);
+    if (pal.mask) {
+      // Masked face
+      ctx.fillStyle = pal.mask;
+      ctx.fillRect(cx + p, by - p, p * 3, p * 2);
+      // Eye slits
+      ctx.fillStyle = stage >= 4 && pal.glow ? pal.glow : '#ff3030';
+      ctx.fillRect(cx + p, by - p, p, p);
+      ctx.fillRect(cx + p * 3, by - p, p, p);
+    } else {
+      // Face under hood
+      ctx.fillStyle = pal.skin || '#f0c090';
+      ctx.fillRect(cx + p, by - p, p * 3, p * 2);
+      ctx.fillStyle = '#1a1a2e';
+      ctx.fillRect(cx + p, by - p, p, p);
+      ctx.fillRect(cx + p * 3, by - p, p, p);
+    }
+    // Crown (stage 5)
+    if (pal.crown) {
+      ctx.fillStyle = pal.crown;
+      ctx.fillRect(cx, by - p * 4, p, p);
+      ctx.fillRect(cx + p * 2, by - p * 5, p, p * 2);
+      ctx.fillRect(cx + p * 4, by - p * 4, p, p);
+    }
+  } else {
+    // Bare head
+    ctx.fillStyle = pal.skin;
+    ctx.fillRect(cx + p, by - p * 2, p * 3, p * 4);
+    ctx.fillStyle = pal.hair;
+    ctx.fillRect(cx, by - p * 3, p * 5, p * 2);
+    ctx.fillRect(cx, by - p * 2, p, p);
+    ctx.fillRect(cx + p * 4, by - p * 2, p, p);
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(cx + p, by - p, p, p);
+    ctx.fillRect(cx + p * 3, by - p, p, p);
+    ctx.fillStyle = '#d09070';
+    ctx.fillRect(cx + p * 2, by + p, p, p);
+  }
+
+  // Dual daggers
+  // Left dagger
+  ctx.fillStyle = pal.dagger;
+  const dLen = stage >= 3 ? p * 5 : p * 3;
+  ctx.fillRect(cx - p * 2, by + p, 2, dLen);
+  ctx.fillStyle = pal.daggerHandle;
+  ctx.fillRect(cx - p * 2, by + p + dLen, 2, p * 2);
+  // Right dagger
+  ctx.fillStyle = pal.dagger;
+  ctx.fillRect(cx + p * 6, by + p, 2, dLen);
+  ctx.fillStyle = pal.daggerHandle;
+  ctx.fillRect(cx + p * 6, by + p + dLen, 2, p * 2);
+
+  // Crossguards (stage 3+)
+  if (stage >= 3) {
+    ctx.fillStyle = pal.dagger;
+    ctx.fillRect(cx - p * 3, by + p + dLen - p, p * 2, 2);
+    ctx.fillRect(cx + p * 5 + 2, by + p + dLen - p, p * 2, 2);
+  }
+
+  // Glow on blades (stage 4+)
+  if (stage >= 4 && pal.glow) {
+    ctx.fillStyle = pal.glow;
+    ctx.globalAlpha = 0.5;
+    ctx.fillRect(cx - p * 2 - 1, by + p, 4, dLen);
+    ctx.fillRect(cx + p * 6 - 1, by + p, 4, dLen);
+    ctx.globalAlpha = 1;
+  }
+
+  // Shadow particles (stage 5)
+  if (stage >= 5) {
+    ctx.fillStyle = pal.glow;
+    const t = Date.now() / 200;
+    for (let i = 0; i < 5; i++) {
+      const px = cx + Math.sin(t + i * 1.3) * 24;
+      const py = by + 20 + Math.cos(t + i * 1.7) * 20;
+      ctx.globalAlpha = 0.3 + 0.2 * Math.sin(t + i);
+      ctx.fillRect(px, py, p, p);
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+const SKILLS = [
+  { id:'power_strike', name:'파워 스트라이크', icon:'💥', desc:'공격력 +10%', maxLv:9999, costBase:50, costScale:1.08,
+    effect:(lv) => ({ atkPct: lv * 0.10 }) },
+  { id:'crit_damage', name:'치명타 피해', icon:'💢', desc:'치명타 데미지 +15%', maxLv:9999, costBase:60, costScale:1.08,
+    effect:(lv) => ({ critDmgPct: lv * 0.15 }) },
+  { id:'crit_mastery', name:'치명타 숙련', icon:'🎯', desc:'치명타 확률 +2%', maxLv:9999, costBase:80, costScale:1.08,
+    effect:(lv) => ({ critPct: lv * 0.02 }) },
+  { id:'gold_finder', name:'골드 파인더', icon:'💰', desc:'골드 획득량 +10%', maxLv:9999, costBase:100, costScale:1.08,
+    effect:(lv) => ({ goldPct: lv * 0.10 }) },
+  { id:'speed_atk', name:'속공', icon:'⚡', desc:'공격 속도 +5%', maxLv:9999, costBase:120, costScale:1.08,
+    effect:(lv) => ({ spdPct: lv * 0.05 }) },
+];
+
+// ==================== GAME STATE ====================
+let G = {
+  gold: 0, dia: 100,
+  classLevels: { knight: 1, archer: 1, rogue: 1 },
+  classXp: { knight: 0, archer: 0, rogue: 0 },
+  stage: 1, subStage: 1, maxStage: 1,
+  baseAtk: 10, baseHp: 100, currentHp: 100,
+  lampLevel: 1,
+  unlockedClasses: ['knight'],
+  selectedClass: 'knight',
+  equipment: {},
+  inventory: [],
+  skillLevels: {},
+  kills: 0, totalGold: 0,
+  lastSave: Date.now(),
+  // Runtime
+  monster: null, monsterHp: 0, monsterMaxHp: 0,
+  attackTimer: 0, attackSpeed: 1000,
+};
+let nextItemId = 1;
+let activeTab = 'lamp';
+let pullSubTab = 'equip'; // 'equip' or 'class'
+let dmgTexts = [];
+
+// ==================== FORMULAS ====================
+function getXpToNext(lv) { return Math.ceil(10 * Math.pow(1.25, lv - 1)); }
+function getLevel() { return G.classLevels[G.selectedClass] || 1; }
+function getXp() { return G.classXp[G.selectedClass] || 0; }
+function getXpToNextForClass() { return getXpToNext(getLevel()); }
+function getMonsterHp(stage) {
+  const base = ss('monHpBase', 15);
+  const growth = ss('monHpGrowth', 1.25);
+  const stageScale = ss('monHpStageScale', 0.5);
+  return Math.ceil(base * Math.pow(growth, stage - 1) * (1 + stage * stageScale));
+}
+function getMonsterAtk(stage) { return Math.ceil(3 * Math.pow(1.08, stage - 1)); }
+function getMonsterGold(stage) { return Math.ceil(2 * Math.pow(1.1, stage - 1)); }
+function getLampCost(level) { return Math.ceil(100 * Math.pow(1.5, level - 1)); } // 골드: 100, 150, 225...
+function getPullCost() { return 3; } // 보석 3개 (10회=30)
+function getSellValue(item) {
+  const ri = RARITIES.findIndex(r => r.id === item.rarityId);
+  return Math.ceil((ri + 1) * 3 * item.statValue * 0.3);
+}
+
+function getPlayerStats() {
+  const cls = CLASSES[G.selectedClass];
+  const lv = getLevel();
+  const info = getClassInfo(G.selectedClass, lv);
+
+  let atk = (cls.baseAtk + (lv - 1) * cls.atkPerLv) * info.statMul;
+  let hp = (cls.baseHp + (lv - 1) * cls.hpPerLv) * info.statMul;
+  let crit = 0.05;
+  let critDmg = 2.0;
+  let goldBonus = 1;
+  let spdBonus = 1;
+
+  // Equipment (with enhancement multiplier)
+  Object.values(G.equipment).forEach(item => {
+    if (!item) return;
+    const enhMul = 1 + (item.enhanceLevel || 0) * 0.1;
+    const val = item.statValue * enhMul;
+    if (item.statType === 'atk') atk += val;
+    if (item.statType === 'hp') hp += val;
+    if (item.statType === 'crit') crit += val / 100;
+    if (item.statType === 'critDmg') critDmg += val / 100;
+    if (item.statType === 'spd') spdBonus += val / 100;
+  });
+
+  // Skills (클래스 단계별 효과 증폭: 1단계=1x, 2단계=1.5x, 3단계=2x, 4단계=3x, 5단계=5x)
+  const stageBonus = [1, 1.5, 2, 3, 5][info.stage - 1] || 1;
+  SKILLS.forEach(sk => {
+    const lv = G.skillLevels[sk.id] || 0;
+    if (lv > 0) {
+      const eff = sk.effect(lv);
+      if (eff.atkPct) atk *= (1 + eff.atkPct * stageBonus);
+      if (eff.hpPct) hp *= (1 + eff.hpPct * stageBonus);
+      if (eff.critPct) crit += eff.critPct * stageBonus;
+      if (eff.critDmgPct) critDmg += eff.critDmgPct * stageBonus;
+      if (eff.goldPct) goldBonus += eff.goldPct * stageBonus;
+      if (eff.spdPct) spdBonus += eff.spdPct * stageBonus;
+    }
+  });
+
+  // 레벨 비례 데미지 보너스
+  const lvDmgBonus = 1 + (lv - 1) * (ss('lvDmgPct',3) / 100);
+  atk *= lvDmgBonus;
+
+  return { atk: Math.ceil(atk), hp: Math.ceil(hp), crit: Math.min(crit, 0.80), critDmg: Math.max(critDmg, 1.5), goldBonus, spdBonus };
+}
+
+function getEvolution() {
+  const info = getClassInfo(G.selectedClass, getLevel());
+  return { name: info.name, stage: info.stage };
+}
+
+// ==================== ITEM GENERATION ====================
+function generateItem(lampLv) {
+  const weights = RARITIES.map((r, i) => {
+    if (r.weight === 0) return 0; // fusion-only rarities cannot appear in gacha
+    let w = r.weight;
+    if (i >= 3) w += lampLv * 0.3;
+    if (i >= 4) w += lampLv * 0.15;
+    return w;
+  });
+  const total = weights.reduce((a, b) => a + b, 0);
+  let roll = Math.random() * total;
+  let rarity = RARITIES[0];
+  for (let i = 0; i < weights.length; i++) {
+    roll -= weights[i];
+    if (roll <= 0) { rarity = RARITIES[i]; break; }
+  }
+
+  const slot = EQUIP_SLOTS[Math.floor(Math.random() * EQUIP_SLOTS.length)];
+  const nameMap = SLOT_NAMES[slot.id];
+  const rarityBase = rarity.id.startsWith('mythic') ? 'mythic' : rarity.id;
+  const rarityNames = nameMap[rarityBase] || nameMap['common'];
+  const nameIdx = Math.floor(Math.random() * rarityNames.length);
+  let baseStat;
+  if (slot.statType === 'crit') {
+    baseStat = (1 + G.stage * 0.3) * rarity.statMul * (0.8 + Math.random() * 0.4);
+  } else if (slot.statType === 'critDmg') {
+    baseStat = (3 + G.stage * 0.8) * rarity.statMul * (0.8 + Math.random() * 0.4);
+  } else if (slot.statType === 'spd') {
+    baseStat = (2 + G.stage * 0.5) * rarity.statMul * (0.8 + Math.random() * 0.4);
+  } else if (slot.statType === 'hp') {
+    baseStat = (10 + G.stage * 5) * rarity.statMul * (0.8 + Math.random() * 0.4);
+  } else {
+    baseStat = (5 + G.stage * 2) * rarity.statMul * (0.8 + Math.random() * 0.4);
+  }
+
+  const STAT_LABELS = { atk:'공격력', hp:'HP', crit:'치명타%', critDmg:'치명타피해%', spd:'공격속도%' };
+  const MYTHIC_SUFFIX = { mythic_s:' S', mythic_sp:' S+', mythic_ss:' SS', mythic_ssp:' SS+', mythic_sss:' SSS' };
+  const displayName = rarityNames[nameIdx] + (MYTHIC_SUFFIX[rarity.id] || '');
+
+  return {
+    id: nextItemId++,
+    slot: slot.id,
+    rarityId: rarity.id,
+    rarity: rarity.name,
+    color: rarity.color,
+    name: displayName,
+    icon: slot.icon,
+    sprite: getEquipSprite(slot.id, rarity.id, nameIdx),
+    statType: slot.statType,
+    statValue: Math.ceil(baseStat),
+    statLabel: STAT_LABELS[slot.statType] || slot.statType,
+    enhanceLevel: 0,
+  };
+}
+
+// ==================== MONSTER ====================
+function spawnMonster() {
+  const isBoss = G.subStage === 10;
+  const stageIdx = ((G.stage - 1) % MONSTERS.length);
+
+  let m;
+  if (isBoss) {
+    m = BOSSES[Math.floor(Math.random() * BOSSES.length)];
+  } else {
+    m = MONSTERS[stageIdx];
+  }
+
+  const baseHp = getMonsterHp(G.stage);
+  const hp = Math.ceil(baseHp * m.hpMul);
+  G.monster = { ...m, isBoss };
+  G.monsterHp = hp;
+  G.monsterMaxHp = hp;
+
+  const monsterEl = document.getElementById('monsterSprite');
+  monsterEl.src = m.sprite;
+  monsterEl.style.width = isBoss ? '140px' : '80px';
+  monsterEl.style.height = isBoss ? '140px' : '80px';
+  document.getElementById('monsterName').textContent = m.name;
+  updateMonsterHp();
+}
+
+function updateMonsterHp() {
+  const pct = Math.max(0, G.monsterHp / G.monsterMaxHp * 100);
+  document.getElementById('monsterHpFill').style.width = pct + '%';
+}
+
+// ==================== SKILL EFFECTS ====================
+let effectParticles = [];
+let effectAnimFrame = null;
+
+function playSkillEffect(classId, stage) {
+  const canvas = document.getElementById('effectCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  // Effect origin (character side) → target (monster side)
+  const ox = 120, oy = 150; // character position
+  const tx = 360, ty = 140; // monster position
+
+  if (classId === 'knight') playKnightEffect(ctx, stage, ox, oy, tx, ty);
+  else if (classId === 'archer') playArcherEffect(ctx, stage, ox, oy, tx, ty);
+  else if (classId === 'rogue') playRogueEffect(ctx, stage, ox, oy, tx, ty);
+}
+
+// Knight: slash effects
+function playKnightEffect(ctx, stage, ox, oy, tx, ty) {
+  const colors = [
+    ['#FFD700','#FFA500'],           // S1: yellow crescent
+    ['#87CEEB','#4169E1'],           // S2: blue slash
+    ['#DC143C','#8B0000','#FF4500'], // S3: crimson slash + debris
+    ['#00FFFF','#00CED1','#E0FFFF'],// S4: ice crystal shield
+    ['#FFD700','#FFF8DC','#FF8C00'], // S5: golden starburst
+  ][stage - 1];
+
+  const particles = [];
+  const cx = (ox + tx) / 2 + 40, cy = (oy + ty) / 2;
+
+  if (stage <= 2) {
+    // Crescent slash
+    for (let i = 0; i < 15 + stage * 5; i++) {
+      const angle = -0.8 + (i / (14 + stage * 5)) * 1.6;
+      const r = 40 + stage * 15;
+      particles.push({
+        x: cx + Math.cos(angle) * r * 0.3,
+        y: cy + Math.sin(angle) * r,
+        vx: Math.cos(angle) * (2 + Math.random() * 2),
+        vy: Math.sin(angle) * (1 + Math.random()),
+        size: 3 + Math.random() * 4 * stage,
+        life: 18 + Math.random() * 8,
+        maxLife: 26,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        type: 'slash',
+        angle: angle,
+      });
+    }
+  } else if (stage === 3) {
+    // Crimson slash + debris
+    for (let i = 0; i < 30; i++) {
+      const angle = -1 + (i / 29) * 2;
+      particles.push({
+        x: cx, y: cy,
+        vx: Math.cos(angle) * (3 + Math.random() * 3),
+        vy: Math.sin(angle) * (2 + Math.random() * 2) - 1,
+        size: 3 + Math.random() * 6,
+        life: 20 + Math.random() * 10,
+        maxLife: 30,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        type: 'slash',
+      });
+    }
+    // Debris
+    for (let i = 0; i < 8; i++) {
+      particles.push({
+        x: cx + (Math.random() - 0.5) * 40,
+        y: cy + Math.random() * 20,
+        vx: (Math.random() - 0.5) * 2,
+        vy: -2 - Math.random() * 3,
+        size: 2 + Math.random() * 3,
+        life: 25, maxLife: 25,
+        color: '#8B4513',
+        type: 'debris',
+        gravity: 0.15,
+      });
+    }
+  } else if (stage === 4) {
+    // Ice crystal shield burst
+    for (let i = 0; i < 40; i++) {
+      const angle = (i / 40) * Math.PI * 2;
+      const r = 10 + Math.random() * 30;
+      particles.push({
+        x: cx, y: cy,
+        vx: Math.cos(angle) * (1 + Math.random() * 2),
+        vy: Math.sin(angle) * (1 + Math.random() * 2),
+        size: 2 + Math.random() * 5,
+        life: 22 + Math.random() * 10,
+        maxLife: 32,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        type: 'crystal',
+        rot: Math.random() * Math.PI,
+        rotSpeed: (Math.random() - 0.5) * 0.2,
+      });
+    }
+    // Center shield flash
+    particles.push({
+      x: cx, y: cy, vx: 0, vy: 0,
+      size: 50, life: 15, maxLife: 15,
+      color: 'rgba(0,255,255,0.3)', type: 'flash',
+    });
+  } else {
+    // Golden starburst
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      for (let j = 0; j < 4; j++) {
+        particles.push({
+          x: cx, y: cy,
+          vx: Math.cos(angle) * (2 + j * 1.5),
+          vy: Math.sin(angle) * (2 + j * 1.5),
+          size: 4 + Math.random() * 4,
+          life: 18 + Math.random() * 12,
+          maxLife: 30,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          type: 'star',
+        });
+      }
+    }
+    // Orbiting rings
+    for (let i = 0; i < 20; i++) {
+      const angle = (i / 20) * Math.PI * 2;
+      particles.push({
+        x: cx + Math.cos(angle) * 35,
+        y: cy + Math.sin(angle) * 15,
+        vx: Math.cos(angle + Math.PI/2) * 3,
+        vy: Math.sin(angle + Math.PI/2) * 1.5,
+        size: 3, life: 25, maxLife: 25,
+        color: '#FFD700', type: 'orbit',
+      });
+    }
+    particles.push({
+      x: cx, y: cy, vx: 0, vy: 0,
+      size: 60, life: 12, maxLife: 12,
+      color: 'rgba(255,215,0,0.4)', type: 'flash',
+    });
+  }
+  startEffectAnim(ctx, particles);
+}
+
+// Archer: projectile effects
+function playArcherEffect(ctx, stage, ox, oy, tx, ty) {
+  const particles = [];
+  const cx = (ox + tx) / 2 + 30, cy = (oy + ty) / 2;
+  const dx = tx - ox, dy = ty - oy;
+  const angle = Math.atan2(dy, dx);
+
+  if (stage <= 2) {
+    // Arrows
+    const count = stage === 1 ? 3 : 6;
+    for (let i = 0; i < count; i++) {
+      const spread = (Math.random() - 0.5) * 0.4;
+      const delay = i * 2;
+      particles.push({
+        x: ox + 30 + i * 8,
+        y: oy - 20 + (Math.random() - 0.5) * 20,
+        vx: Math.cos(angle + spread) * (5 + Math.random() * 2),
+        vy: Math.sin(angle + spread) * (2 + Math.random()),
+        size: 3,
+        life: 20 + Math.random() * 5,
+        maxLife: 25,
+        color: stage === 1 ? '#8B4513' : '#654321',
+        type: 'arrow',
+        angle: angle + spread,
+      });
+    }
+    if (stage === 2) {
+      // Dust trail
+      for (let i = 0; i < 5; i++) {
+        particles.push({
+          x: ox + 40 + Math.random() * 20, y: oy + 10,
+          vx: -0.5 + Math.random(), vy: -1 - Math.random(),
+          size: 4 + Math.random() * 4,
+          life: 15, maxLife: 15,
+          color: '#D2B48C', type: 'dust',
+        });
+      }
+    }
+  } else if (stage === 3) {
+    // Green tornado
+    for (let i = 0; i < 50; i++) {
+      const t = i / 50;
+      const a = t * Math.PI * 4;
+      const r = 10 + t * 30;
+      particles.push({
+        x: cx + Math.cos(a) * r,
+        y: cy + Math.sin(a) * r * 0.5 - t * 20,
+        vx: Math.cos(a + Math.PI/2) * 2,
+        vy: -1 - Math.random(),
+        size: 3 + Math.random() * 4,
+        life: 20 + Math.random() * 10,
+        maxLife: 30,
+        color: ['#228B22','#32CD32','#006400','#90EE90'][Math.floor(Math.random()*4)],
+        type: 'tornado',
+      });
+    }
+  } else if (stage === 4) {
+    // Cyan energy beam
+    for (let i = 0; i < 30; i++) {
+      const t = i / 30;
+      particles.push({
+        x: ox + 50 + t * 200,
+        y: cy + (Math.random() - 0.5) * (10 + t * 15),
+        vx: 4 + Math.random() * 3,
+        vy: (Math.random() - 0.5) * 2,
+        size: 2 + Math.random() * 3,
+        life: 15 + Math.random() * 8,
+        maxLife: 23,
+        color: ['#00FFFF','#00CED1','#E0FFFF','#87CEEB'][Math.floor(Math.random()*4)],
+        type: 'beam',
+      });
+    }
+    // Arrow heads in beam
+    for (let i = 0; i < 5; i++) {
+      particles.push({
+        x: ox + 60 + i * 40, y: cy + (Math.random()-0.5)*8,
+        vx: 6, vy: (Math.random()-0.5),
+        size: 4, life: 18, maxLife: 18,
+        color: '#00FFFF', type: 'arrow', angle: angle,
+      });
+    }
+  } else {
+    // Golden orbital sphere
+    for (let i = 0; i < 60; i++) {
+      const a = (i / 60) * Math.PI * 2;
+      const ring = Math.floor(i / 20);
+      const r = 20 + ring * 12;
+      particles.push({
+        x: cx + Math.cos(a) * r,
+        y: cy + Math.sin(a) * r * (0.3 + ring * 0.1),
+        vx: Math.cos(a + Math.PI/2) * (2 + ring),
+        vy: Math.sin(a + Math.PI/2) * (1 + ring * 0.3),
+        size: 2 + Math.random() * 3,
+        life: 22 + Math.random() * 10,
+        maxLife: 32,
+        color: ['#FFD700','#FFA500','#FFFACD','#DAA520'][Math.floor(Math.random()*4)],
+        type: 'orbit',
+      });
+    }
+    particles.push({
+      x: cx, y: cy, vx: 0, vy: 0,
+      size: 25, life: 20, maxLife: 20,
+      color: '#FFD700', type: 'core',
+    });
+  }
+  startEffectAnim(ctx, particles);
+}
+
+// Rogue: dark slash effects
+function playRogueEffect(ctx, stage, ox, oy, tx, ty) {
+  const particles = [];
+  const cx = (ox + tx) / 2 + 30, cy = (oy + ty) / 2;
+
+  if (stage === 1) {
+    // Small dark projectiles
+    for (let i = 0; i < 5; i++) {
+      const a = -0.3 + (Math.random() * 0.6);
+      particles.push({
+        x: ox + 40, y: oy - 10 + i * 8,
+        vx: 5 + Math.random() * 2,
+        vy: (Math.random() - 0.5) * 3 + a * 2,
+        size: 3 + Math.random() * 2,
+        life: 15 + Math.random() * 5,
+        maxLife: 20,
+        color: ['#4B0082','#2F0047','#483D8B'][Math.floor(Math.random()*3)],
+        type: 'dagger',
+        angle: a,
+      });
+    }
+  } else if (stage === 2) {
+    // Purple glowing daggers
+    for (let i = 0; i < 8; i++) {
+      const a = -0.5 + (i / 7) * 1.0;
+      particles.push({
+        x: ox + 50, y: cy + (Math.random()-0.5)*30,
+        vx: 6 + Math.random() * 2,
+        vy: Math.sin(a) * 3,
+        size: 4 + Math.random() * 2,
+        life: 16 + Math.random() * 6,
+        maxLife: 22,
+        color: ['#8A2BE2','#9370DB','#BA55D3'][Math.floor(Math.random()*3)],
+        type: 'dagger',
+        angle: a,
+      });
+    }
+    // Purple glow trail
+    for (let i = 0; i < 12; i++) {
+      particles.push({
+        x: ox + 50 + Math.random() * 100, y: cy + (Math.random()-0.5)*20,
+        vx: 1 + Math.random(), vy: (Math.random()-0.5),
+        size: 5 + Math.random() * 5,
+        life: 12, maxLife: 12,
+        color: 'rgba(138,43,226,0.3)', type: 'glow',
+      });
+    }
+  } else if (stage === 3) {
+    // X-shaped blade cross
+    const arms = [[-1,-1],[1,-1],[-1,1],[1,1]];
+    arms.forEach(([dx,dy]) => {
+      for (let i = 0; i < 10; i++) {
+        const t = i / 10;
+        particles.push({
+          x: cx, y: cy,
+          vx: dx * (2 + t * 4),
+          vy: dy * (2 + t * 4),
+          size: 3 + Math.random() * 3,
+          life: 18 + Math.random() * 6,
+          maxLife: 24,
+          color: ['#4B0082','#6A0DAD','#301934'][Math.floor(Math.random()*3)],
+          type: 'xslash',
+        });
+      }
+    });
+    // Center flash
+    particles.push({
+      x: cx, y: cy, vx: 0, vy: 0,
+      size: 40, life: 10, maxLife: 10,
+      color: 'rgba(75,0,130,0.5)', type: 'flash',
+    });
+  } else if (stage === 4) {
+    // Dark shadow vortex
+    for (let i = 0; i < 50; i++) {
+      const a = (i / 50) * Math.PI * 2;
+      const r = 15 + (i % 3) * 15;
+      particles.push({
+        x: cx + Math.cos(a) * r,
+        y: cy + Math.sin(a) * r * 0.6,
+        vx: Math.cos(a + Math.PI/2) * 2.5,
+        vy: Math.sin(a + Math.PI/2) * 1.5,
+        size: 3 + Math.random() * 4,
+        life: 22 + Math.random() * 8,
+        maxLife: 30,
+        color: ['#1a0033','#2d004d','#4B0082','#000'][Math.floor(Math.random()*4)],
+        type: 'vortex',
+      });
+    }
+    // Shadow figure flash
+    particles.push({
+      x: cx, y: cy, vx: 0, vy: 0,
+      size: 50, life: 15, maxLife: 15,
+      color: 'rgba(0,0,0,0.6)', type: 'flash',
+    });
+    // Sparkles
+    for (let i = 0; i < 8; i++) {
+      particles.push({
+        x: cx + (Math.random()-0.5)*80,
+        y: cy + (Math.random()-0.5)*60,
+        vx: 0, vy: -0.5 - Math.random(),
+        size: 2, life: 20, maxLife: 20,
+        color: '#DDA0DD', type: 'sparkle',
+      });
+    }
+  } else {
+    // Purple vortex explosion
+    for (let i = 0; i < 70; i++) {
+      const a = (i / 70) * Math.PI * 2;
+      const r = Math.random() * 50;
+      particles.push({
+        x: cx + Math.cos(a) * r * 0.3,
+        y: cy + Math.sin(a) * r * 0.3,
+        vx: Math.cos(a) * (1 + Math.random() * 3),
+        vy: Math.sin(a) * (1 + Math.random() * 3),
+        size: 3 + Math.random() * 5,
+        life: 25 + Math.random() * 10,
+        maxLife: 35,
+        color: ['#8B008B','#9932CC','#6A0DAD','#4B0082','#DA70D6'][Math.floor(Math.random()*5)],
+        type: 'vortex',
+      });
+    }
+    // Swirling tendrils
+    for (let t = 0; t < 3; t++) {
+      for (let i = 0; i < 15; i++) {
+        const a = (t / 3) * Math.PI * 2 + (i / 15) * Math.PI * 2;
+        const r = 10 + i * 3;
+        particles.push({
+          x: cx + Math.cos(a) * r,
+          y: cy + Math.sin(a) * r * 0.4,
+          vx: Math.cos(a) * 1.5,
+          vy: Math.sin(a) * 0.8,
+          size: 2 + Math.random() * 3,
+          life: 28, maxLife: 28,
+          color: '#9932CC', type: 'tendril',
+        });
+      }
+    }
+    particles.push({
+      x: cx, y: cy, vx: 0, vy: 0,
+      size: 65, life: 14, maxLife: 14,
+      color: 'rgba(75,0,130,0.5)', type: 'flash',
+    });
+    // Sparkles
+    for (let i = 0; i < 12; i++) {
+      particles.push({
+        x: cx + (Math.random()-0.5)*100,
+        y: cy + (Math.random()-0.5)*80,
+        vx: (Math.random()-0.5)*0.5,
+        vy: -0.5 - Math.random(),
+        size: 2, life: 25, maxLife: 25,
+        color: '#DDA0DD', type: 'sparkle',
+      });
+    }
+  }
+  startEffectAnim(ctx, particles);
+}
+
+function startEffectAnim(ctx, particles) {
+  effectParticles = particles;
+  if (effectAnimFrame) cancelAnimationFrame(effectAnimFrame);
+  animateEffect(ctx);
+}
+
+function animateEffect(ctx) {
+  const canvas = ctx.canvas;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  let alive = false;
+  effectParticles.forEach(p => {
+    if (p.life <= 0) return;
+    alive = true;
+    p.life--;
+    p.x += (p.vx || 0);
+    p.y += (p.vy || 0);
+    if (p.gravity) p.vy += p.gravity;
+    if (p.rotSpeed) p.rot += p.rotSpeed;
+
+    const alpha = Math.min(1, p.life / (p.maxLife * 0.3));
+    ctx.globalAlpha = alpha;
+
+    if (p.type === 'flash') {
+      const scale = 1 - (p.life / p.maxLife) * 0.5;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * scale, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (p.type === 'arrow') {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.angle || 0);
+      ctx.fillStyle = p.color;
+      // Arrow shaft
+      ctx.fillRect(-8, -1, 16, 2);
+      // Arrow head
+      ctx.beginPath();
+      ctx.moveTo(8, -3); ctx.lineTo(12, 0); ctx.lineTo(8, 3);
+      ctx.fill();
+      ctx.restore();
+    } else if (p.type === 'crystal') {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot || 0);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.moveTo(0, -p.size);
+      ctx.lineTo(p.size * 0.6, 0);
+      ctx.lineTo(0, p.size);
+      ctx.lineTo(-p.size * 0.6, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    } else if (p.type === 'sparkle') {
+      ctx.fillStyle = p.color;
+      const s = p.size * (0.5 + Math.sin(p.life * 0.5) * 0.5);
+      ctx.fillRect(p.x - s/2, p.y - 0.5, s, 1);
+      ctx.fillRect(p.x - 0.5, p.y - s/2, 1, s);
+    } else if (p.type === 'core') {
+      const scale = 0.8 + Math.sin(p.life * 0.3) * 0.2;
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = alpha * 0.7;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * scale * 0.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#FFF';
+      ctx.fill();
+    } else {
+      // Default: circle particle
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * (p.life / p.maxLife), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+
+  ctx.globalAlpha = 1;
+
+  if (alive) {
+    effectAnimFrame = requestAnimationFrame(() => animateEffect(ctx));
+  } else {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    effectAnimFrame = null;
+  }
+}
+
+// ==================== COMBAT ====================
+function attack() {
+  if (!G.monster) return;
+  const stats = getPlayerStats();
+  let dmg = stats.atk;
+  let isCrit = Math.random() < stats.crit;
+  if (isCrit) dmg = Math.ceil(dmg * stats.critDmg);
+
+  G.monsterHp -= dmg;
+  showDamage(dmg, isCrit);
+
+  // Skill effect (sprite only, no particles)
+  const evo = getEvolution();
+  drawEffectSprite(G.selectedClass, evo.stage);
+
+  // ── Character attack motion ──
+  const charEl = document.getElementById('charCanvas');
+  const atkClass = G.selectedClass === 'knight' ? 'atk-slash' : G.selectedClass === 'archer' ? 'atk-shoot' : 'atk-stab';
+  charEl.classList.remove('atk-slash','atk-shoot','atk-stab','atk-crit');
+  void charEl.offsetWidth; // force reflow for re-trigger
+  charEl.classList.add(atkClass);
+  if (isCrit) charEl.classList.add('atk-crit');
+  setTimeout(() => {
+    charEl.classList.remove(atkClass, 'atk-crit');
+  }, G.selectedClass === 'rogue' ? 200 : (G.selectedClass === 'archer' ? 300 : 250));
+
+  // ── Monster hit reaction ──
+  const ms = document.getElementById('monsterSprite');
+  ms.classList.add('hit');
+  setTimeout(() => ms.classList.remove('hit'), 250);
+
+  // Screen shake on crit
+  if (isCrit) {
+    const battle = document.getElementById('battleArea');
+    battle.classList.add('shake');
+    setTimeout(() => battle.classList.remove('shake'), 150);
+  }
+
+  if (G.monsterHp <= 0) {
+    onMonsterKill();
+  } else {
+    updateMonsterHp();
+  }
+}
+
+function onMonsterKill() {
+  const stats = getPlayerStats();
+  const baseGold = getMonsterGold(G.stage) * G.monster.goldMul;
+  const classStage = getClassStage(G.selectedClass, getLevel()) + 1;
+  const classMul = [1, 2, 4, 8, 16][classStage - 1] || 1;
+  const lvGoldBonus = 1 + (getLevel() - 1) * (ss('lvGoldPct',5) / 100);
+  const lvExpBonus = 1 + (getLevel() - 1) * (ss('lvExpPct',5) / 100);
+  const gold = Math.ceil(baseGold * stats.goldBonus * classMul * lvGoldBonus * ss('goldMul',1));
+  const xp = Math.ceil((5 + G.stage * 2) * classMul * lvExpBonus * ss('expMul',1));
+
+  G.gold += gold;
+  G.totalGold += gold;
+
+  // Boss diamond reward
+  if (G.monster.isBoss) {
+    G.dia += 10;
+    showFloatText('💎 +10 보석!', '#7f5af0');
+  }
+
+  // Per-class XP
+  G.classXp[G.selectedClass] = (G.classXp[G.selectedClass] || 0) + xp;
+  G.kills++;
+
+  while (G.classXp[G.selectedClass] >= getXpToNextForClass()) {
+    G.classXp[G.selectedClass] -= getXpToNextForClass();
+    G.classLevels[G.selectedClass] = (G.classLevels[G.selectedClass] || 1) + 1;
+    showFloatText('⬆️ LEVEL UP!', '#2ec4b6');
+  }
+
+  G.subStage++;
+  if (G.subStage > 10) {
+    G.subStage = 1;
+    G.stage++;
+    G.maxStage = Math.max(G.maxStage, G.stage);
+    showFloatText(`🏰 스테이지 ${G.stage} 돌입!`, '#ff8906');
+  }
+
+  updateTopBar();
+  spawnMonster();
+}
+
+function showDamage(dmg, crit) {
+  const el = document.createElement('div');
+  el.className = 'dmg-text' + (crit ? ' crit' : '');
+  el.textContent = (crit ? '💥 ' : '') + formatNum(dmg);
+  el.style.right = (50 + Math.random() * 40) + 'px';
+  el.style.bottom = (80 + Math.random() * 60) + 'px';
+  document.getElementById('battleArea').appendChild(el);
+  setTimeout(() => el.remove(), 700);
+}
+
+function showFloatText(text, color) {
+  const el = document.createElement('div');
+  el.textContent = text;
+  el.style.cssText = `
+    position:fixed; top:45%; left:50%; transform:translate(-50%,-50%);
+    font-size:18px; font-weight:900; color:${color};
+    text-shadow:0 0 8px ${color}44, 0 2px 4px rgba(0,0,0,0.8);
+    z-index:9999; pointer-events:none; white-space:nowrap;
+    animation: floatUp 1.2s ease-out forwards;
+    background:rgba(0,0,0,0.6); padding:6px 16px; border-radius:8px;
+    border:1px solid ${color}66;
+  `;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1200);
+}
+
+// ==================== PULL (뽑기) ====================
+function doPullEquip(count) {
+  const cost = getPullCost() * count;
+  if (G.dia < cost) { showFloatText('💎 보석이 부족합니다!', '#e74c3c'); return; }
+  G.dia -= cost;
+
+  const items = [];
+  for (let i = 0; i < count; i++) {
+    const item = generateItem(G.lampLevel);
+    items.push(item);
+    G.inventory.push(item);
+  }
+
+  showPullResult(items, 'equip');
+  updateAllUI();
+}
+
+function unlockClass(classId) {
+  const cls = CLASSES[classId];
+  if (!cls || G.unlockedClasses.includes(classId)) return;
+  if (G.dia < cls.unlockCost) return;
+  G.dia -= cls.unlockCost;
+  G.unlockedClasses.push(classId);
+  showFloatText(`🆕 ${cls.name} 해금!`, '#7f5af0');
+  updateAllUI();
+}
+
+function selectClass(classId) {
+  if (!G.unlockedClasses.includes(classId)) return;
+  G.selectedClass = classId;
+  updateAllUI();
+}
+
+function showPullResult(items, type) {
+  const container = document.getElementById('pullItems');
+  container.innerHTML = '';
+
+  // Build summary (highlight best rarity)
+  const rarityOrder = ['mythic_sss','mythic_ssp','mythic_ss','mythic_sp','mythic_s','mythic','legendary','epic','rare','uncommon','common'];
+  let bestRarity = null;
+  const countMap = {};
+  items.forEach(item => {
+    const rid = item.rarityId;
+    countMap[rid] = (countMap[rid]||0)+1;
+    if (!bestRarity || rarityOrder.indexOf(rid) < rarityOrder.indexOf(bestRarity)) bestRarity = rid;
+  });
+  const summaryParts = [];
+  ['legendary','epic','rare'].forEach(r => { if(countMap[r]) summaryParts.push(`<span style="color:${items.find(i=>i.rarityId===r)?.color||'#fff'}">${countMap[r]}×${RARITIES.find(x=>x.id===r)?.name||r}</span>`); });
+  if(countMap['mythic']||Object.keys(countMap).some(k=>k.startsWith('mythic'))) {
+    const mc = Object.entries(countMap).filter(([k])=>k.startsWith('mythic')).reduce((s,[,v])=>s+v,0);
+    summaryParts.unshift(`<span style="color:#ff4444;font-weight:900">${mc}×신화</span>`);
+  }
+  document.getElementById('pullSummary').innerHTML = summaryParts.length ? summaryParts.join(' · ') : '&nbsp;';
+
+  // Title glow by best rarity
+  const titleEl = document.getElementById('pullResultTitle');
+  if(bestRarity && bestRarity.startsWith('mythic')) titleEl.style.color='#ff4444';
+  else if(bestRarity==='legendary') titleEl.style.color='#ffaa00';
+  else titleEl.style.color='var(--gold)';
+
+  // Grid columns: 1 item = 1col, ≤3 = 3col, ≤5 = 5col, else 5
+  const cols = items.length===1?1:items.length<=3?3:5;
+  container.style.gridTemplateColumns = `repeat(${cols},1fr)`;
+  container.style.maxWidth = cols===1?'120px':cols===3?'220px':'360px';
+
+  // Existing inventory for NEW badge
+  const existingNames = new Set(G.inventory.map(i=>i.name).concat(Object.values(G.equipment).filter(Boolean).map(i=>i.name)));
+
+  items.forEach((item, i) => {
+    const el = document.createElement('div');
+    el.className = `pull-item rarity-${item.rarityId}`;
+    el.style.animationDelay = (i * 0.06) + 's';
+    // Get sprite path
+    const spriteSrc = item.sprite || getEquipSprite(item.slot||'weapon', item.rarityId, item.id||i);
+    el.innerHTML = `
+      <img class="pull-icon" src="${spriteSrc}" onerror="this.style.display='none'">
+      <div class="item-name">${itemName(item)}</div>
+      <div class="item-rarity" style="color:${item.color}">${item.rarity}</div>
+    `;
+    container.appendChild(el);
+  });
+  document.getElementById('pullResult').classList.add('show');
+}
+
+function closePullResult() {
+  document.getElementById('pullResult').classList.remove('show');
+}
+
+// ==================== EQUIP ====================
+function equipItem(item) {
+  if (G.equipment[item.slot]) {
+    G.inventory.push(G.equipment[item.slot]);
+  }
+  G.equipment[item.slot] = item;
+  G.inventory = G.inventory.filter(i => i.id !== item.id);
+  updateAllUI();
+  closeItemPopup();
+}
+
+function sellItem(item) {
+  const value = getSellValue(item);
+  G.gold += value;
+  G.totalGold += value;
+  G.inventory = G.inventory.filter(i => i.id !== item.id);
+  updateAllUI();
+  closeItemPopup();
+}
+
+function sellAllCommon() {
+  const commons = G.inventory.filter(i => i.rarityId === 'common');
+  let total = 0;
+  commons.forEach(i => { total += getSellValue(i); });
+  G.gold += total;
+  G.totalGold += total;
+  G.inventory = G.inventory.filter(i => i.rarityId !== 'common');
+  updateAllUI();
+}
+
+function equipBestAll() {
+  EQUIP_SLOTS.forEach(slot => {
+    const candidates = G.inventory.filter(i => i.slot === slot.id);
+    if (candidates.length === 0) return;
+    const best = candidates.reduce((a, b) => b.statValue > a.statValue ? b : a);
+    const current = G.equipment[slot.id];
+    if (!current || best.statValue > current.statValue) {
+      if (current) G.inventory.push(current);
+      G.equipment[slot.id] = best;
+      G.inventory = G.inventory.filter(i => i.id !== best.id);
+    }
+  });
+  updateAllUI();
+}
+
+function showItemPopup(item) {
+  const card = document.getElementById('itemPopupCard');
+  const equipped = Object.values(G.equipment).find(e => e && e.id === item.id);
+  const enhLv = item.enhanceLevel || 0;
+  const enhSuffix = enhLv > 0 ? ` +${enhLv}` : '';
+  const enhMul = 1 + enhLv * 0.1;
+  const effectiveVal = Math.ceil(item.statValue * enhMul);
+  const enhCost = getEnhanceCost(item);
+  const canEnhance = enhLv < 10;
+  card.innerHTML = `
+    <div class="ip-icon">${getEquipIcon(item)}</div>
+    <div class="ip-name" style="color:${item.color}">${itemName(item)}${enhSuffix}</div>
+    <div class="ip-rarity" style="color:${item.color}">${item.rarity}</div>
+    <div class="ip-stat">${item.statLabel} +${effectiveVal}${enhLv > 0 ? ` <span style="color:var(--gold);font-size:11px;">(기본 ${item.statValue} +강화 ${Math.ceil(item.statValue * enhLv * 0.1)})</span>` : ''}</div>
+    ${enhLv > 0 ? `<div style="font-size:11px;color:var(--gold);margin-top:2px;">강화 +${enhLv}/10</div>` : ''}
+    <div class="ip-buttons">
+      ${equipped ? '' : `<button class="ip-btn equip" onclick="equipItem(findItem(${item.id}))">장착</button>`}
+      ${canEnhance ? `<button class="ip-btn enhance" onclick="enhanceItem(${item.id})" ${G.gold < enhCost ? 'disabled' : ''}>강화 (💰${formatNum(enhCost)})</button>` : '<button class="ip-btn enhance" disabled>강화 MAX</button>'}
+      ${equipped ? `<button class="ip-btn sell" onclick="unequipItem('${item.slot}')">해제</button>` : `<button class="ip-btn sell" onclick="sellItem(findItem(${item.id}))">판매 (💰${getSellValue(item)})</button>`}
+      <button class="ip-btn close" onclick="closeItemPopup()">닫기</button>
+    </div>
+  `;
+  document.getElementById('itemPopup').classList.add('show');
+}
+
+function closeItemPopup() { document.getElementById('itemPopup').classList.remove('show'); }
+function findItem(id) { return G.inventory.find(i => i.id === id) || Object.values(G.equipment).find(i => i && i.id === id); }
+function unequipItem(slot) {
+  if (G.equipment[slot]) {
+    G.inventory.push(G.equipment[slot]);
+    G.equipment[slot] = null;
+    updateAllUI();
+    closeItemPopup();
+  }
+}
+
+// ==================== UI RENDERING ====================
+function formatNum(n) {
+  if (n < 1000) return Math.floor(n).toString();
+  const units = ['K','M','B','T','Qa','Qi','Sx','Sp','Oc','No','Dc'];
+  let tier = 0;
+  let v = n;
+  while (v >= 1000 && tier < units.length) { v /= 1000; tier++; }
+  return v.toFixed(1) + units[tier - 1];
+}
+
+function updateTopBar() {
+  const stats = getPlayerStats();
+  const evo = getEvolution();
+  document.getElementById('goldDisplay').textContent = formatNum(G.gold);
+  document.getElementById('diaDisplay').textContent = G.dia;
+  document.getElementById('levelDisplay').textContent = getLevel();
+  document.getElementById('stageDisplay').textContent = `${G.stage}-${G.subStage}`;
+  document.getElementById('charLevelLabel').textContent = `Lv.${getLevel()}`;
+  document.getElementById('expFill').style.width = (getXp() / getXpToNextForClass() * 100) + '%';
+  document.getElementById('expLabel').textContent = `EXP ${getXp()}/${getXpToNextForClass()}`;
+  document.getElementById('dpsLabel').textContent = `ATK ${formatNum(stats.atk)} | DPS ${formatNum(Math.ceil(stats.atk * stats.spdBonus * (1 + stats.crit)))}`;
+  G.attackSpeed = Math.max(50, Math.ceil(1000 / stats.spdBonus));
+}
+
+function updateAllUI() {
+  updateTopBar();
+  const evo = getEvolution();
+  const charCanvas = document.getElementById('charCanvas');
+  drawCharacter(charCanvas, G.selectedClass, evo.stage);
+  const charNameEl = document.getElementById('charName');
+  charNameEl.textContent = evo.name;
+  charNameEl.style.color = 'var(--blue)';
+
+  // Render active tab (skip admin/ranking to preserve input state)
+  if (activeTab !== 'admin' && activeTab !== 'ranking') {
+    renderTab(activeTab);
+  }
+}
+
+function renderTab(tab) {
+  const el = document.getElementById('tabContent');
+  if (tab === 'lamp') renderLamp(el);
+  else if (tab === 'equip') renderEquip(el);
+  else if (tab === 'fusion') renderFusion(el);
+  else if (tab === 'skills') renderSkills(el);
+  else if (tab === 'ranking') renderRanking(el);
+  else if (tab === 'admin') renderAdmin(el);
+  else if (tab === 'more') renderMore(el);
+}
+
+function switchPullTab(tab) {
+  pullSubTab = tab;
+  renderTab('lamp');
+}
+
+function renderLamp(el) {
+  const isEquip = pullSubTab === 'equip';
+
+  let content = '';
+  if (isEquip) {
+    const cost1 = getPullCost();
+    const cost10 = cost1 * 10;
+    const upgCost = getLampCost(G.lampLevel);
+    content = `
+      <div class="lamp-title">🌸 꽃도훈 장비 뽑기</div>
+      <div class="lamp-visual">
+        <div class="lamp-emoji" onclick="doPullEquip(1)">🌸</div>
+        <div class="lamp-level">꽃도훈 Lv.${G.lampLevel} | 고급 장비 확률 UP!</div>
+      </div>
+      <div class="lamp-buttons">
+        <button class="lamp-btn single" onclick="doPullEquip(1)" ${G.dia < cost1 ? 'disabled' : ''}>
+          1회 뽑기<span class="cost">💎 ${cost1}</span>
+        </button>
+        <button class="lamp-btn multi" onclick="doPullEquip(10)" ${G.dia < cost10 ? 'disabled' : ''}>
+          10회 뽑기<span class="cost">💎 ${cost10}</span>
+        </button>
+      </div>
+      <div class="lamp-upgrade">
+        <button onclick="upgradeLamp()" ${G.gold < upgCost ? 'disabled' : ''}>
+          🔧 꽃도훈 강화 (💰 ${formatNum(upgCost)})
+        </button>
+      </div>
+      <div style="margin-top:16px; font-size:11px; color:var(--dim); text-align:center;">
+        ${RARITIES.filter(r => r.weight > 0).map(r => `<span style="color:${r.color}">${r.name}</span>`).join(' · ')}
+        <div style="margin-top:4px;font-size:10px;color:#666;">※ 신화 S 이상은 합성에서만 획득 가능</div>
+      </div>
+    `;
+  } else {
+    // Class selection tab
+    const classIds = ['knight', 'archer', 'rogue'];
+    let classListHtml = '';
+
+    classIds.forEach(cid => {
+      const cls = CLASSES[cid];
+      const isUnlocked = G.unlockedClasses.includes(cid);
+      const isSelected = G.selectedClass === cid;
+      const info = getClassInfo(cid, G.classLevels[cid] || 1);
+
+      // Create a small preview canvas id
+      const canvasId = `classPreview_${cid}`;
+
+      if (isUnlocked) {
+        classListHtml += `
+          <div style="display:flex;align-items:center;gap:10px;background:${isSelected ? 'rgba(255,137,6,0.15)' : 'var(--card2)'};border:2px solid ${isSelected ? 'var(--accent)' : '#444'};border-radius:10px;padding:10px;margin-bottom:8px;cursor:pointer;transition:all 0.15s;" onclick="selectClass('${cid}')">
+            <canvas id="${canvasId}" width="240" height="210" style="width:60px;height:52px;image-rendering:auto;" class="class-preview-canvas"></canvas>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:14px;font-weight:700;color:var(--text);">${cls.name} <span style="font-size:11px;color:var(--blue);">[${info.stageLabel}]</span></div>
+              <div style="font-size:11px;color:var(--dim);margin-top:2px;">단계 ${info.stage}/5 — ${info.name}</div>
+              <div style="font-size:11px;color:var(--green);margin-top:2px;">ATK ${cls.baseAtk} | HP ${cls.baseHp} | 성장 ATK+${cls.atkPerLv}/Lv</div>
+            </div>
+            ${isSelected ? '<div style="font-size:11px;font-weight:700;color:var(--accent);white-space:nowrap;">사용 중</div>' : '<div style="font-size:11px;color:var(--dim);white-space:nowrap;">선택</div>'}
+          </div>
+        `;
+      } else {
+        classListHtml += `
+          <div style="display:flex;align-items:center;gap:10px;background:var(--card2);border:2px solid #333;border-radius:10px;padding:10px;margin-bottom:8px;opacity:0.7;">
+            <canvas id="${canvasId}" width="240" height="210" style="width:60px;height:52px;image-rendering:auto;" class="class-preview-canvas"></canvas>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:14px;font-weight:700;color:#666;">🔒 ${cls.name}</div>
+              <div style="font-size:11px;color:var(--dim);margin-top:2px;">ATK ${cls.baseAtk} | HP ${cls.baseHp} | 성장 ATK+${cls.atkPerLv}/Lv</div>
+            </div>
+            <button onclick="event.stopPropagation();unlockClass('${cid}')" style="background:linear-gradient(135deg,var(--purple),#6c3ec1);color:#fff;border:none;padding:8px 14px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap;" ${G.dia < cls.unlockCost ? 'disabled' : ''}>
+              해금<br><span style="font-size:10px;">💎 ${cls.unlockCost}</span>
+            </button>
+          </div>
+        `;
+      }
+    });
+
+    content = `
+      <div class="lamp-title">⚔️ 영웅 클래스</div>
+      <div style="text-align:center;margin-bottom:14px;">
+        <canvas id="classMainPreview" width="240" height="210" style="width:100px;height:88px;image-rendering:auto;" class="class-preview-canvas"></canvas>
+        <div style="font-size:12px;color:var(--dim);margin-top:4px;">${getClassInfo(G.selectedClass, getLevel()).name} (${STAGE_LABELS[getClassStage(G.selectedClass, getLevel())]})</div>
+      </div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;">🛡️ 클래스 선택 — 터치하여 선택</div>
+      ${classListHtml}
+      <div style="margin-top:10px;font-size:11px;color:var(--dim);text-align:center;">
+        레벨업으로 자동 진화: 견습(1) → 정규(20) → 정예(50) → 전설(100) → 신화(200)
+      </div>
+    `;
+  }
+
+  el.innerHTML = `
+    <div class="lamp-section">
+      <div class="sub-tabs">
+        <button class="sub-tab ${isEquip ? 'active' : ''}" onclick="switchPullTab('equip')">🪔 장비 뽑기</button>
+        <button class="sub-tab ${!isEquip ? 'active' : ''}" onclick="switchPullTab('class')">⚔️ 영웅 클래스</button>
+      </div>
+      ${content}
+    </div>
+  `;
+
+  // Draw class preview canvases after DOM is ready
+  if (!isEquip) {
+    requestAnimationFrame(() => {
+      ['knight', 'archer', 'rogue'].forEach(cid => {
+        const cvs = document.getElementById(`classPreview_${cid}`);
+        if (cvs) {
+          const stg = getClassStage(cid, G.classLevels[cid] || 1) + 1;
+          drawCharacter(cvs, cid, stg);
+        }
+      });
+      const mainCvs = document.getElementById('classMainPreview');
+      if (mainCvs) {
+        const stg = getClassStage(G.selectedClass, getLevel()) + 1;
+        drawCharacter(mainCvs, G.selectedClass, stg);
+      }
+    });
+  }
+}
+
+function renderEquip(el) {
+  let slotsHtml = EQUIP_SLOTS.map(slot => {
+    const item = G.equipment[slot.id];
+    if (item) {
+      const eLv = item.enhanceLevel || 0;
+      const eStr = eLv > 0 ? ` +${eLv}` : '';
+      const eVal = Math.ceil(item.statValue * (1 + eLv * 0.1));
+      return `<div class="equip-slot rarity-${item.rarityId}" onclick="showItemPopup(findItem(${item.id}))">
+        <div class="slot-icon">${getEquipIcon(item)}</div>
+        <div class="slot-info">
+          <div class="slot-label">${slot.name}</div>
+          <div class="slot-name" style="color:${item.color}">${itemName(item)}${eStr}</div>
+          <div class="slot-stat">${item.statLabel} +${eVal}</div>
+        </div>
+      </div>`;
+    }
+    return `<div class="equip-slot empty">
+      <div class="slot-icon">${slot.icon}</div>
+      <div class="slot-info">
+        <div class="slot-label">${slot.name}</div>
+        <div class="slot-name">비어있음</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const sorted = [...G.inventory].sort((a, b) => {
+    const ai = RARITIES.findIndex(r => r.id === a.rarityId);
+    const bi = RARITIES.findIndex(r => r.id === b.rarityId);
+    return bi - ai;
+  });
+
+  let invHtml = sorted.map(item => {
+    const eLv = item.enhanceLevel || 0;
+    const eStr = eLv > 0 ? ` +${eLv}` : '';
+    return `
+    <div class="inv-item rarity-${item.rarityId}" onclick="showItemPopup(findItem(${item.id}))">
+      <div class="item-icon">${getEquipIcon(item)}</div>
+      <div class="item-name" style="color:${item.color}">${itemName(item)}${eStr}</div>
+      <div class="item-stat">${item.statLabel} +${item.statValue}</div>
+    </div>
+  `;}).join('');
+
+  const commonCount = G.inventory.filter(i => i.rarityId === 'common').length;
+
+  el.innerHTML = `
+    <div class="equip-section">
+      <div class="equip-title" style="display:flex;justify-content:space-between;align-items:center;">
+        ⚔️ 장착 장비
+        <button style="font-size:11px;background:var(--green);color:#fff;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700;" onclick="equipBestAll()">⚡ 최강 일괄장착</button>
+      </div>
+      <div class="equip-slots">${slotsHtml}</div>
+      <div class="inv-title">
+        🎒 인벤토리 (${G.inventory.length})
+        ${commonCount > 0 ? `<button style="font-size:11px;background:var(--red);color:#fff;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:inherit;" onclick="sellAllCommon()">일반 전부 판매 (${commonCount}개)</button>` : ''}
+      </div>
+      <div class="inv-grid">${invHtml || '<div style="grid-column:span 4;text-align:center;color:var(--dim);padding:20px;">인벤토리가 비어있습니다</div>'}</div>
+    </div>
+  `;
+}
+
+function renderSkills(el) {
+  let html = '<div class="skills-section"><div style="font-size:14px;font-weight:700;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">⚡ 스킬 강화 <button style="font-size:11px;background:var(--purple);color:#fff;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700;" onclick="upgradeAllSkills()">⚡ 일괄강화</button></div>';
+  SKILLS.forEach(sk => {
+    const lv = G.skillLevels[sk.id] || 0;
+    const cost = Math.ceil(sk.costBase * Math.pow(sk.costScale, lv) * ss('skillCostMul',1));
+    const lvCap = getLevel() + 50;
+    const maxed = lv >= sk.maxLv || lv >= lvCap;
+    html += `
+      <div class="skill-slot">
+        <div class="sk-icon">${sk.icon}</div>
+        <div class="sk-info">
+          <div class="sk-name">${sk.name}</div>
+          <div class="sk-desc">${sk.desc}</div>
+          <div class="sk-lv">Lv.${lv}/${Math.min(sk.maxLv, lvCap)}</div>
+        </div>
+        <button onclick="upgradeSkill('${sk.id}')" ${maxed || G.gold < cost ? 'disabled' : ''}>
+          ${maxed ? 'MAX' : `강화\n💰${formatNum(cost)}`}
+        </button>
+      </div>
+    `;
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function renderMore(el) {
+  const stats = getPlayerStats();
+  const info = getClassInfo(G.selectedClass, getLevel());
+  el.innerHTML = `
+    <div class="more-section">
+      <div style="font-size:16px;font-weight:700;margin-bottom:12px;">📊 스탯 정보</div>
+      <div class="stat-row"><span class="label">클래스</span><span class="val">${info.name} Lv.${getLevel()} (${info.stageLabel})</span></div>
+      <div class="stat-row"><span class="label">공격력</span><span class="val">${formatNum(stats.atk)}</span></div>
+      <div class="stat-row"><span class="label">최대 HP</span><span class="val">${formatNum(stats.hp)}</span></div>
+      <div class="stat-row"><span class="label">치명타 확률</span><span class="val">${(stats.crit*100).toFixed(1)}% <span style="color:#888;font-size:10px">(최대 80%)</span></span></div>
+      <div class="stat-row"><span class="label">치명타 피해</span><span class="val">${(stats.critDmg*100).toFixed(0)}%</span></div>
+      <div class="stat-row"><span class="label">공격 속도</span><span class="val">${(stats.spdBonus*100).toFixed(0)}%</span></div>
+      <div class="stat-row"><span class="label">골드 보너스</span><span class="val">${(stats.goldBonus*100).toFixed(0)}%</span></div>
+      <div class="stat-row"><span class="label">누적 처치</span><span class="val">${G.kills}</span></div>
+      <div class="stat-row"><span class="label">누적 골드</span><span class="val">${formatNum(G.totalGold)}</span></div>
+      <div class="stat-row"><span class="label">최고 스테이지</span><span class="val">${G.maxStage}</span></div>
+
+      <div style="font-size:16px;font-weight:700;margin:20px 0 12px;">📺 광고 보상</div>
+      <button class="more-btn ad" onclick="watchAd()">🎬 광고 보고 골드 2배 (30초)</button>
+      <button class="more-btn ad" onclick="freeGems()" style="margin-top:6px;">🎬 광고 보고 💎 50 받기</button>
+
+      <div style="font-size:16px;font-weight:700;margin:20px 0 12px;">⚙️ 설정</div>
+      <button class="more-btn" onclick="doResetAccount()" style="background:#e74c3c;color:#fff;border:none;padding:10px;border-radius:8px;font-weight:700;cursor:pointer;width:100%;">🗑️ 계정 초기화 (처음부터 시작)</button>
+
+      <div style="text-align:center;margin-top:24px;font-size:11px;color:var(--dim);">
+        ⚔️ 던전 클리커 v2.0<br>
+        자동 저장 활성화됨
+      </div>
+    </div>
+  `;
+}
+
+// ==================== ACTIONS ====================
+function upgradeLamp() {
+  const cost = getLampCost(G.lampLevel);
+  if (G.gold < cost) return;
+  G.gold -= cost;
+  G.lampLevel++;
+  showFloatText(`🌸 꽃도훈 Lv.${G.lampLevel}!`, '#f1c40f');
+  updateAllUI();
+}
+
+function upgradeSkill(id) {
+  const sk = SKILLS.find(s => s.id === id);
+  const lv = G.skillLevels[id] || 0;
+  const cost = Math.ceil(sk.costBase * Math.pow(sk.costScale, lv) * ss('skillCostMul',1));
+  const lvCap = getLevel() + 50;
+  if (G.gold < cost || lv >= sk.maxLv || lv >= lvCap) return;
+  G.gold -= cost;
+  G.skillLevels[id] = lv + 1;
+  updateAllUI();
+}
+
+function upgradeAllSkills() {
+  let upgraded = 0;
+  const lvCap = getLevel() + 50;
+  for (let safe = 0; safe < 1000; safe++) {
+    let any = false;
+    for (const sk of SKILLS) {
+      const lv = G.skillLevels[sk.id] || 0;
+      const cost = Math.ceil(sk.costBase * Math.pow(sk.costScale, lv) * ss('skillCostMul',1));
+      if (G.gold >= cost && lv < sk.maxLv && lv < lvCap) {
+        G.gold -= cost;
+        G.skillLevels[sk.id] = lv + 1;
+        upgraded++;
+        any = true;
+      }
+    }
+    if (!any) break;
+  }
+  if (upgraded > 0) showFloatText(`⚡ 스킬 ${upgraded}회 강화!`, '#7f5af0');
+  updateAllUI();
+}
+
+async function doResetAccount() {
+  if (!confirm('정말 계정을 초기화하시겠습니까?\n모든 진행 데이터가 삭제됩니다!')) return;
+  if (!confirm('⚠️ 마지막 확인! 되돌릴 수 없습니다.\n정말 초기화?')) return;
+  await fetch('/api/reset', { method: 'POST' });
+  localStorage.clear();
+  resetGameState();
+  spawnMonster();
+  updateAllUI();
+  showFloatText('🗑️ 계정 초기화 완료!', '#e74c3c');
+}
+
+function watchAd() { alert('광고 연동 후 사용 가능합니다.\n(테스트: 골드 500 지급)'); G.gold += 500; updateAllUI(); }
+function freeGems() { alert('광고 연동 후 사용 가능합니다.\n(테스트: 💎 50 지급)'); G.dia += 50; updateAllUI(); }
+
+// ==================== ENHANCEMENT (강화) ====================
+function getEnhanceCost(item) {
+  const enhLv = item.enhanceLevel || 0;
+  const ri = RARITIES.findIndex(r => r.id === item.rarityId);
+  return Math.ceil(50 * (enhLv + 1) * (ri + 1));
+}
+
+function enhanceItem(itemId) {
+  const item = findItem(itemId);
+  if (!item) return;
+  const enhLv = item.enhanceLevel || 0;
+  if (enhLv >= 10) return;
+  const cost = getEnhanceCost(item);
+  if (G.gold < cost) return;
+  G.gold -= cost;
+  item.enhanceLevel = enhLv + 1;
+  showFloatText(`⬆️ ${itemName(item)} +${item.enhanceLevel} 강화 성공!`, '#f1c40f');
+  updateAllUI();
+  showItemPopup(item);
+}
+
+// ==================== FUSION (합성) ====================
+let fusionSlot1 = null; // item id
+let fusionSlot2 = null;
+let fusionPickingSlot = 0; // 0=none, 1=slot1, 2=slot2
+
+function fuseItems(item1Id, item2Id) {
+  const item1 = G.inventory.find(i => i.id === item1Id);
+  const item2 = G.inventory.find(i => i.id === item2Id);
+  if (!item1 || !item2) return null;
+  if (item1.rarityId !== item2.rarityId || item1.slot !== item2.slot) return null;
+
+  const currentIdx = RARITIES.findIndex(r => r.id === item1.rarityId);
+  if (currentIdx >= RARITIES.length - 1) return null;
+
+  const nextRarity = RARITIES[currentIdx + 1];
+  const fusionCost = Math.ceil(100 * Math.pow(currentIdx + 1, 2));
+  if (G.gold < fusionCost) { showFloatText('💰 골드가 부족합니다!', '#e74c3c'); return null; }
+  G.gold -= fusionCost;
+
+  // Remove both items (also unequip if equipped)
+  Object.keys(G.equipment).forEach(slot => {
+    if (G.equipment[slot] && (G.equipment[slot].id === item1Id || G.equipment[slot].id === item2Id)) {
+      G.equipment[slot] = null;
+    }
+  });
+  G.inventory = G.inventory.filter(i => i.id !== item1Id && i.id !== item2Id);
+
+  const slot = EQUIP_SLOTS.find(s => s.id === item1.slot);
+  const nameMap = SLOT_NAMES[slot.id];
+  const fusionRarityBase = nextRarity.id.startsWith('mythic') ? 'mythic' : nextRarity.id;
+  const fusionNames = nameMap[fusionRarityBase] || nameMap['common'];
+  const nameIdx = Math.floor(Math.random() * fusionNames.length);
+  let baseStat;
+  if (slot.statType === 'crit') {
+    baseStat = (1 + G.stage * 0.3) * nextRarity.statMul * (0.9 + Math.random() * 0.2);
+  } else if (slot.statType === 'critDmg') {
+    baseStat = (3 + G.stage * 0.8) * nextRarity.statMul * (0.9 + Math.random() * 0.2);
+  } else if (slot.statType === 'spd') {
+    baseStat = (2 + G.stage * 0.5) * nextRarity.statMul * (0.9 + Math.random() * 0.2);
+  } else if (slot.statType === 'hp') {
+    baseStat = (10 + G.stage * 5) * nextRarity.statMul * (0.9 + Math.random() * 0.2);
+  } else {
+    baseStat = (5 + G.stage * 2) * nextRarity.statMul * (0.9 + Math.random() * 0.2);
+  }
+
+  const STAT_LABELS = { atk:'공격력', hp:'HP', crit:'치명타%', critDmg:'치명타피해%', spd:'공격속도%' };
+  const MYTHIC_SUFFIX = { mythic_s:' S', mythic_sp:' S+', mythic_ss:' SS', mythic_ssp:' SS+', mythic_sss:' SSS' };
+  const fusionDisplayName = fusionNames[nameIdx] + (MYTHIC_SUFFIX[nextRarity.id] || '');
+
+  const newItem = {
+    id: nextItemId++,
+    slot: item1.slot,
+    rarityId: nextRarity.id,
+    rarity: nextRarity.name,
+    color: nextRarity.color,
+    name: fusionDisplayName,
+    icon: slot.icon,
+    sprite: getEquipSprite(slot.id, nextRarity.id, nameIdx),
+    statType: slot.statType,
+    statValue: Math.ceil(baseStat),
+    statLabel: STAT_LABELS[slot.statType] || slot.statType,
+    enhanceLevel: 0,
+  };
+  G.inventory.push(newItem);
+  return newItem;
+}
+
+function doFusion() {
+  if (!fusionSlot1 || !fusionSlot2) return;
+  const result = fuseItems(fusionSlot1, fusionSlot2);
+  fusionSlot1 = null;
+  fusionSlot2 = null;
+  fusionPickingSlot = 0;
+  if (result) {
+    showFloatText(`🔮 합성 성공! ${result.rarity} ${itemName(result)}!`, result.color);
+    updateAllUI();
+    showItemPopup(result);
+  } else {
+    updateAllUI();
+  }
+}
+
+function autoFuseAll() {
+  let totalFused = 0;
+  let keepGoing = true;
+
+  while (keepGoing) {
+    keepGoing = false;
+    // Group inventory by slot + rarity
+    const groups = {};
+    G.inventory.forEach(item => {
+      const key = item.slot + '_' + item.rarityId;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(item);
+    });
+
+    // Find first group with 2+ items and fuse them
+    for (const key of Object.keys(groups)) {
+      const items = groups[key];
+      if (items.length >= 2) {
+        // Check rarity is not max
+        const ridx = RARITIES.findIndex(r => r.id === items[0].rarityId);
+        if (ridx >= RARITIES.length - 1) continue;
+        // Check gold
+        const cost = Math.ceil(100 * Math.pow(ridx + 1, 2));
+        if (G.gold < cost) continue;
+
+        const result = fuseItems(items[0].id, items[1].id);
+        if (result) {
+          totalFused++;
+          keepGoing = true; // Check again, new item might pair with another
+          break; // Restart loop since inventory changed
+        }
+      }
+    }
+  }
+
+  if (totalFused > 0) {
+    showFloatText(`🔮 일괄 합성 ${totalFused}회 완료!`, '#7f5af0');
+  } else {
+    showFloatText('합성 가능한 장비가 없습니다', '#e74c3c');
+  }
+  fusionSlot1 = null;
+  fusionSlot2 = null;
+  updateAllUI();
+}
+
+function selectFusionSlot(slotNum) {
+  fusionPickingSlot = slotNum;
+  renderTab('fusion');
+}
+
+function pickFusionItem(itemId) {
+  if (fusionPickingSlot === 1) {
+    fusionSlot1 = itemId;
+    // If slot2 has same item, clear it
+    if (fusionSlot2 === itemId) fusionSlot2 = null;
+  } else if (fusionPickingSlot === 2) {
+    fusionSlot2 = itemId;
+    if (fusionSlot1 === itemId) fusionSlot1 = null;
+  }
+  fusionPickingSlot = 0;
+  renderTab('fusion');
+}
+
+function clearFusionSlots() {
+  fusionSlot1 = null;
+  fusionSlot2 = null;
+  fusionPickingSlot = 0;
+  renderTab('fusion');
+}
+
+function renderFusion(el) {
+  const item1 = fusionSlot1 ? G.inventory.find(i => i.id === fusionSlot1) : null;
+  const item2 = fusionSlot2 ? G.inventory.find(i => i.id === fusionSlot2) : null;
+
+  // Check if items no longer exist
+  if (fusionSlot1 && !item1) fusionSlot1 = null;
+  if (fusionSlot2 && !item2) fusionSlot2 = null;
+
+  const canFuse = item1 && item2 && item1.rarityId === item2.rarityId && item1.slot === item2.slot;
+  const currentIdx = item1 ? RARITIES.findIndex(r => r.id === item1.rarityId) : -1;
+  const isMaxRarity = currentIdx >= RARITIES.length - 1;
+  const fusionCost = canFuse ? Math.ceil(100 * Math.pow(currentIdx + 1, 2)) : 0;
+  const nextRarity = canFuse && !isMaxRarity ? RARITIES[currentIdx + 1] : null;
+
+  let slot1Html = item1 ?
+    `<div class="fusion-slot filled rarity-${item1.rarityId}" onclick="selectFusionSlot(1)">
+      <div class="fs-icon">${item1.icon}</div>
+      <div class="fs-name" style="color:${item1.color}">${itemName(item1)}</div>
+      <div class="fs-rarity" style="color:${item1.color}">${item1.rarity}</div>
+    </div>` :
+    `<div class="fusion-slot" onclick="selectFusionSlot(1)"><div class="fs-empty">선택</div></div>`;
+
+  let slot2Html = item2 ?
+    `<div class="fusion-slot filled rarity-${item2.rarityId}" onclick="selectFusionSlot(2)">
+      <div class="fs-icon">${item2.icon}</div>
+      <div class="fs-name" style="color:${item2.color}">${itemName(item2)}</div>
+      <div class="fs-rarity" style="color:${item2.color}">${item2.rarity}</div>
+    </div>` :
+    `<div class="fusion-slot" onclick="selectFusionSlot(2)"><div class="fs-empty">선택</div></div>`;
+
+  let resultHtml = '';
+  if (canFuse && nextRarity) {
+    resultHtml = `<div class="fusion-result">
+      <div style="font-size:12px;color:var(--dim);margin-bottom:4px;">결과</div>
+      <div style="font-size:16px;font-weight:700;color:${nextRarity.color};">${nextRarity.name} 등급 장비</div>
+      <div style="font-size:11px;color:var(--dim);margin-top:4px;">비용: 💰 ${formatNum(fusionCost)}</div>
+    </div>
+    <button class="fusion-btn" onclick="doFusion()" ${G.gold < fusionCost || isMaxRarity ? 'disabled' : ''}>🔮 합성하기</button>`;
+  } else if (canFuse && isMaxRarity) {
+    resultHtml = `<div class="fusion-result"><div style="color:var(--red);font-size:13px;">이미 최고 등급입니다!</div></div>`;
+  } else if (item1 && item2) {
+    resultHtml = `<div class="fusion-result"><div style="color:var(--red);font-size:13px;">같은 등급, 같은 부위의 장비 2개가 필요합니다</div></div>`;
+  }
+
+  // Build pick list if selecting
+  let pickListHtml = '';
+  if (fusionPickingSlot > 0) {
+    const otherItem = fusionPickingSlot === 1 ? item2 : item1;
+    let candidates = [...G.inventory];
+
+    // If other slot has an item, filter to same rarity and slot
+    if (otherItem) {
+      candidates = candidates.filter(i => i.rarityId === otherItem.rarityId && i.slot === otherItem.slot && i.id !== otherItem.id);
+    }
+
+    // Sort by rarity desc
+    candidates.sort((a, b) => {
+      const ai = RARITIES.findIndex(r => r.id === a.rarityId);
+      const bi = RARITIES.findIndex(r => r.id === b.rarityId);
+      return bi - ai;
+    });
+
+    // Exclude max rarity items
+    candidates = candidates.filter(i => {
+      const ri = RARITIES.findIndex(r => r.id === i.rarityId);
+      return ri < RARITIES.length - 1;
+    });
+
+    if (candidates.length > 0) {
+      pickListHtml = `<div style="font-size:13px;font-weight:700;margin:12px 0 8px;">🎒 장비 선택 (슬롯 ${fusionPickingSlot})</div>
+      <div class="fusion-pick-list">
+        ${candidates.map(item => `
+          <div class="fusion-pick-item rarity-${item.rarityId}" onclick="pickFusionItem(${item.id})">
+            <div class="item-icon">${getEquipIcon(item)}</div>
+            <div class="item-name" style="color:${item.color}">${itemName(item)}</div>
+            <div class="item-stat" style="color:${item.color}">${item.rarity}</div>
+          </div>
+        `).join('')}
+      </div>`;
+    } else {
+      pickListHtml = `<div style="text-align:center;color:var(--dim);padding:20px;font-size:13px;">합성 가능한 장비가 없습니다</div>`;
+    }
+  }
+
+  el.innerHTML = `
+    <div class="fusion-section">
+      <div class="fusion-title">🔮 장비 합성</div>
+      <div style="text-align:center;font-size:11px;color:var(--dim);margin-bottom:8px;">같은 등급 + 같은 부위 = 상위 등급 장비!</div>
+      <div style="text-align:center;margin-bottom:12px;">
+        <button onclick="autoFuseAll()" style="background:linear-gradient(135deg,#7f5af0,#6c3ec1);color:#fff;border:none;padding:10px 24px;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">🔮 일괄 합성</button>
+      </div>
+      <div class="fusion-slots">
+        ${slot1Html}
+        <div class="fusion-plus">+</div>
+        ${slot2Html}
+      </div>
+      ${resultHtml}
+      ${(fusionSlot1 || fusionSlot2) ? `<div style="text-align:center;margin-top:8px;"><button style="background:none;border:1px solid var(--dim);color:var(--dim);padding:6px 16px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:11px;" onclick="clearFusionSlots()">초기화</button></div>` : ''}
+      ${pickListHtml}
+      <div style="margin-top:16px;font-size:11px;color:var(--dim);text-align:center;">
+        등급: ${RARITIES.map(r => `<span style="color:${r.color}">${r.name}</span>`).join(' → ')}
+      </div>
+    </div>
+  `;
+}
+
+// ==================== SAVE / LOAD ====================
+function getSaveKey() {
+  return currentUser ? 'idle_save_' + currentUser.uid : 'idle_save_guest';
+}
+
+function saveGame() {
+  const data = { ...G, monster: null, lastSave: Date.now() };
+  localStorage.setItem(getSaveKey(), JSON.stringify(data));
+}
+
+function loadGame() {
+  try {
+    // 일회성 강제 초기화
+    if (!localStorage.getItem('_reset_done_v3')) {
+      localStorage.clear();
+      localStorage.setItem('_reset_done_v3', '1');
+      console.log('🧹 로컬 강제 초기화 완료');
+      return;
+    }
+    const raw = localStorage.getItem(getSaveKey());
+    if (!raw) return;
+    const data = JSON.parse(raw);
+
+    // Migrate old saves
+    if (data.ownedHeroes !== undefined) delete data.ownedHeroes;
+    if (data.selectedHeroId !== undefined) delete data.selectedHeroId;
+    if (data.companions !== undefined) delete data.companions;
+    if (data.charLampLevel !== undefined) delete data.charLampLevel;
+
+    Object.assign(G, data);
+    G.monster = null;
+
+    // Ensure new fields exist
+    if (!G.unlockedClasses) G.unlockedClasses = ['knight'];
+    if (!G.selectedClass || !CLASSES[G.selectedClass]) G.selectedClass = 'knight';
+
+    // Migrate old single-level save to per-class levels
+    if (G.level !== undefined && !G.classLevels) {
+      G.classLevels = { knight: G.level || 1, archer: 1, rogue: 1 };
+      G.classXp = { knight: G.xp || 0, archer: 0, rogue: 0 };
+    }
+    if (!G.classLevels) G.classLevels = { knight: 1, archer: 1, rogue: 1 };
+    if (!G.classXp) G.classXp = { knight: 0, archer: 0, rogue: 0 };
+    // Clean up old fields
+    delete G.level; delete G.xp; delete G.xpToNext;
+
+    // Recalc nextItemId
+    const allItems = [...G.inventory, ...Object.values(G.equipment).filter(Boolean)];
+    if (allItems.length > 0) nextItemId = Math.max(...allItems.map(i => i.id)) + 1;
+
+    // Offline rewards
+    const offlineMs = Date.now() - (data.lastSave || Date.now());
+    const offlineSec = Math.min(offlineMs / 1000, 8 * 3600);
+    if (offlineSec > 60) {
+      const stats = getPlayerStats();
+      const dps = stats.atk * stats.spdBonus;
+      const offlineGold = Math.ceil(dps * offlineSec * 0.3 * getMonsterGold(G.stage) / getMonsterHp(G.stage));
+      if (offlineGold > 0) {
+        G.gold += offlineGold;
+        G.totalGold += offlineGold;
+        const min = Math.floor(offlineSec / 60);
+        setTimeout(() => alert(`⏰ ${min}분 동안 방치 보상!\n💰 ${formatNum(offlineGold)} 골드 획득!`), 500);
+      }
+    }
+  } catch(e) { console.warn('Load failed', e); }
+}
+
+// ==================== TAB SWITCHING ====================
+// Tab switching with event delegation (supports dynamically added tabs)
+document.querySelector('.tab-bar').addEventListener('click', (e) => {
+  const btn = e.target.closest('.tab-btn');
+  if (!btn) return;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeTab = btn.dataset.tab;
+  renderTab(activeTab);
+});
+
+// ==================== GAME LOOP ====================
+let lastTick = Date.now();
+function gameLoop() {
+  const now = Date.now();
+  const dt = now - lastTick;
+
+  G.attackTimer += dt;
+  if (G.attackTimer >= G.attackSpeed) {
+    G.attackTimer -= G.attackSpeed;
+    attack();
+  }
+
+  lastTick = now;
+  requestAnimationFrame(gameLoop);
+}
+
+// ==================== INIT ====================
+
+// ==================== AUTH (Flask OAuth) ====================
+function googleLogin() {
+  location.href = '/login';
+}
+function googleLogout() {
+  if (confirm('로그아웃 하시겠습니까?')) location.href = '/logout';
+}
+
+// Check auth on page load
+async function checkAuth() {
+  try {
+    const res = await fetch('/api/me');
+    const data = await res.json();
+    if (data.loggedIn) {
+      currentUser = data;
+      isAdmin = data.isAdmin;
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('app').style.display = '';
+      document.getElementById('userPhoto').src = data.photo || '';
+      document.getElementById('userName').textContent = data.name || data.email;
+
+      // Show admin tab if admin
+      if (isAdmin) {
+        const tabBar = document.querySelector('.tab-bar');
+        if (!document.querySelector('[data-tab="admin"]')) {
+          const btn = document.createElement('button');
+          btn.className = 'tab-btn';
+          btn.dataset.tab = 'admin';
+          btn.innerHTML = '<span class="tab-icon">🔧</span>관리자';
+          tabBar.appendChild(btn);
+        }
+      }
+
+      await loadServerSettings();
+      await loadCloudSave();
+      spawnMonster();
+      updateAllUI();
+      if (!window._gameLoopStarted) {
+        window._gameLoopStarted = true;
+        gameLoop();
+      }
+    } else {
+      document.getElementById('loginOverlay').style.display = '';
+      document.getElementById('app').style.display = 'none';
+    }
+  } catch(e) {
+    console.error('Auth check failed:', e);
+  }
+}
+checkAuth();
+
+// ==================== CLOUD SAVE (Realtime DB) ====================
+function resetGameState() {
+  G.gold = 0; G.dia = 100;
+  G.classLevels = { knight: 1, archer: 1, rogue: 1 };
+  G.classXp = { knight: 0, archer: 0, rogue: 0 };
+  G.stage = 1; G.subStage = 1; G.maxStage = 1;
+  G.baseAtk = 10; G.baseHp = 100; G.currentHp = 100;
+  G.lampLevel = 1;
+  G.unlockedClasses = ['knight'];
+  G.selectedClass = 'knight';
+  G.equipment = {}; G.inventory = [];
+  G.skillLevels = {}; G.kills = 0; G.totalGold = 0;
+  G.monster = null; G.monsterHp = 0; G.monsterMaxHp = 0;
+  G.attackTimer = 0; G.attackSpeed = 1000;
+  G.lastSave = Date.now();
+  nextItemId = 1;
+  console.log('🆕 새 게임 시작!');
+}
+
+async function loadCloudSave() {
+  resetGameState();
+  try {
+    const res = await fetch('/api/load');
+    const data = await res.json();
+    if (data && data.gameState) {
+      const saved = typeof data.gameState === 'string' ? JSON.parse(data.gameState) : data.gameState;
+      console.log('☁️ Cloud data keys:', Object.keys(saved));
+      for (const key of Object.keys(saved)) {
+        G[key] = saved[key];
+      }
+      G.monster = null;
+      console.log('☁️ Cloud save loaded! stage:', G.stage, 'gold:', G.gold);
+    } else {
+      loadGame();
+      console.log('☁️ No cloud save, fresh start');
+    }
+  } catch(e) {
+    console.warn('☁️ Cloud load failed:', e);
+    loadGame();
+  }
+}
+
+async function saveCloudGame() {
+  if (!currentUser) return;
+  saveGame();
+  try {
+    const cp = getCombatPower();
+    const info = getClassInfo(G.selectedClass, getLevel());
+    await fetch('/api/save', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        gameState: G,
+        combatPower: cp, level: getLevel(), stage: G.stage,
+        className: info.name, classStage: info.stageLabel
+      })
+    });
+  } catch(e) {
+    console.warn('Cloud save failed:', e);
+  }
+}
+
+// ==================== COMBAT POWER ====================
+function getCombatPower() {
+  const stats = getPlayerStats();
+  const cp = Math.floor(
+    stats.atk * 1.0 +
+    stats.hp * 0.3 +
+    stats.crit * 500 +
+    stats.critDmg * 200 +
+    stats.spdBonus * 300 +
+    stats.goldBonus * 100 +
+    getLevel() * 50 +
+    G.stage * 10
+  );
+  return cp;
+}
+
+function updateCombatPower() {
+  const cp = getCombatPower();
+  const el = document.getElementById('combatPower');
+  if (el) el.textContent = formatNum(cp);
+}
+
+// ==================== RANKING ====================
+async function renderRanking(el) {
+  el.innerHTML = '<div class="rank-list"><div style="text-align:center;padding:20px;color:var(--dim);">로딩 중...</div></div>';
+  if (currentUser) await saveCloudGame();
+  try {
+    const res = await fetch('/api/rankings');
+    const data = await res.json();
+    const ranks = data.rankings || [];
+    if (!ranks.length) {
+      el.innerHTML = '<div class="rank-list"><div style="text-align:center;padding:20px;color:var(--dim);">아직 랭킹 데이터가 없습니다</div></div>';
+      return;
+    }
+    let html = '<div class="rank-list"><div style="font-size:16px;font-weight:900;margin-bottom:12px;text-align:center;">🏆 전투력 랭킹 TOP 50</div>';
+    ranks.forEach((r, i) => {
+      const isMe = currentUser && r.uid === currentUser.uid;
+      const medal = i === 0 ? '👑' : (i === 1 ? '🥈' : (i === 2 ? '🥉' : (i + 1)));
+      html += `
+        <div class="rank-item ${isMe ? 'me' : ''}">
+          <div class="rank-pos ${i<3?['gold','silver','bronze'][i]:''}">${medal}</div>
+          ${r.photo ? `<img class="rank-img" src="${r.photo}">` : '<div class="rank-img" style="background:#333;border-radius:50%;"></div>'}
+          <div class="rank-info">
+            <div class="rank-name">${r.name||'?'} ${isMe ? '(나)' : ''}</div>
+            <div style="font-size:10px;color:var(--dim);">Lv.${r.level||1} ${r.class_name||''} ${r.class_stage||''} | Stage ${r.stage||0}</div>
+          </div>
+          <div class="rank-cp">⚔️ ${formatNum(r.combat_power||0)}</div>
+        </div>`;
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div style="padding:20px;color:#ff4444;">랭킹 로드 실패</div>';
+  }
+}
+
+// ==================== ADMIN PANEL ====================
+async function applyServerSetting(key, val) {
+  if (!isAdmin) return;
+  serverSettings[key] = val;
+  await fetch('/api/server-settings', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({[key]: val})
+  });
+  showFloatText('✅ 서버 전체 적용: ' + key + ' = ' + val, '#4CAF50');
+}
+
+async function loadServerSettings() {
+  try {
+    const res = await fetch('/api/server-settings');
+    serverSettings = await res.json();
+    const res2 = await fetch('/api/my-settings');
+    userSettings = await res2.json();
+  } catch(e) { console.warn('설정 로드 실패', e); }
+}
+function ss(key, def) {
+  // 개인 설정 우선, 없으면 서버 설정, 없으면 기본값
+  if (userSettings[key] !== undefined && userSettings[key] !== 1) return userSettings[key] * (serverSettings[key] !== undefined ? serverSettings[key] : def);
+  return serverSettings[key] !== undefined ? serverSettings[key] : def;
+}
+
+let adminSubTab = 'personal';
+function switchAdminTab(tab) {
+  adminSubTab = tab;
+  renderAdmin(document.getElementById('tabContent'));
+}
+
+function renderAdmin(el) {
+  if (!isAdmin) { el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--dim);">접근 권한 없음</div>'; return; }
+
+  const tabs = [
+    { id:'personal', label:'🎮 내 설정', color:'#4fc3f7' },
+    { id:'server', label:'🌐 서버 전체', color:'#ff6b6b' },
+    { id:'users', label:'👥 유저 관리', color:'#81c784' },
+  ];
+
+  const tabHtml = tabs.map(t =>
+    `<button onclick="switchAdminTab('${t.id}')" style="flex:1;padding:8px 0;border:none;border-bottom:2px solid ${adminSubTab===t.id ? t.color : 'transparent'};background:none;color:${adminSubTab===t.id ? t.color : 'var(--dim)'};font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">${t.label}</button>`
+  ).join('');
+
+  let content = '';
+
+  if (adminSubTab === 'personal') {
+    content = `
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--gold);">💰 재화 조절</div>
+      <div class="admin-row"><label>골드 추가</label><input type="text" id="adminGold" value="10000"><button onclick="G.gold+=Number(document.getElementById('adminGold').value);updateAllUI();saveCloudGame()">추가</button></div>
+      <div class="admin-row"><label>💎 보석 추가</label><input type="text" id="adminDia" value="100"><button onclick="G.dia+=Number(document.getElementById('adminDia').value);updateAllUI();saveCloudGame()">추가</button></div>
+      <div class="admin-row"><label>스테이지 이동</label><input type="text" id="adminStage" value="${G.stage}"><button onclick="G.stage=Number(document.getElementById('adminStage').value);G.subStage=1;spawnMonster();updateAllUI();saveCloudGame()">이동</button></div>
+      <div class="admin-row"><label>레벨 설정</label><input type="text" id="adminLevel" value="${getLevel()}"><button onclick="G.classLevels[G.selectedClass]=Number(document.getElementById('adminLevel').value);G.classXp[G.selectedClass]=0;updateAllUI();saveCloudGame()">적용</button></div>
+
+      <div style="font-size:13px;font-weight:700;margin:16px 0 8px;color:#4fc3f7;">📊 내 개인 배율</div>
+      <div style="font-size:10px;color:var(--dim);margin-bottom:8px;">※ 서버 배율에 추가로 곱해집니다 (1 = 기본)</div>
+      <div class="admin-row"><label>EXP 배율</label><input type="text" id="myExpMul" value="${userSettings.expMul||1}"><button onclick="saveMyUserSetting('expMul',Number(document.getElementById('myExpMul').value))">적용</button></div>
+      <div class="admin-row"><label>골드 배율</label><input type="text" id="myGoldMul" value="${userSettings.goldMul||1}"><button onclick="saveMyUserSetting('goldMul',Number(document.getElementById('myGoldMul').value))">적용</button></div>
+      <div class="admin-row"><label>공격력 배율</label><input type="text" id="myAtkMul" value="${userSettings.atkMul||1}"><button onclick="saveMyUserSetting('atkMul',Number(document.getElementById('myAtkMul').value))">적용</button></div>
+
+      <div style="margin-top:16px;padding-top:12px;border-top:1px solid #333;">
+        <button style="background:#ff4444;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit;width:100%;" onclick="resetGame()">🗑️ 게임 완전 초기화 (로컬+클라우드)</button>
+      </div>
+    `;
+  } else if (adminSubTab === 'server') {
+    content = `
+      <div style="font-size:11px;color:#ff6b6b;margin-bottom:12px;">⚠️ 아래 설정은 모든 유저에게 실시간 적용됩니다</div>
+
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--gold);">📊 배율 설정</div>
+      <div class="admin-row"><label>EXP 배율</label><input type="text" id="adminExpMul" value="${serverSettings.expMul||1}"><button onclick="applyServerSetting('expMul',Number(document.getElementById('adminExpMul').value))">서버 적용</button></div>
+      <div class="admin-row"><label>골드 배율</label><input type="text" id="adminGoldMul" value="${serverSettings.goldMul||1}"><button onclick="applyServerSetting('goldMul',Number(document.getElementById('adminGoldMul').value))">서버 적용</button></div>
+      <div class="admin-row"><label>공격력 배율</label><input type="text" id="adminAtkMul" value="${serverSettings.atkMul||1}"><button onclick="applyServerSetting('atkMul',Number(document.getElementById('adminAtkMul').value))">서버 적용</button></div>
+      <div class="admin-row"><label>스킬 비용 배율</label><input type="text" id="adminSkillCost" value="${serverSettings.skillCostMul||1}"><button onclick="applyServerSetting('skillCostMul',Number(document.getElementById('adminSkillCost').value))">서버 적용</button></div>
+      <div class="admin-row"><label>뽑기 비용 배율</label><input type="text" id="adminPullCost" value="${serverSettings.pullCostMul||1}"><button onclick="applyServerSetting('pullCostMul',Number(document.getElementById('adminPullCost').value))">서버 적용</button></div>
+
+      <div style="font-size:13px;font-weight:700;margin:16px 0 8px;color:#e57373;">👾 몬스터 설정</div>
+      <div class="admin-row"><label>기본 체력</label><input type="text" id="adminMonBase" value="${serverSettings.monHpBase||15}"><button onclick="applyServerSetting('monHpBase',Number(document.getElementById('adminMonBase').value))">서버 적용</button></div>
+      <div class="admin-row"><label>체력 성장률</label><input type="text" id="adminMonGrowth" value="${serverSettings.monHpGrowth||1.25}"><button onclick="applyServerSetting('monHpGrowth',Number(document.getElementById('adminMonGrowth').value))">서버 적용</button></div>
+      <div class="admin-row"><label>스테이지 스케일</label><input type="text" id="adminMonScale" value="${serverSettings.monHpStageScale||0.5}"><button onclick="applyServerSetting('monHpStageScale',Number(document.getElementById('adminMonScale').value))">서버 적용</button></div>
+
+      <div style="font-size:13px;font-weight:700;margin:16px 0 8px;color:#4fc3f7;">📈 레벨 비례 성장 (레벨당 %)</div>
+      <div class="admin-row"><label>레벨당 데미지%</label><input type="text" id="adminLvDmg" value="${serverSettings.lvDmgPct||3}"><button onclick="applyServerSetting('lvDmgPct',Number(document.getElementById('adminLvDmg').value))">서버 적용</button></div>
+      <div class="admin-row"><label>레벨당 EXP%</label><input type="text" id="adminLvExp" value="${serverSettings.lvExpPct||5}"><button onclick="applyServerSetting('lvExpPct',Number(document.getElementById('adminLvExp').value))">서버 적용</button></div>
+      <div class="admin-row"><label>레벨당 골드%</label><input type="text" id="adminLvGold" value="${serverSettings.lvGoldPct||5}"><button onclick="applyServerSetting('lvGoldPct',Number(document.getElementById('adminLvGold').value))">서버 적용</button></div>
+    `;
+  } else if (adminSubTab === 'users') {
+    content = `
+      <div class="admin-row">
+        <button style="background:#4CAF50;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-weight:700;cursor:pointer;font-family:inherit;width:100%;" onclick="loadUserList()">유저 목록 새로고침</button>
+      </div>
+      <div class="admin-row" style="margin-top:8px;">
+        <input type="text" id="adminUserSearch" placeholder="닉네임/이메일 검색..." style="flex:2" oninput="filterUserList()">
+      </div>
+      <div id="adminUserList" style="max-height:250px;overflow-y:auto;margin-top:8px;"></div>
+
+      <div style="font-size:13px;font-weight:700;margin:16px 0 8px;color:#ffb74d;">🎁 개별 유저 지급/설정</div>
+      <div class="admin-row"><label>대상 UID</label><input type="text" id="targetUid" placeholder="위에서 선택" style="flex:2"></div>
+      <div id="targetUserInfo" style="font-size:11px;color:var(--dim);margin-bottom:8px;"></div>
+      <div class="admin-row"><label>골드 지급</label><input type="text" id="targetGold" value="10000"><button onclick="giveToUser('gold',Number(document.getElementById('targetGold').value))">지급</button></div>
+      <div class="admin-row"><label>보석 지급</label><input type="text" id="targetDia" value="100"><button onclick="giveToUser('dia',Number(document.getElementById('targetDia').value))">지급</button></div>
+      <div class="admin-row"><label>EXP 배율</label><input type="text" id="targetExpMul" value="1"><button onclick="setUserSetting('expMul',Number(document.getElementById('targetExpMul').value))">적용</button></div>
+      <div class="admin-row"><label>골드 배율</label><input type="text" id="targetGoldMul" value="1"><button onclick="setUserSetting('goldMul',Number(document.getElementById('targetGoldMul').value))">적용</button></div>
+      <div class="admin-row"><label>공격력 배율</label><input type="text" id="targetAtkMul" value="1"><button onclick="setUserSetting('atkMul',Number(document.getElementById('targetAtkMul').value))">적용</button></div>
+    `;
+  }
+
+  el.innerHTML = `
+    <div class="admin-section">
+      <div style="font-size:16px;font-weight:900;margin-bottom:12px;color:#ff4444;">🔧 관리자 패널</div>
+      <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid #333;">${tabHtml}</div>
+      ${content}
+    </div>
+  `;
+}
+
+let allUsers = [];
+async function loadUserList() {
+  const listEl = document.getElementById('adminUserList');
+  listEl.innerHTML = '<div style="color:var(--dim);text-align:center;padding:8px;">로딩중...</div>';
+  try {
+    const res = await fetch('/api/admin/users');
+    const data = await res.json();
+    allUsers = (data.users || []).sort((a, b) => (b.combat_power || 0) - (a.combat_power || 0));
+    renderUserList(allUsers);
+  } catch(e) { listEl.innerHTML = '<div style="color:#ff4444;">로드 실패: ' + e.message + '</div>'; }
+}
+
+function filterUserList() {
+  const q = (document.getElementById('adminUserSearch').value || '').toLowerCase();
+  const filtered = allUsers.filter(u =>
+    (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q) || u.uid.includes(q)
+  );
+  renderUserList(filtered);
+}
+
+function renderUserList(users) {
+  const el = document.getElementById('adminUserList');
+  if (!users.length) { el.innerHTML = '<div style="color:var(--dim);text-align:center;padding:8px;">유저 없음</div>'; return; }
+  el.innerHTML = users.map((u, i) => `
+    <div onclick="selectUser('${u.uid}','${(u.name||'').replace(/'/g,'')}','${(u.email||'').replace(/'/g,'')}')"
+      style="padding:8px 10px;margin:4px 0;background:#1a1a2e;border-radius:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border:1px solid #333;font-size:12px;">
+      <div>
+        <div style="font-weight:700;color:var(--text);">${u.name || '이름없음'}</div>
+        <div style="color:var(--dim);font-size:10px;">${u.email || u.uid}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="color:var(--gold);font-size:11px;">⚔️ ${formatNum(u.combatPower || 0)}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function selectUser(uid, name, email) {
+  document.getElementById('targetUid').value = uid;
+  document.getElementById('targetUserInfo').textContent = '선택: ' + name + ' (' + email + ')';
+}
+
+async function giveToUser(field, amount) {
+  const uid = document.getElementById('targetUid').value;
+  if (!uid) { alert('대상 UID를 선택하세요'); return; }
+  try {
+    const res = await fetch('/api/admin/give', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ uid, field, amount })
+    });
+    const data = await res.json();
+    if (data.ok) showFloatText('✅ ' + field + ' +' + formatNum(amount) + ' 지급!', '#4CAF50');
+    else alert('지급 실패: ' + (data.error || ''));
+  } catch(e) { alert('지급 실패: ' + e.message); }
+}
+
+async function setUserSetting(key, val) {
+  const uid = document.getElementById('targetUid').value;
+  if (!uid) { alert('대상 UID를 선택하세요'); return; }
+  try {
+    const res = await fetch('/api/user-settings/' + uid, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ [key]: val })
+    });
+    showFloatText('✅ ' + key + ' = ' + val + ' 적용!', '#4CAF50');
+  } catch(e) { alert('설정 실패: ' + e.message); }
+}
+
+async function saveMyUserSetting(key, val) {
+  if (!currentUser) return;
+  userSettings[key] = val;
+  await fetch('/api/user-settings/' + currentUser.uid, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(userSettings)
+  });
+  showFloatText('✅ 내 ' + key + ' = ' + val + ' 적용!', '#4fc3f7');
+}
+
+async function resetGame() {
+  if (!confirm('정말 게임을 완전 초기화 하시겠습니까?\n로컬 + 클라우드 데이터 모두 삭제됩니다!')) return;
+  if (!confirm('되돌릴 수 없습니다. 정말로?')) return;
+  try {
+    await fetch('/api/reset', { method: 'POST' });
+    localStorage.clear();
+    location.reload();
+  } catch(e) { alert('초기화 실패: ' + e.message); }
+}
+
+
+// ==================== APPLY ADMIN MULTIPLIERS ====================
+// Patch getPlayerStats to apply admin atk multiplier
+const _origGetPlayerStats = getPlayerStats;
+getPlayerStats = function() {
+  const s = _origGetPlayerStats();
+  s.atk = Math.ceil(s.atk * ss('atkMul',1));
+  return s;
+};
+
+// Patch updateAllUI to update combat power
+const _origUpdateAllUI = updateAllUI;
+updateAllUI = function() {
+  _origUpdateAllUI();
+  updateCombatPower();
+};
+
+// ==================== INIT WITH AUTH ====================
+// Don't start game until auth resolves (handled in onAuthStateChanged)
+// Auto cloud save every 60s
+setInterval(() => { if(currentUser) saveCloudGame(); }, 60000);
+// Save on close
+window.addEventListener('beforeunload', () => { saveGame(); if(currentUser) saveCloudGame(); });
+
+// Apply admin multipliers to XP and gold
+const _origOnMonsterKill = onMonsterKill;
+onMonsterKill = function() {
+  // Temporarily patch to apply admin multipliers
+  _origOnMonsterKill();
+};
+</script>
+</body>
+</html>
