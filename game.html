@@ -2387,7 +2387,7 @@ function upgradeAllSkills() {
 async function doResetAccount() {
   if (!confirm('정말 계정을 초기화하시겠습니까?\n모든 진행 데이터가 삭제됩니다!')) return;
   if (!confirm('⚠️ 마지막 확인! 되돌릴 수 없습니다.\n정말 초기화?')) return;
-  await fetch('/api/reset', { method: 'POST' });
+  await authFetch('/api/reset', { method: 'POST' });
   localStorage.clear();
   resetGameState();
   spawnMonster();
@@ -2871,17 +2871,40 @@ function gameLoop() {
 // ==================== INIT ====================
 
 // ==================== AUTH (Flask OAuth) ====================
+// ── Token auth ──
+let authToken = localStorage.getItem('authToken') || '';
+function authHeaders() {
+  return authToken ? { 'Authorization': 'Bearer ' + authToken } : {};
+}
+function authFetch(url, opts = {}) {
+  opts.headers = { ...opts.headers, ...authHeaders() };
+  return fetch(url, opts);
+}
+
 function googleLogin() {
   location.href = '/login';
 }
 function googleLogout() {
-  if (confirm('로그아웃 하시겠습니까?')) location.href = '/logout';
+  if (confirm('로그아웃 하시겠습니까?')) {
+    localStorage.removeItem('authToken');
+    authToken = '';
+    location.reload();
+  }
 }
 
-// Check auth on page load
+// Check token from URL hash after OAuth redirect
+(function checkHashToken() {
+  const hash = location.hash;
+  if (hash.startsWith('#token=')) {
+    authToken = hash.replace('#token=', '');
+    localStorage.setItem('authToken', authToken);
+    history.replaceState(null, '', '/');
+  }
+})();
+
 async function checkAuth() {
   try {
-    const res = await fetch('/api/me');
+    const res = await authFetch('/api/me');
     const data = await res.json();
     if (data.loggedIn) {
       currentUser = data;
@@ -2946,7 +2969,7 @@ function resetGameState() {
 
 async function claimPendingRewards() {
   try {
-    const res = await fetch('/api/claim-rewards', { method: 'POST' });
+    const res = await authFetch('/api/claim-rewards', { method: 'POST' });
     const data = await res.json();
     const rewards = data.rewards || {};
     const messages = data.messages || [];
@@ -2983,7 +3006,7 @@ function showAnnouncement(msg) {
 async function loadCloudSave() {
   resetGameState();
   try {
-    const res = await fetch('/api/load');
+    const res = await authFetch('/api/load');
     const data = await res.json();
     if (data && data.gameState) {
       const saved = typeof data.gameState === 'string' ? JSON.parse(data.gameState) : data.gameState;
@@ -3031,7 +3054,7 @@ async function _doCloudSave() {
   try {
     const cp = getCombatPower();
     const info = getClassInfo(G.selectedClass, getLevel());
-    await fetch('/api/save', {
+    await authFetch('/api/save', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
@@ -3084,7 +3107,7 @@ async function renderRanking(el) {
   el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--dim);">로딩 중...</div>';
   if (currentUser) await saveCloudGame();
   try {
-    const res = await fetch('/api/rankings');
+    const res = await authFetch('/api/rankings');
     const data = await res.json();
     const allRanks = data.rankings || [];
     if (!allRanks.length) {
@@ -3144,7 +3167,7 @@ async function renderRanking(el) {
 async function applyServerSetting(key, val) {
   if (!isAdmin) return;
   serverSettings[key] = val;
-  await fetch('/api/server-settings', {
+  await authFetch('/api/server-settings', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({[key]: val})
@@ -3154,9 +3177,9 @@ async function applyServerSetting(key, val) {
 
 async function loadServerSettings() {
   try {
-    const res = await fetch('/api/server-settings');
+    const res = await authFetch('/api/server-settings');
     serverSettings = await res.json();
-    const res2 = await fetch('/api/my-settings');
+    const res2 = await authFetch('/api/my-settings');
     userSettings = await res2.json();
   } catch(e) { console.warn('설정 로드 실패', e); }
 }
@@ -3268,7 +3291,7 @@ async function loadUserList() {
   const listEl = document.getElementById('adminUserList');
   listEl.innerHTML = '<div style="color:var(--dim);text-align:center;padding:8px;">로딩중...</div>';
   try {
-    const res = await fetch('/api/admin/users');
+    const res = await authFetch('/api/admin/users');
     const data = await res.json();
     allUsers = (data.users || []).sort((a, b) => (b.combat_power || 0) - (a.combat_power || 0));
     renderUserList(allUsers);
@@ -3309,7 +3332,7 @@ async function giveToAllUsers(field, amount) {
   const msg = document.getElementById('serverGiveMsg')?.value || '';
   if (!confirm(`모든 유저에게 ${field} +${formatNum(amount)} 지급하시겠습니까?${msg ? '\n공지: '+msg : ''}`)) return;
   try {
-    const res = await fetch('/api/admin/give-all', {
+    const res = await authFetch('/api/admin/give-all', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ field, amount, message: msg })
     });
@@ -3323,7 +3346,7 @@ async function giveToUser(field, amount) {
   const uid = document.getElementById('targetUid').value;
   if (!uid) { alert('대상 UID를 선택하세요'); return; }
   try {
-    const res = await fetch('/api/admin/give', {
+    const res = await authFetch('/api/admin/give', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ uid, field, amount })
     });
@@ -3337,7 +3360,7 @@ async function setUserSetting(key, val) {
   const uid = document.getElementById('targetUid').value;
   if (!uid) { alert('대상 UID를 선택하세요'); return; }
   try {
-    const res = await fetch('/api/user-settings/' + uid, {
+    const res = await authFetch('/api/user-settings/' + uid, {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ [key]: val })
     });
@@ -3348,7 +3371,7 @@ async function setUserSetting(key, val) {
 async function saveMyUserSetting(key, val) {
   if (!currentUser) return;
   userSettings[key] = val;
-  await fetch('/api/user-settings/' + currentUser.uid, {
+  await authFetch('/api/user-settings/' + currentUser.uid, {
     method: 'POST', headers: {'Content-Type':'application/json'},
     body: JSON.stringify(userSettings)
   });
@@ -3359,7 +3382,7 @@ async function resetGame() {
   if (!confirm('정말 게임을 완전 초기화 하시겠습니까?\n로컬 + 클라우드 데이터 모두 삭제됩니다!')) return;
   if (!confirm('되돌릴 수 없습니다. 정말로?')) return;
   try {
-    await fetch('/api/reset', { method: 'POST' });
+    await authFetch('/api/reset', { method: 'POST' });
     localStorage.clear();
     location.reload();
   } catch(e) { alert('초기화 실패: ' + e.message); }
