@@ -365,12 +365,12 @@ body { background:var(--bg); color:var(--text); font-family:'Noto Sans KR',sans-
 <script>
 // ==================== DATA ====================
 const RARITIES = [
-  { id:'common', name:'일반', color:'#888', weight:45, statMul:1 },
-  { id:'uncommon', name:'고급', color:'#2cb67d', weight:30, statMul:2 },
-  { id:'rare', name:'희귀', color:'#2ec4b6', weight:15, statMul:4 },
-  { id:'epic', name:'영웅', color:'#7f5af0', weight:7, statMul:8 },
-  { id:'legendary', name:'전설', color:'#f1c40f', weight:2.5, statMul:15 },
-  { id:'mythic', name:'신화', color:'#ff4444', weight:0.5, statMul:30 },
+  { id:'common', name:'일반', color:'#888', weight:55, statMul:1 },
+  { id:'uncommon', name:'고급', color:'#2cb67d', weight:28, statMul:2 },
+  { id:'rare', name:'희귀', color:'#2ec4b6', weight:12, statMul:4 },
+  { id:'epic', name:'영웅', color:'#7f5af0', weight:4, statMul:8 },
+  { id:'legendary', name:'전설', color:'#f1c40f', weight:0.8, statMul:15 },
+  { id:'mythic', name:'신화', color:'#ff4444', weight:0.15, statMul:30 },
   { id:'mythic_s', name:'신화 S', color:'#ff2222', weight:0, statMul:45 },
   { id:'mythic_sp', name:'신화 S+', color:'#ff0000', weight:0, statMul:65 },
   { id:'mythic_ss', name:'신화 SS', color:'#cc0000', weight:0, statMul:90 },
@@ -1144,9 +1144,9 @@ function generateItem(lampLv) {
   const weights = RARITIES.map((r, i) => {
     if (r.weight === 0) return 0; // fusion-only rarities cannot appear in gacha
     let w = r.weight;
-    if (i >= 3) w += lampLv * 0.08;  // epic: 느리게 증가
-    if (i >= 4) w += lampLv * 0.03;  // legendary: 매우 느리게
-    if (i >= 5) w += lampLv * 0.005; // mythic: 극소량
+    if (i >= 3) w += lampLv * 0.03;  // epic: 느리게 증가
+    if (i >= 4) w += lampLv * 0.008; // legendary: 매우 느리게
+    if (i >= 5) w += lampLv * 0.001; // mythic: 극소량
     return w;
   });
   const total = weights.reduce((a, b) => a + b, 0);
