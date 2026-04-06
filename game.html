@@ -1790,7 +1790,8 @@ function onMonsterKill() {
   // Boss diamond reward
   if (G.monster.isBoss) {
     G.dia += 2;
-    showFloatText('💎 +10 보석!', '#7f5af0');
+    showFloatText('💎 +2 보석!', '#7f5af0');
+    saveCloudGame(); // 보스 킬 시 즉시 저장
   }
 
   // Per-class XP
@@ -1860,6 +1861,7 @@ function doPullEquip(count) {
 
   showPullResult(items, 'equip');
   updateAllUI();
+  saveCloudGame();
 }
 
 function unlockClass(classId) {
@@ -1874,6 +1876,7 @@ function unlockClass(classId) {
   G.unlockedClasses.push(classId);
   showFloatText(`🆕 ${cls.name} 해금!`, '#7f5af0');
   updateAllUI();
+  saveCloudGame();
 }
 
 function selectClass(classId) {
@@ -1889,6 +1892,7 @@ function selectClass(classId) {
   G.maxStage = G.classMaxStages[classId] || 1;
   spawnMonster();
   updateAllUI();
+  saveCloudGame();
 }
 
 function showPullResult(items, type) {
@@ -1995,6 +1999,7 @@ function equipBestAll() {
   });
   updateAllUI();
   renderTab('equip');
+  saveCloudGame();
 }
 
 function showItemPopup(item) {
@@ -2333,6 +2338,7 @@ function upgradeLamp() {
   G.lampLevel++;
   showFloatText(`🌸 꽃도훈 Lv.${G.lampLevel}!`, '#f1c40f');
   updateAllUI();
+  saveCloudGame();
 }
 
 function upgradeSkill(id) {
@@ -2344,6 +2350,7 @@ function upgradeSkill(id) {
   G.gold -= cost;
   G.skillLevels[id] = lv + 1;
   updateAllUI();
+  saveCloudGame();
 }
 
 function upgradeAllSkills() {
@@ -2400,6 +2407,7 @@ function enhanceItem(itemId) {
   showFloatText(`⬆️ ${itemName(item)} +${item.enhanceLevel} 강화 성공!`, '#f1c40f');
   updateAllUI();
   showItemPopup(item);
+  saveCloudGame();
 }
 
 // ==================== FUSION (합성) ====================
