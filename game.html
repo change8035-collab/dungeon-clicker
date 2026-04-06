@@ -1958,8 +1958,10 @@ function equipBestAll() {
   EQUIP_SLOTS.forEach(slot => {
     const candidates = G.inventory.filter(i => i.slot === slot.id);
     if (candidates.length === 0) return;
-    const best = candidates.reduce((a, b) => b.statValue > a.statValue ? b : a);
+    // 같은 스탯이면 id가 낮은 걸 선택 (안정적 정렬)
+    const best = candidates.reduce((a, b) => b.statValue > a.statValue ? b : (b.statValue === a.statValue ? (a.id < b.id ? a : b) : a));
     const current = G.equipment[slot.id];
+    // 같은 스탯이면 현재 장착 유지 (교체 안 함)
     if (!current || best.statValue > current.statValue) {
       if (current) G.inventory.push(current);
       G.equipment[slot.id] = best;
