@@ -3031,7 +3031,8 @@ function switchAdminTab(tab) {
   renderAdmin(document.getElementById('tabContent'));
 }
 
-function renderAdmin(el) {
+async function renderAdmin(el) {
+  await loadServerSettings();
   if (!isAdmin) { el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--dim);">접근 권한 없음</div>'; return; }
 
   const tabs = [
