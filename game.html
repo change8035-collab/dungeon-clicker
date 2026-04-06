@@ -2927,6 +2927,9 @@ function saveCloudGame() {
         body: JSON.stringify({
           gameState: G,
           combatPower: cp, level: getLevel(), stage: Math.max(...Object.values(G.classMaxStages || {1:1})),
+          knightStage: (G.classMaxStages||{}).knight || 0,
+          archerStage: (G.classMaxStages||{}).archer || 0,
+          rogueStage: (G.classMaxStages||{}).rogue || 0,
           className: info.name, classStage: info.stageLabel
         })
       });
@@ -2979,23 +2982,37 @@ async function renderRanking(el) {
       return;
     }
 
-    const tabs = `<div style="display:flex;gap:0;margin-bottom:12px;border-bottom:1px solid #333;">
-      <button onclick="rankTab='power';renderRanking(document.getElementById('tabContent'))" style="flex:1;padding:8px;border:none;border-bottom:2px solid ${rankTab==='power'?'var(--gold)':'transparent'};background:none;color:${rankTab==='power'?'var(--gold)':'var(--dim)'};font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">⚔️ 전투력</button>
-      <button onclick="rankTab='stage';renderRanking(document.getElementById('tabContent'))" style="flex:1;padding:8px;border:none;border-bottom:2px solid ${rankTab==='stage'?'#2ec4b6':'transparent'};background:none;color:${rankTab==='stage'?'#2ec4b6':'var(--dim)'};font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">🏰 스테이지</button>
+    const rankTabs = [
+      { id:'power', label:'⚔️ 전투력', color:'var(--gold)' },
+      { id:'stage', label:'🏰 전체', color:'#2ec4b6' },
+      { id:'knight', label:'🗡️ 기사', color:'#7f8c8d' },
+      { id:'archer', label:'🏹 궁수', color:'#27ae60' },
+      { id:'rogue', label:'🗡️ 도적', color:'#8e44ad' },
+    ];
+    const tabs = `<div style="display:flex;gap:0;margin-bottom:12px;border-bottom:1px solid #333;flex-wrap:wrap;">
+      ${rankTabs.map(t => `<button onclick="rankTab='${t.id}';renderRanking(document.getElementById('tabContent'))" style="flex:1;padding:6px 4px;border:none;border-bottom:2px solid ${rankTab===t.id?t.color:'transparent'};background:none;color:${rankTab===t.id?t.color:'var(--dim)'};font-weight:700;font-size:10px;cursor:pointer;font-family:inherit;min-width:0;">${t.label}</button>`).join('')}
     </div>`;
 
-    let ranks;
-    if (rankTab === 'stage') {
-      ranks = [...allRanks].sort((a, b) => (b.stage||0) - (a.stage||0));
+    let ranks, sortKey, titleText, valueLabel;
+    if (rankTab === 'knight') {
+      sortKey = 'knight_stage'; titleText = '🗡️ 기사 스테이지 랭킹'; valueLabel = '🗡️';
+    } else if (rankTab === 'archer') {
+      sortKey = 'archer_stage'; titleText = '🏹 궁수 스테이지 랭킹'; valueLabel = '🏹';
+    } else if (rankTab === 'rogue') {
+      sortKey = 'rogue_stage'; titleText = '🗡️ 도적 스테이지 랭킹'; valueLabel = '🗡️';
+    } else if (rankTab === 'stage') {
+      sortKey = 'stage'; titleText = '🏰 최고 스테이지 랭킹'; valueLabel = '🏰';
     } else {
-      ranks = [...allRanks].sort((a, b) => (b.combat_power||0) - (a.combat_power||0));
+      sortKey = 'combat_power'; titleText = '⚔️ 전투력 랭킹'; valueLabel = '⚔️';
     }
+    ranks = [...allRanks].sort((a, b) => (b[sortKey]||0) - (a[sortKey]||0));
 
-    let html = tabs + `<div class="rank-list"><div style="font-size:16px;font-weight:900;margin-bottom:12px;text-align:center;">${rankTab==='power'?'⚔️ 전투력 랭킹':'🏰 스테이지 랭킹'} TOP 50</div>`;
+    let html = tabs + `<div class="rank-list"><div style="font-size:16px;font-weight:900;margin-bottom:12px;text-align:center;">${titleText} TOP 50</div>`;
     ranks.slice(0, 50).forEach((r, i) => {
       const isMe = currentUser && r.uid === currentUser.uid;
       const medal = i === 0 ? '👑' : (i === 1 ? '🥈' : (i === 2 ? '🥉' : (i + 1)));
-      const valueText = rankTab === 'power' ? `⚔️ ${formatNum(r.combat_power||0)}` : `🏰 ${r.stage||0}`;
+      const val = r[sortKey] || 0;
+      const valueText = sortKey === 'combat_power' ? `${valueLabel} ${formatNum(val)}` : `${valueLabel} ${val}`;
       html += `
         <div class="rank-item ${isMe ? 'me' : ''}">
           <div class="rank-pos ${i<3?['gold','silver','bronze'][i]:''}">${medal}</div>

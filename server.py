@@ -117,6 +117,9 @@ def api_save():
         'uid': uid, 'name': user['name'], 'photo': user['photo'],
         'email': user['email'], 'combat_power': data.get('combatPower', 0),
         'level': data.get('level', 1), 'stage': data.get('stage', 1),
+        'knight_stage': data.get('knightStage', 0),
+        'archer_stage': data.get('archerStage', 0),
+        'rogue_stage': data.get('rogueStage', 0),
         'class_name': data.get('className', ''), 'class_stage': data.get('classStage', '')
     }, on_conflict='uid').execute()
     return jsonify({'ok': True})
