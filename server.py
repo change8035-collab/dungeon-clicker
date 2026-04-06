@@ -39,29 +39,43 @@ def get_flow():
     )
 
 # ── Auth ──
+def get_base_url():
+    """Get base URL, forcing HTTPS on production"""
+    url = request.host_url.rstrip('/')
+    if os.environ.get('RENDER'):
+        url = url.replace('http://', 'https://')
+    return url
+
 @app.route('/login')
 def login():
     flow = get_flow()
-    flow.redirect_uri = request.host_url.rstrip('/') + '/callback'
+    flow.redirect_uri = get_base_url() + '/callback'
     auth_url, state = flow.authorization_url(prompt='select_account')
     session['state'] = state
     return redirect(auth_url)
 
 @app.route('/callback')
 def callback():
-    flow = get_flow()
-    flow.redirect_uri = request.host_url.rstrip('/') + '/callback'
-    flow.fetch_token(authorization_response=request.url)
-    credentials = flow.credentials
-    id_info = id_token.verify_oauth2_token(credentials.id_token, g_requests.Request(), GOOGLE_CLIENT_ID)
-    session['user'] = {
-        'uid': id_info['sub'],
-        'email': id_info.get('email', ''),
-        'name': id_info.get('name', ''),
-        'photo': id_info.get('picture', ''),
-        'is_admin': id_info.get('email', '') in ADMIN_EMAILS
-    }
-    return redirect('/')
+    try:
+        flow = get_flow()
+        flow.redirect_uri = get_base_url() + '/callback'
+        # Force HTTPS in authorization_response URL
+        auth_response = request.url
+        if os.environ.get('RENDER'):
+            auth_response = auth_response.replace('http://', 'https://')
+        flow.fetch_token(authorization_response=auth_response)
+        credentials = flow.credentials
+        id_info = id_token.verify_oauth2_token(credentials.id_token, g_requests.Request(), GOOGLE_CLIENT_ID)
+        session['user'] = {
+            'uid': id_info['sub'],
+            'email': id_info.get('email', ''),
+            'name': id_info.get('name', ''),
+            'photo': id_info.get('picture', ''),
+            'is_admin': id_info.get('email', '') in ADMIN_EMAILS
+        }
+        return redirect('/')
+    except Exception as e:
+        return f'로그인 오류: {str(e)}', 500
 
 @app.route('/logout')
 def logout():
