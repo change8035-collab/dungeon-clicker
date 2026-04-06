@@ -9,7 +9,7 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 SUPABASE_URL = os.environ.get('SUPABASE_URL', 'https://pvwcpowcsstdcvcghjff.supabase.co')
 SUPABASE_KEY = os.environ.get('SUPABASE_KEY', 'sb_secret_NvQiIbELqA7FGe9W6wq8YA_yAxTiQf0')
-ADMIN_NICKS = os.environ.get('ADMIN_NICKS', '김은서,관리자').split(',')
+ADMIN_NICKS = os.environ.get('ADMIN_NICKS', '관리자').split(',')
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
