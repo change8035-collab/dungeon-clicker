@@ -361,17 +361,17 @@ body { background:var(--bg); color:var(--text); font-family:'Noto Sans KR',sans-
 <script>
 // ==================== DATA ====================
 const RARITIES = [
-  { id:'common', name:'일반', color:'#888', weight:50, statMul:1 },
-  { id:'uncommon', name:'고급', color:'#2cb67d', weight:28, statMul:1.5 },
-  { id:'rare', name:'희귀', color:'#2ec4b6', weight:13, statMul:2.5 },
-  { id:'epic', name:'영웅', color:'#7f5af0', weight:6, statMul:4 },
-  { id:'legendary', name:'전설', color:'#f1c40f', weight:2.5, statMul:7 },
-  { id:'mythic', name:'신화', color:'#ff4444', weight:0.5, statMul:12 },
-  { id:'mythic_s', name:'신화 S', color:'#ff2222', weight:0, statMul:15 },
-  { id:'mythic_sp', name:'신화 S+', color:'#ff0000', weight:0, statMul:20 },
-  { id:'mythic_ss', name:'신화 SS', color:'#cc0000', weight:0, statMul:28 },
-  { id:'mythic_ssp', name:'신화 SS+', color:'#aa0000', weight:0, statMul:38 },
-  { id:'mythic_sss', name:'신화 SSS', color:'#880000', weight:0, statMul:50 },
+  { id:'common', name:'일반', color:'#888', weight:45, statMul:1 },
+  { id:'uncommon', name:'고급', color:'#2cb67d', weight:30, statMul:2 },
+  { id:'rare', name:'희귀', color:'#2ec4b6', weight:15, statMul:4 },
+  { id:'epic', name:'영웅', color:'#7f5af0', weight:7, statMul:8 },
+  { id:'legendary', name:'전설', color:'#f1c40f', weight:2.5, statMul:15 },
+  { id:'mythic', name:'신화', color:'#ff4444', weight:0.5, statMul:30 },
+  { id:'mythic_s', name:'신화 S', color:'#ff2222', weight:0, statMul:45 },
+  { id:'mythic_sp', name:'신화 S+', color:'#ff0000', weight:0, statMul:65 },
+  { id:'mythic_ss', name:'신화 SS', color:'#cc0000', weight:0, statMul:90 },
+  { id:'mythic_ssp', name:'신화 SS+', color:'#aa0000', weight:0, statMul:130 },
+  { id:'mythic_sss', name:'신화 SSS', color:'#880000', weight:0, statMul:200 },
 ];
 
 const EQUIP_SLOTS = [
@@ -1137,8 +1137,9 @@ function generateItem(lampLv) {
   const weights = RARITIES.map((r, i) => {
     if (r.weight === 0) return 0; // fusion-only rarities cannot appear in gacha
     let w = r.weight;
-    if (i >= 3) w += lampLv * 0.3;
-    if (i >= 4) w += lampLv * 0.15;
+    if (i >= 3) w += lampLv * 0.08;  // epic: 느리게 증가
+    if (i >= 4) w += lampLv * 0.03;  // legendary: 매우 느리게
+    if (i >= 5) w += lampLv * 0.005; // mythic: 극소량
     return w;
   });
   const total = weights.reduce((a, b) => a + b, 0);
@@ -1156,15 +1157,15 @@ function generateItem(lampLv) {
   const nameIdx = Math.floor(Math.random() * rarityNames.length);
   let baseStat;
   if (slot.statType === 'crit') {
-    baseStat = (1 + G.stage * 0.3) * rarity.statMul * (0.8 + Math.random() * 0.4);
+    baseStat = (1 + G.stage * 0.3) * rarity.statMul * (0.9 + Math.random() * 0.2);
   } else if (slot.statType === 'critDmg') {
-    baseStat = (3 + G.stage * 0.8) * rarity.statMul * (0.8 + Math.random() * 0.4);
+    baseStat = (3 + G.stage * 0.8) * rarity.statMul * (0.9 + Math.random() * 0.2);
   } else if (slot.statType === 'spd') {
-    baseStat = (2 + G.stage * 0.5) * rarity.statMul * (0.8 + Math.random() * 0.4);
+    baseStat = (2 + G.stage * 0.5) * rarity.statMul * (0.9 + Math.random() * 0.2);
   } else if (slot.statType === 'hp') {
-    baseStat = (10 + G.stage * 5) * rarity.statMul * (0.8 + Math.random() * 0.4);
+    baseStat = (10 + G.stage * 5) * rarity.statMul * (0.9 + Math.random() * 0.2);
   } else {
-    baseStat = (5 + G.stage * 2) * rarity.statMul * (0.8 + Math.random() * 0.4);
+    baseStat = (5 + G.stage * 2) * rarity.statMul * (0.9 + Math.random() * 0.2);
   }
 
   const STAT_LABELS = { atk:'공격력', hp:'HP', crit:'치명타%', critDmg:'치명타피해%', spd:'공격속도%' };
