@@ -1,4 +1,4 @@
-import os, json, secrets, urllib.parse
+import os, json, secrets, urllib.parse, hashlib, base64
 from flask import Flask, request, jsonify, redirect, session, send_from_directory
 import requests as http_requests
 from supabase import create_client
@@ -29,12 +29,21 @@ def get_redirect_uri():
 
 @app.route('/login')
 def login():
+    # PKCE: generate code_verifier and code_challenge
+    code_verifier = base64.urlsafe_b64encode(secrets.token_bytes(32)).rstrip(b'=').decode()
+    code_challenge = base64.urlsafe_b64encode(
+        hashlib.sha256(code_verifier.encode()).digest()
+    ).rstrip(b'=').decode()
+    session['code_verifier'] = code_verifier
+
     params = urllib.parse.urlencode({
         'client_id': GOOGLE_CLIENT_ID,
         'redirect_uri': get_redirect_uri(),
         'response_type': 'code',
         'scope': 'openid email profile',
-        'prompt': 'select_account'
+        'prompt': 'select_account',
+        'code_challenge': code_challenge,
+        'code_challenge_method': 'S256'
     })
     return redirect('https://accounts.google.com/o/oauth2/v2/auth?' + params)
 
@@ -45,13 +54,16 @@ def callback():
         if not code:
             return 'No code received', 400
 
-        # Exchange code for tokens
+        code_verifier = session.pop('code_verifier', '')
+
+        # Exchange code for tokens (with PKCE)
         token_res = http_requests.post('https://oauth2.googleapis.com/token', data={
             'code': code,
             'client_id': GOOGLE_CLIENT_ID,
             'client_secret': GOOGLE_CLIENT_SECRET,
             'redirect_uri': get_redirect_uri(),
-            'grant_type': 'authorization_code'
+            'grant_type': 'authorization_code',
+            'code_verifier': code_verifier
         })
         tokens = token_res.json()
 
