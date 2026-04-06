@@ -2869,16 +2869,23 @@ async function saveCloudGame() {
 
 // ==================== COMBAT POWER ====================
 function getCombatPower() {
-  const stats = getPlayerStats();
+  // 장비 능력치 기반 전투력
+  let equipAtk = 0, equipCrit = 0, equipCritDmg = 0, equipSpd = 0;
+  Object.values(G.equipment).forEach(item => {
+    if (!item) return;
+    const enhMul = 1 + (item.enhanceLevel || 0) * 0.1;
+    const val = item.statValue * enhMul;
+    if (item.statType === 'atk') equipAtk += val;
+    if (item.statType === 'crit') equipCrit += val;
+    if (item.statType === 'critDmg') equipCritDmg += val;
+    if (item.statType === 'spd') equipSpd += val;
+  });
   const cp = Math.floor(
-    stats.atk * 1.0 +
-    stats.hp * 0.3 +
-    stats.crit * 500 +
-    stats.critDmg * 200 +
-    stats.spdBonus * 300 +
-    stats.goldBonus * 100 +
-    getLevel() * 50 +
-    G.stage * 10
+    equipAtk * 2.0 +
+    equipCrit * 50 +
+    equipCritDmg * 30 +
+    equipSpd * 40 +
+    getLevel() * 10
   );
   return cp;
 }
@@ -2890,30 +2897,45 @@ function updateCombatPower() {
 }
 
 // ==================== RANKING ====================
+let rankTab = 'power';
 async function renderRanking(el) {
-  el.innerHTML = '<div class="rank-list"><div style="text-align:center;padding:20px;color:var(--dim);">로딩 중...</div></div>';
+  el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--dim);">로딩 중...</div>';
   if (currentUser) await saveCloudGame();
   try {
     const res = await fetch('/api/rankings');
     const data = await res.json();
-    const ranks = data.rankings || [];
-    if (!ranks.length) {
-      el.innerHTML = '<div class="rank-list"><div style="text-align:center;padding:20px;color:var(--dim);">아직 랭킹 데이터가 없습니다</div></div>';
+    const allRanks = data.rankings || [];
+    if (!allRanks.length) {
+      el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--dim);">아직 랭킹 데이터가 없습니다</div>';
       return;
     }
-    let html = '<div class="rank-list"><div style="font-size:16px;font-weight:900;margin-bottom:12px;text-align:center;">🏆 전투력 랭킹 TOP 50</div>';
-    ranks.forEach((r, i) => {
+
+    const tabs = `<div style="display:flex;gap:0;margin-bottom:12px;border-bottom:1px solid #333;">
+      <button onclick="rankTab='power';renderRanking(document.getElementById('tabContent'))" style="flex:1;padding:8px;border:none;border-bottom:2px solid ${rankTab==='power'?'var(--gold)':'transparent'};background:none;color:${rankTab==='power'?'var(--gold)':'var(--dim)'};font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">⚔️ 전투력</button>
+      <button onclick="rankTab='stage';renderRanking(document.getElementById('tabContent'))" style="flex:1;padding:8px;border:none;border-bottom:2px solid ${rankTab==='stage'?'#2ec4b6':'transparent'};background:none;color:${rankTab==='stage'?'#2ec4b6':'var(--dim)'};font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">🏰 스테이지</button>
+    </div>`;
+
+    let ranks;
+    if (rankTab === 'stage') {
+      ranks = [...allRanks].sort((a, b) => (b.stage||0) - (a.stage||0));
+    } else {
+      ranks = [...allRanks].sort((a, b) => (b.combat_power||0) - (a.combat_power||0));
+    }
+
+    let html = tabs + `<div class="rank-list"><div style="font-size:16px;font-weight:900;margin-bottom:12px;text-align:center;">${rankTab==='power'?'⚔️ 전투력 랭킹':'🏰 스테이지 랭킹'} TOP 50</div>`;
+    ranks.slice(0, 50).forEach((r, i) => {
       const isMe = currentUser && r.uid === currentUser.uid;
       const medal = i === 0 ? '👑' : (i === 1 ? '🥈' : (i === 2 ? '🥉' : (i + 1)));
+      const valueText = rankTab === 'power' ? `⚔️ ${formatNum(r.combat_power||0)}` : `🏰 ${r.stage||0}`;
       html += `
         <div class="rank-item ${isMe ? 'me' : ''}">
           <div class="rank-pos ${i<3?['gold','silver','bronze'][i]:''}">${medal}</div>
           ${r.photo ? `<img class="rank-img" src="${r.photo}">` : '<div class="rank-img" style="background:#333;border-radius:50%;"></div>'}
           <div class="rank-info">
             <div class="rank-name">${r.name||'?'} ${isMe ? '(나)' : ''}</div>
-            <div style="font-size:10px;color:var(--dim);">Lv.${r.level||1} ${r.class_name||''} ${r.class_stage||''} | Stage ${r.stage||0}</div>
+            <div style="font-size:10px;color:var(--dim);">Lv.${r.level||1} ${r.class_name||''} ${r.class_stage||''}</div>
           </div>
-          <div class="rank-cp">⚔️ ${formatNum(r.combat_power||0)}</div>
+          <div class="rank-cp">${valueText}</div>
         </div>`;
     });
     html += '</div>';
@@ -3154,7 +3176,7 @@ setInterval(async () => {
     saveCloudGame();
     updateTopBar();
   }
-}, 15000);
+}, 5000);
 // Save on close
 window.addEventListener('beforeunload', () => { saveGame(); if(currentUser) saveCloudGame(); });
 
