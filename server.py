@@ -1,120 +1,85 @@
-import os, json, secrets, urllib.parse, hashlib, base64
-from flask import Flask, request, jsonify, redirect, send_from_directory
-import requests as http_requests
+import os, json, secrets
+from flask import Flask, request, jsonify, send_from_directory
 from supabase import create_client
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 
-# Trust proxy headers on Render
 from werkzeug.middleware.proxy_fix import ProxyFix
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
-# ── Config ──
-GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '362966934345-chc1dngqgtifsh0cegqvsvv4v4v7hb50.apps.googleusercontent.com')
-GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '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')
 SUPABASE_URL = os.environ.get('SUPABASE_URL', 'https://pvwcpowcsstdcvcghjff.supabase.co')
 SUPABASE_KEY = os.environ.get('SUPABASE_KEY', 'sb_secret_NvQiIbELqA7FGe9W6wq8YA_yAxTiQf0')
-ADMIN_EMAILS = ['teuye144@dgsw.hs.kr', 'teuye144@gmail.com']
+ADMIN_NICKS = os.environ.get('ADMIN_NICKS', '김은서,관리자').split(',')
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# ── Token-based auth (no session cookies) ──
-# In-memory token store (persists until server restart, but tokens also saved in DB)
-tokens_cache = {}  # token -> user_info
-
-def get_user_from_token():
-    auth = request.headers.get('Authorization', '')
-    token = auth.replace('Bearer ', '') if auth.startswith('Bearer ') else request.args.get('token', '')
-    if not token: return None
-    if token in tokens_cache: return tokens_cache[token]
-    # Check DB
-    res = supabase.table('saves').select('uid,email,name,photo').eq('uid', token[:50]).execute()
+def get_user():
+    """Get user from X-User-Id header (sent from client localStorage)"""
+    uid = request.headers.get('X-User-Id', '')
+    if not uid: return None
+    res = supabase.table('saves').select('uid,name').eq('uid', uid).execute()
+    if res.data and len(res.data) > 0:
+        user = res.data[0]
+        user['is_admin'] = user.get('name', '') in ADMIN_NICKS
+        return user
     return None
 
-def get_redirect_uri():
-    if os.environ.get('RENDER'):
-        return 'https://dungeon-clicker.onrender.com/callback'
-    return 'http://localhost:8090/callback'
+# ── Auth: Register / Check nickname ──
+@app.route('/api/register', methods=['POST'])
+def api_register():
+    data = request.json
+    nickname = (data.get('nickname', '') or '').strip()
+    if not nickname or len(nickname) < 2 or len(nickname) > 12:
+        return jsonify({'error': '닉네임은 2~12자로 입력해주세요'}), 400
+    # Check duplicate
+    res = supabase.table('saves').select('uid').eq('name', nickname).execute()
+    if res.data and len(res.data) > 0:
+        return jsonify({'error': '이미 사용 중인 닉네임입니다'}), 400
+    uid = secrets.token_hex(16)
+    supabase.table('saves').insert({
+        'uid': uid, 'name': nickname, 'email': '', 'photo': '', 'game_state': {}
+    }).execute()
+    return jsonify({'ok': True, 'uid': uid, 'nickname': nickname, 'is_admin': nickname in ADMIN_NICKS})
 
-# ── Auth ──
-@app.route('/login')
-def login():
-    code_verifier = base64.urlsafe_b64encode(secrets.token_bytes(32)).rstrip(b'=').decode()
-    code_challenge = base64.urlsafe_b64encode(
-        hashlib.sha256(code_verifier.encode()).digest()
-    ).rstrip(b'=').decode()
-    state = base64.urlsafe_b64encode(code_verifier.encode()).decode()
-    params = urllib.parse.urlencode({
-        'client_id': GOOGLE_CLIENT_ID,
-        'redirect_uri': get_redirect_uri(),
-        'response_type': 'code',
-        'scope': 'openid email profile',
-        'prompt': 'select_account',
-        'code_challenge': code_challenge,
-        'code_challenge_method': 'S256',
-        'state': state
-    })
-    return redirect('https://accounts.google.com/o/oauth2/v2/auth?' + params)
+@app.route('/api/check-nick', methods=['POST'])
+def api_check_nick():
+    nickname = (request.json.get('nickname', '') or '').strip()
+    res = supabase.table('saves').select('uid').eq('name', nickname).execute()
+    return jsonify({'available': not (res.data and len(res.data) > 0)})
 
-@app.route('/callback')
-def callback():
-    try:
-        code = request.args.get('code')
-        if not code: return 'No code received', 400
-        state = request.args.get('state', '')
-        code_verifier = base64.urlsafe_b64decode(state.encode()).decode() if state else ''
-
-        token_res = http_requests.post('https://oauth2.googleapis.com/token', data={
-            'code': code, 'client_id': GOOGLE_CLIENT_ID,
-            'client_secret': GOOGLE_CLIENT_SECRET,
-            'redirect_uri': get_redirect_uri(),
-            'grant_type': 'authorization_code',
-            'code_verifier': code_verifier
-        })
-        tokens = token_res.json()
-        if 'error' in tokens:
-            return f'Token error: {tokens["error"]} - {tokens.get("error_description","")}', 400
-
-        user_res = http_requests.get('https://www.googleapis.com/oauth2/v2/userinfo',
-            headers={'Authorization': 'Bearer ' + tokens['access_token']})
-        user_info = user_res.json()
-
-        # Generate auth token
-        auth_token = secrets.token_hex(32)
-        user_data = {
-            'uid': user_info['id'],
-            'email': user_info.get('email', ''),
-            'name': user_info.get('name', ''),
-            'photo': user_info.get('picture', ''),
-            'is_admin': user_info.get('email', '') in ADMIN_EMAILS
-        }
-        tokens_cache[auth_token] = user_data
-
-        # Redirect with token in hash (not visible to server logs)
-        return redirect('/#token=' + auth_token)
-    except Exception as e:
-        return f'로그인 오류: {str(e)}', 500
+@app.route('/api/change-nick', methods=['POST'])
+def api_change_nick():
+    user = get_user()
+    if not user: return jsonify({'error': 'not logged in'}), 401
+    new_nick = (request.json.get('nickname', '') or '').strip()
+    if not new_nick or len(new_nick) < 2 or len(new_nick) > 12:
+        return jsonify({'error': '닉네임은 2~12자'}), 400
+    res = supabase.table('saves').select('uid').eq('name', new_nick).execute()
+    if res.data and len(res.data) > 0:
+        return jsonify({'error': '이미 사용 중인 닉네임'}), 400
+    supabase.table('saves').update({'name': new_nick}).eq('uid', user['uid']).execute()
+    supabase.table('rankings').update({'name': new_nick}).eq('uid', user['uid']).execute()
+    return jsonify({'ok': True, 'nickname': new_nick, 'is_admin': new_nick in ADMIN_NICKS})
 
 @app.route('/api/me')
 def api_me():
-    user = get_user_from_token()
+    user = get_user()
     if not user: return jsonify({'loggedIn': False})
-    return jsonify({'loggedIn': True, **user})
+    return jsonify({'loggedIn': True, 'uid': user['uid'], 'name': user['name'], 'is_admin': user.get('is_admin', False)})
 
 # ── Game Save/Load ──
 @app.route('/api/save', methods=['POST'])
 def api_save():
-    user = get_user_from_token()
+    user = get_user()
     if not user: return jsonify({'error': 'not logged in'}), 401
     data = request.json
     uid = user['uid']
-    supabase.table('saves').upsert({
-        'uid': uid, 'email': user['email'], 'name': user['name'],
-        'photo': user['photo'], 'game_state': data.get('gameState', {})
-    }, on_conflict='uid').execute()
+    supabase.table('saves').update({
+        'game_state': data.get('gameState', {})
+    }).eq('uid', uid).execute()
     supabase.table('rankings').upsert({
-        'uid': uid, 'name': user['name'], 'photo': user['photo'],
-        'email': user['email'], 'combat_power': data.get('combatPower', 0),
+        'uid': uid, 'name': user['name'],
+        'combat_power': data.get('combatPower', 0),
         'level': data.get('level', 1), 'stage': data.get('stage', 1),
         'knight_stage': data.get('knightStage', 0),
         'archer_stage': data.get('archerStage', 0),
@@ -125,7 +90,7 @@ def api_save():
 
 @app.route('/api/load')
 def api_load():
-    user = get_user_from_token()
+    user = get_user()
     if not user: return jsonify({'error': 'not logged in'}), 401
     res = supabase.table('saves').select('game_state').eq('uid', user['uid']).execute()
     if res.data and len(res.data) > 0:
@@ -134,7 +99,7 @@ def api_load():
 
 @app.route('/api/reset', methods=['POST'])
 def api_reset():
-    user = get_user_from_token()
+    user = get_user()
     if not user: return jsonify({'error': 'not logged in'}), 401
     uid = user['uid']
     supabase.table('saves').delete().eq('uid', uid).execute()
@@ -145,7 +110,9 @@ def api_reset():
 # ── Rankings ──
 @app.route('/api/rankings')
 def api_rankings():
-    res = supabase.table('rankings').select('*').order('combat_power', desc=True).limit(50).execute()
+    tab = request.args.get('tab', 'combat_power')
+    order_col = tab if tab in ['combat_power','knight_stage','archer_stage','rogue_stage'] else 'combat_power'
+    res = supabase.table('rankings').select('*').order(order_col, desc=True).limit(50).execute()
     return jsonify({'rankings': res.data or []})
 
 # ── Server Settings ──
@@ -156,9 +123,8 @@ def api_server_settings():
 
 @app.route('/api/server-settings', methods=['POST'])
 def api_set_server_settings():
-    user = get_user_from_token()
-    if not user or user['email'] not in ADMIN_EMAILS:
-        return jsonify({'error': 'forbidden'}), 403
+    user = get_user()
+    if not user or not user.get('is_admin'): return jsonify({'error': 'forbidden'}), 403
     for k, v in request.json.items():
         supabase.table('server_settings').upsert({'key': k, 'value': float(v)}, on_conflict='key').execute()
     return jsonify({'ok': True})
@@ -166,7 +132,7 @@ def api_set_server_settings():
 # ── User Settings ──
 @app.route('/api/my-settings')
 def api_my_settings():
-    user = get_user_from_token()
+    user = get_user()
     if not user: return jsonify({})
     res = supabase.table('user_settings').select('settings').eq('uid', user['uid']).execute()
     if res.data and len(res.data) > 0:
@@ -175,9 +141,8 @@ def api_my_settings():
 
 @app.route('/api/user-settings/<uid>', methods=['GET','POST'])
 def api_user_settings(uid):
-    user = get_user_from_token()
-    if not user or user['email'] not in ADMIN_EMAILS:
-        return jsonify({'error': 'forbidden'}), 403
+    user = get_user()
+    if not user or not user.get('is_admin'): return jsonify({'error': 'forbidden'}), 403
     if request.method == 'POST':
         supabase.table('user_settings').upsert({'uid': uid, 'settings': request.json}, on_conflict='uid').execute()
         return jsonify({'ok': True})
@@ -188,61 +153,46 @@ def api_user_settings(uid):
 # ── Admin ──
 @app.route('/api/admin/users')
 def api_admin_users():
-    user = get_user_from_token()
-    if not user or user['email'] not in ADMIN_EMAILS:
-        return jsonify({'error': 'forbidden'}), 403
-    res = supabase.table('saves').select('uid,email,name,photo').execute()
+    user = get_user()
+    if not user or not user.get('is_admin'): return jsonify({'error': 'forbidden'}), 403
+    res = supabase.table('saves').select('uid,name').execute()
     return jsonify({'users': res.data or []})
 
 @app.route('/api/admin/give', methods=['POST'])
 def api_admin_give():
-    user = get_user_from_token()
-    if not user or user['email'] not in ADMIN_EMAILS:
-        return jsonify({'error': 'forbidden'}), 403
+    user = get_user()
+    if not user or not user.get('is_admin'): return jsonify({'error': 'forbidden'}), 403
     data = request.json
     target_uid, field, amount = data['uid'], data['field'], data.get('amount', 0)
-    res = supabase.table('user_settings').select('settings').eq('uid', target_uid).execute()
-    settings = {}
-    if res.data and len(res.data) > 0:
-        settings = res.data[0].get('settings') or {}
-        if isinstance(settings, str): settings = json.loads(settings)
-    pending = settings.get('pending_rewards', {})
-    pending[field] = pending.get(field, 0) + amount
-    settings['pending_rewards'] = pending
-    supabase.table('user_settings').upsert({'uid': target_uid, 'settings': settings}, on_conflict='uid').execute()
-    return jsonify({'ok': True, 'pending': pending})
+    res = supabase.table('saves').select('game_state').eq('uid', target_uid).execute()
+    if not res.data: return jsonify({'error': 'not found'}), 404
+    gs = res.data[0].get('game_state') or {}
+    if isinstance(gs, str): gs = json.loads(gs)
+    gs[field] = gs.get(field, 0) + amount
+    supabase.table('saves').update({'game_state': gs}).eq('uid', target_uid).execute()
+    return jsonify({'ok': True, 'new_value': gs.get(field)})
 
 @app.route('/api/admin/give-all', methods=['POST'])
 def api_admin_give_all():
-    user = get_user_from_token()
-    if not user or user['email'] not in ADMIN_EMAILS:
-        return jsonify({'error': 'forbidden'}), 403
+    user = get_user()
+    if not user or not user.get('is_admin'): return jsonify({'error': 'forbidden'}), 403
     data = request.json
-    field, amount = data['field'], data.get('amount', 0)
-    message = data.get('message', '')
-    saves_res = supabase.table('saves').select('uid').execute()
-    uids = [r['uid'] for r in (saves_res.data or [])]
+    field, amount, message = data['field'], data.get('amount', 0), data.get('message', '')
+    saves_res = supabase.table('saves').select('uid,game_state').execute()
     count = 0
-    for uid in uids:
-        res = supabase.table('user_settings').select('settings').eq('uid', uid).execute()
-        settings = {}
-        if res.data and len(res.data) > 0:
-            settings = res.data[0].get('settings') or {}
-            if isinstance(settings, str): settings = json.loads(settings)
-        pending = settings.get('pending_rewards', {})
-        pending[field] = pending.get(field, 0) + amount
-        if message:
-            msgs = settings.get('pending_messages', [])
-            msgs.append(message)
-            settings['pending_messages'] = msgs
-        settings['pending_rewards'] = pending
-        supabase.table('user_settings').upsert({'uid': uid, 'settings': settings}, on_conflict='uid').execute()
+    for row in (saves_res.data or []):
+        gs = row.get('game_state') or {}
+        if isinstance(gs, str): gs = json.loads(gs)
+        gs[field] = gs.get(field, 0) + amount
+        supabase.table('saves').update({'game_state': gs}).eq('uid', row['uid']).execute()
         count += 1
+    if message:
+        supabase.table('server_settings').upsert({'key': 'notice', 'value': 0}, on_conflict='key').execute()
     return jsonify({'ok': True, 'count': count})
 
 @app.route('/api/claim-rewards', methods=['POST'])
 def api_claim_rewards():
-    user = get_user_from_token()
+    user = get_user()
     if not user: return jsonify({'error': 'not logged in'}), 401
     uid = user['uid']
     res = supabase.table('user_settings').select('settings').eq('uid', uid).execute()

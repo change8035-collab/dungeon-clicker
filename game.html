@@ -294,19 +294,20 @@ body { background:var(--bg); color:var(--text); font-family:'Noto Sans KR',sans-
 <div class="login-overlay" id="loginOverlay">
   <h1>⚔️ 던전 클리커</h1>
   <p>무한의 탑에 도전하라!</p>
-  <button class="login-btn" onclick="location.href='/login'">
-    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">
-    Google 계정으로 로그인
-  </button>
+  <div id="nickForm" style="display:flex;flex-direction:column;align-items:center;gap:12px;">
+    <input id="nickInput" type="text" placeholder="닉네임 입력 (2~12자)" maxlength="12"
+      style="padding:12px 20px;border-radius:10px;border:2px solid var(--accent);background:#1a1a2e;color:#fff;font-size:16px;text-align:center;width:220px;font-family:inherit;">
+    <div id="nickError" style="color:#ff4444;font-size:12px;display:none;"></div>
+    <button onclick="doRegister()" style="background:linear-gradient(135deg,var(--accent),#6c3ec1);color:#fff;border:none;padding:12px 40px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;">시작하기</button>
+  </div>
 </div>
 
 <div id="app" style="display:none;">
   <!-- USER BAR -->
   <div class="user-bar" id="userBar">
-    <img id="userPhoto" src="" alt="">
-    <span class="uname" id="userName">-</span>
+    <span class="uname" id="userName" onclick="changeNickname()" style="cursor:pointer;" title="클릭하여 닉네임 변경">-</span>
     <span class="cp">⚔️ <span id="combatPower">0</span></span>
-    <button onclick="googleLogout()">로그아웃</button>
+    <button onclick="doLogout()">로그아웃</button>
   </div>
   <!-- TOP BAR -->
   <div class="top-bar">
@@ -2870,51 +2871,84 @@ function gameLoop() {
 
 // ==================== INIT ====================
 
-// ==================== AUTH (Flask OAuth) ====================
-// ── Token auth ──
-let authToken = localStorage.getItem('authToken') || '';
+// ==================== AUTH (Nickname) ====================
+// ==================== NICKNAME AUTH ====================
+let userUid = localStorage.getItem('userUid') || '';
+
 function authHeaders() {
-  return authToken ? { 'Authorization': 'Bearer ' + authToken } : {};
+  return { 'X-User-Id': userUid };
 }
 function authFetch(url, opts = {}) {
-  opts.headers = { ...opts.headers, ...authHeaders() };
+  opts.headers = { ...(opts.headers || {}), ...authHeaders() };
   return fetch(url, opts);
 }
 
-function googleLogin() {
-  location.href = '/login';
-}
-function googleLogout() {
-  if (confirm('로그아웃 하시겠습니까?')) {
-    localStorage.removeItem('authToken');
-    authToken = '';
-    location.reload();
+async function doRegister() {
+  const nick = document.getElementById('nickInput').value.trim();
+  const errEl = document.getElementById('nickError');
+  if (!nick || nick.length < 2 || nick.length > 12) {
+    errEl.textContent = '닉네임은 2~12자로 입력해주세요'; errEl.style.display = ''; return;
   }
+  errEl.style.display = 'none';
+  try {
+    const res = await fetch('/api/register', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ nickname: nick })
+    });
+    const data = await res.json();
+    if (data.error) { errEl.textContent = data.error; errEl.style.display = ''; return; }
+    localStorage.setItem('userUid', data.uid);
+    userUid = data.uid;
+    location.reload();
+  } catch(e) { errEl.textContent = '서버 오류'; errEl.style.display = ''; }
 }
 
-// Check token from URL hash after OAuth redirect
-(function checkHashToken() {
-  const hash = location.hash;
-  if (hash.startsWith('#token=')) {
-    authToken = hash.replace('#token=', '');
-    localStorage.setItem('authToken', authToken);
-    history.replaceState(null, '', '/');
-  }
-})();
+// Enter키로 시작
+document.addEventListener('DOMContentLoaded', () => {
+  const inp = document.getElementById('nickInput');
+  if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') doRegister(); });
+});
+
+async function changeNickname() {
+  const newNick = prompt('새 닉네임 입력 (2~12자):');
+  if (!newNick || newNick.trim().length < 2) return;
+  try {
+    const res = await authFetch('/api/change-nick', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ nickname: newNick.trim() })
+    });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+    currentUser.name = data.nickname;
+    isAdmin = data.is_admin;
+    document.getElementById('userName').textContent = data.nickname;
+    showFloatText('✅ 닉네임 변경: ' + data.nickname, '#4CAF50');
+  } catch(e) { alert('변경 실패'); }
+}
+
+function doLogout() {
+  if (!confirm('로그아웃 하시겠습니까?\n(닉네임을 기억해두세요!)')) return;
+  localStorage.removeItem('userUid');
+  userUid = '';
+  location.reload();
+}
 
 async function checkAuth() {
+  if (!userUid) {
+    document.getElementById('loginOverlay').style.display = '';
+    document.getElementById('app').style.display = 'none';
+    return;
+  }
   try {
     const res = await authFetch('/api/me');
     const data = await res.json();
     if (data.loggedIn) {
       currentUser = data;
-      isAdmin = data.is_admin || data.isAdmin;
+      isAdmin = data.is_admin;
       document.getElementById('loginOverlay').style.display = 'none';
       document.getElementById('app').style.display = '';
-      document.getElementById('userPhoto').src = data.photo || '';
-      document.getElementById('userName').textContent = data.name || data.email;
+      document.getElementById('userName').textContent = data.name;
 
-      // Show admin tab if admin
       if (isAdmin) {
         const tabBar = document.querySelector('.tab-bar');
         if (!document.querySelector('[data-tab="admin"]')) {
@@ -2928,7 +2962,6 @@ async function checkAuth() {
 
       await loadServerSettings();
       await loadCloudSave();
-      await claimPendingRewards();
       spawnMonster();
       updateAllUI();
       if (!window._gameLoopStarted) {
@@ -2936,6 +2969,8 @@ async function checkAuth() {
         gameLoop();
       }
     } else {
+      localStorage.removeItem('userUid');
+      userUid = '';
       document.getElementById('loginOverlay').style.display = '';
       document.getElementById('app').style.display = 'none';
     }
