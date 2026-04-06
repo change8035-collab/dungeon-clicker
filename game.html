@@ -1994,9 +1994,11 @@ function equipBestAll() {
     }
   });
   updateAllUI();
+  renderTab('equip');
 }
 
 function showItemPopup(item) {
+  if (!item) { renderTab(activeTab); return; }
   const card = document.getElementById('itemPopupCard');
   const equipped = Object.values(G.equipment).find(e => e && e.id === item.id);
   const enhLv = item.enhanceLevel || 0;
