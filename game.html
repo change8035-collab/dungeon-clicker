@@ -3107,7 +3107,7 @@ updateAllUI = function() {
 // ==================== INIT WITH AUTH ====================
 // Don't start game until auth resolves (handled in onAuthStateChanged)
 // Auto cloud save every 60s
-setInterval(() => { if(currentUser) saveCloudGame(); }, 60000);
+setInterval(() => { if(currentUser) saveCloudGame(); }, 15000);
 // Save on close
 window.addEventListener('beforeunload', () => { saveGame(); if(currentUser) saveCloudGame(); });
 
