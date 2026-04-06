@@ -489,7 +489,7 @@ const CLASSES = {
   archer: {
     id: 'archer', name: '궁수', baseAtk: 14, baseHp: 70,
     atkPerLv: 2.5, hpPerLv: 7,
-    unlockCost: 5000,
+    unlockCost: 3000, requires: null,
     stages: [
       { lv: 1, name: '견습 궁수', statMul: 1.0 },
       { lv: 20, name: '정규 궁수', statMul: 1.8 },
@@ -501,7 +501,7 @@ const CLASSES = {
   rogue: {
     id: 'rogue', name: '도적', baseAtk: 18, baseHp: 50,
     atkPerLv: 3.0, hpPerLv: 5,
-    unlockCost: 5000,
+    unlockCost: 5000, requires: 'archer',
     stages: [
       { lv: 1, name: '견습 도적', statMul: 1.0 },
       { lv: 20, name: '정규 도적', statMul: 1.8 },
@@ -1131,7 +1131,12 @@ function getPlayerStats() {
   const lvDmgBonus = 1 + (lv - 1) * (ss('lvDmgPct',3) / 100);
   atk *= lvDmgBonus;
 
-  return { atk: Math.ceil(atk), hp: Math.ceil(hp), crit: Math.min(crit, 0.80), critDmg: Math.max(critDmg, 1.5), goldBonus, spdBonus };
+  // 보유 클래스 수 보너스: 클래스 1개당 1.8배 (기사=1배, +궁수=1.8배, +도적=3.24배)
+  const classCount = G.unlockedClasses.length;
+  const classMulBonus = Math.pow(1.8, classCount - 1);
+  atk *= classMulBonus;
+
+  return { atk: Math.ceil(atk), hp: Math.ceil(hp), crit: Math.min(crit, 0.80), critDmg: Math.max(critDmg, 1.5), goldBonus, spdBonus, classMulBonus };
 }
 
 function getEvolution() {
@@ -1853,6 +1858,10 @@ function doPullEquip(count) {
 function unlockClass(classId) {
   const cls = CLASSES[classId];
   if (!cls || G.unlockedClasses.includes(classId)) return;
+  if (cls.requires && !G.unlockedClasses.includes(cls.requires)) {
+    showFloatText(`❌ ${CLASSES[cls.requires].name} 해금 필요!`, '#e74c3c');
+    return;
+  }
   if (G.dia < cls.unlockCost) return;
   G.dia -= cls.unlockCost;
   G.unlockedClasses.push(classId);
@@ -2130,8 +2139,9 @@ function renderLamp(el) {
             <div style="flex:1;min-width:0;">
               <div style="font-size:14px;font-weight:700;color:#666;">🔒 ${cls.name}</div>
               <div style="font-size:11px;color:var(--dim);margin-top:2px;">ATK ${cls.baseAtk} | HP ${cls.baseHp} | 성장 ATK+${cls.atkPerLv}/Lv</div>
+              ${cls.requires && !G.unlockedClasses.includes(cls.requires) ? `<div style="font-size:10px;color:#e74c3c;margin-top:2px;">⚠️ ${CLASSES[cls.requires].name} 해금 필요</div>` : ''}
             </div>
-            <button onclick="event.stopPropagation();unlockClass('${cid}')" style="background:linear-gradient(135deg,var(--purple),#6c3ec1);color:#fff;border:none;padding:8px 14px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap;" ${G.dia < cls.unlockCost ? 'disabled' : ''}>
+            <button onclick="event.stopPropagation();unlockClass('${cid}')" style="background:linear-gradient(135deg,var(--purple),#6c3ec1);color:#fff;border:none;padding:8px 14px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap;" ${(G.dia < cls.unlockCost || (cls.requires && !G.unlockedClasses.includes(cls.requires))) ? 'disabled' : ''}>
               해금<br><span style="font-size:10px;">💎 ${cls.unlockCost}</span>
             </button>
           </div>
@@ -2280,6 +2290,7 @@ function renderMore(el) {
       <div class="stat-row"><span class="label">치명타 피해</span><span class="val">${(stats.critDmg*100).toFixed(0)}%</span></div>
       <div class="stat-row"><span class="label">공격 속도</span><span class="val">${(stats.spdBonus*100).toFixed(0)}%</span></div>
       <div class="stat-row"><span class="label">골드 보너스</span><span class="val">${(stats.goldBonus*100).toFixed(0)}%</span></div>
+      <div class="stat-row"><span class="label">클래스 보너스</span><span class="val" style="color:var(--gold);">×${stats.classMulBonus.toFixed(2)} (${G.unlockedClasses.length}클래스)</span></div>
       <div class="stat-row"><span class="label">누적 처치</span><span class="val">${G.kills}</span></div>
       <div class="stat-row"><span class="label">누적 골드</span><span class="val">${formatNum(G.totalGold)}</span></div>
       <div class="stat-row"><span class="label">최고 스테이지</span><span class="val">${G.maxStage}</span></div>
