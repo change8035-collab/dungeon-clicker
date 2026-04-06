@@ -342,7 +342,7 @@ body { background:var(--bg); color:var(--text); font-family:'Noto Sans KR',sans-
   <div class="tab-bar">
     <button class="tab-btn active" data-tab="lamp"><span class="tab-icon">🌸</span>뽑기</button>
     <button class="tab-btn" data-tab="equip"><span class="tab-icon">🎒</span>장비</button>
-    <button class="tab-btn" data-tab="fusion"><span class="tab-icon">🔮</span>합성</button>
+    <button class="tab-btn" data-tab="shop"><span class="tab-icon">🏪</span>상점</button>
     <button class="tab-btn" data-tab="skills"><span class="tab-icon">⚡</span>스킬</button>
     <button class="tab-btn" data-tab="ranking"><span class="tab-icon">🏆</span>랭킹</button>
     <button class="tab-btn" data-tab="more"><span class="tab-icon">📋</span>더보기</button>
@@ -1789,8 +1789,8 @@ function onMonsterKill() {
 
   // Boss diamond reward
   if (G.monster.isBoss) {
-    G.dia += 2;
-    showFloatText('💎 +2 보석!', '#7f5af0');
+    G.dia += 5;
+    showFloatText('💎 +5 보석!', '#7f5af0');
     saveCloudGame(); // 보스 킬 시 즉시 저장
   }
 
@@ -2083,7 +2083,7 @@ function renderTab(tab) {
   const el = document.getElementById('tabContent');
   if (tab === 'lamp') renderLamp(el);
   else if (tab === 'equip') renderEquip(el);
-  else if (tab === 'fusion') renderFusion(el);
+  else if (tab === 'shop') renderShop(el);
   else if (tab === 'skills') renderSkills(el);
   else if (tab === 'ranking') renderRanking(el);
   else if (tab === 'admin') renderAdmin(el);
@@ -2216,7 +2216,16 @@ function renderLamp(el) {
   }
 }
 
+let equipSubTab = 'equip';
 function renderEquip(el) {
+  const subTabs = `<div style="display:flex;gap:0;margin-bottom:12px;border-bottom:1px solid #333;">
+    <button onclick="equipSubTab='equip';renderEquip(document.getElementById('tabContent'))" style="flex:1;padding:8px;border:none;border-bottom:2px solid ${equipSubTab==='equip'?'var(--accent)':'transparent'};background:none;color:${equipSubTab==='equip'?'var(--accent)':'var(--dim)'};font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">🎒 장비</button>
+    <button onclick="equipSubTab='fusion';renderEquip(document.getElementById('tabContent'))" style="flex:1;padding:8px;border:none;border-bottom:2px solid ${equipSubTab==='fusion'?'#f1c40f':'transparent'};background:none;color:${equipSubTab==='fusion'?'#f1c40f':'var(--dim)'};font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">🔮 합성</button>
+  </div>`;
+  if (equipSubTab === 'fusion') {
+    renderFusion(el, subTabs);
+    return;
+  }
   let slotsHtml = EQUIP_SLOTS.map(slot => {
     const item = G.equipment[slot.id];
     if (item) {
@@ -2260,7 +2269,7 @@ function renderEquip(el) {
 
   const commonCount = G.inventory.filter(i => i.rarityId === 'common').length;
 
-  el.innerHTML = `
+  el.innerHTML = subTabs + `
     <div class="equip-section">
       <div class="equip-title" style="display:flex;justify-content:space-between;align-items:center;">
         ⚔️ 장착 장비
@@ -2563,7 +2572,97 @@ function clearFusionSlots() {
   renderTab('fusion');
 }
 
-function renderFusion(el) {
+function renderShop(el) {
+  el.innerHTML = `
+    <div style="padding:12px;">
+      <div style="font-size:16px;font-weight:900;margin-bottom:16px;text-align:center;">🏪 상점</div>
+
+      <div style="background:linear-gradient(135deg,#1a1a3e,#2a1a4e);border:2px solid #cc0000;border-radius:12px;padding:16px;margin-bottom:12px;">
+        <div style="font-size:14px;font-weight:900;color:#ff4444;margin-bottom:4px;">🔥 신화 SS 풀세트 패키지</div>
+        <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">모든 부위(무기/투구/갑옷/신발/반지/목걸이) 신화 SS 장비 1개씩!</div>
+        <div style="display:flex;gap:4px;justify-content:center;margin-bottom:10px;">
+          ${EQUIP_SLOTS.map(s => '<span style="font-size:20px;">'+s.icon+'</span>').join('')}
+        </div>
+        <div style="text-align:center;">
+          <button onclick="buySSPackage()" style="background:linear-gradient(135deg,#cc0000,#ff4444);color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;font-family:inherit;" ${G.gold < 999000000 ? 'disabled' : ''}>
+            구매 💰 999M
+          </button>
+        </div>
+      </div>
+
+      <div style="background:var(--card2);border:2px solid var(--gold);border-radius:12px;padding:16px;margin-bottom:12px;">
+        <div style="font-size:14px;font-weight:900;color:var(--gold);margin-bottom:4px;">💎 보석 패키지</div>
+        <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">보석 500개 즉시 지급</div>
+        <div style="text-align:center;">
+          <button onclick="buyGemPackage()" style="background:linear-gradient(135deg,#7f5af0,#6c3ec1);color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;font-family:inherit;" ${G.gold < 500000000 ? 'disabled' : ''}>
+            구매 💰 500M
+          </button>
+        </div>
+      </div>
+
+      <div style="background:var(--card2);border:2px solid #2ec4b6;border-radius:12px;padding:16px;">
+        <div style="font-size:14px;font-weight:900;color:#2ec4b6;margin-bottom:4px;">⚡ 스킬 포인트 패키지</div>
+        <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">모든 스킬 +10 레벨</div>
+        <div style="text-align:center;">
+          <button onclick="buySkillPackage()" style="background:linear-gradient(135deg,#2ec4b6,#1a9e92);color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;font-family:inherit;" ${G.gold < 200000000 ? 'disabled' : ''}>
+            구매 💰 200M
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function buySSPackage() {
+  if (G.gold < 999000000) { showFloatText('💰 골드가 부족합니다!', '#e74c3c'); return; }
+  if (!confirm('999M 골드로 신화 SS 풀세트를 구매하시겠습니까?')) return;
+  G.gold -= 999000000;
+  const ssRarity = RARITIES.find(r => r.id === 'mythic_ss');
+  EQUIP_SLOTS.forEach(slot => {
+    const nameMap = SLOT_NAMES[slot.id];
+    const names = nameMap['mythic'] || nameMap['common'];
+    const nameIdx = Math.floor(Math.random() * names.length);
+    const STAT_LABELS = { atk:'공격력', hp:'HP', crit:'치명타%', critDmg:'치명타피해%', spd:'공격속도%' };
+    let baseStat;
+    if (slot.statType === 'crit') baseStat = (1 + G.stage * 0.3) * ssRarity.statMul;
+    else if (slot.statType === 'critDmg') baseStat = (3 + G.stage * 0.8) * ssRarity.statMul;
+    else if (slot.statType === 'spd') baseStat = (2 + G.stage * 0.5) * ssRarity.statMul;
+    else baseStat = (5 + G.stage * 2) * ssRarity.statMul;
+    const item = {
+      id: nextItemId++, slot: slot.id, rarityId: 'mythic_ss', rarity: '신화 SS',
+      color: ssRarity.color, name: names[nameIdx] + ' SS', icon: slot.icon,
+      sprite: getEquipSprite(slot.id, 'mythic_ss', nameIdx),
+      statType: slot.statType, statValue: Math.ceil(baseStat),
+      statLabel: STAT_LABELS[slot.statType] || slot.statType, enhanceLevel: 0,
+    };
+    G.inventory.push(item);
+  });
+  showFloatText('🔥 신화 SS 풀세트 획득!', '#ff4444');
+  updateAllUI();
+  saveCloudGame();
+}
+
+function buyGemPackage() {
+  if (G.gold < 500000000) { showFloatText('💰 골드가 부족합니다!', '#e74c3c'); return; }
+  if (!confirm('500M 골드로 보석 500개를 구매하시겠습니까?')) return;
+  G.gold -= 500000000;
+  G.dia += 500;
+  showFloatText('💎 +500 보석 획득!', '#7f5af0');
+  updateAllUI();
+  saveCloudGame();
+}
+
+function buySkillPackage() {
+  if (G.gold < 200000000) { showFloatText('💰 골드가 부족합니다!', '#e74c3c'); return; }
+  if (!confirm('200M 골드로 스킬 +10을 구매하시겠습니까?')) return;
+  G.gold -= 200000000;
+  SKILLS.forEach(sk => { G.skillLevels[sk.id] = (G.skillLevels[sk.id] || 0) + 10; });
+  showFloatText('⚡ 모든 스킬 +10!', '#2ec4b6');
+  updateAllUI();
+  saveCloudGame();
+}
+
+function renderFusion(el, headerHtml) {
   const item1 = fusionSlot1 ? G.inventory.find(i => i.id === fusionSlot1) : null;
   const item2 = fusionSlot2 ? G.inventory.find(i => i.id === fusionSlot2) : null;
 
@@ -2647,7 +2746,7 @@ function renderFusion(el) {
     }
   }
 
-  el.innerHTML = `
+  el.innerHTML = (headerHtml || '') + `
     <div class="fusion-section">
       <div class="fusion-title">🔮 장비 합성</div>
       <div style="text-align:center;font-size:11px;color:var(--dim);margin-bottom:8px;">같은 등급 + 같은 부위 = 상위 등급 장비!</div>
