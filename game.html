@@ -1050,6 +1050,9 @@ let G = {
   classLevels: { knight: 1, archer: 1, rogue: 1 },
   classXp: { knight: 0, archer: 0, rogue: 0 },
   stage: 1, subStage: 1, maxStage: 1,
+  classStages: { knight: 1, archer: 1, rogue: 1 },
+  classSubStages: { knight: 1, archer: 1, rogue: 1 },
+  classMaxStages: { knight: 1, archer: 1, rogue: 1 },
   baseAtk: 10, baseHp: 100, currentHp: 100,
   lampLevel: 1,
   unlockedClasses: ['knight'],
@@ -1805,8 +1808,12 @@ function onMonsterKill() {
     G.subStage = 1;
     G.stage++;
     G.maxStage = Math.max(G.maxStage, G.stage);
+    G.classMaxStages[G.selectedClass] = G.maxStage;
     showFloatText(`🏰 스테이지 ${G.stage} 돌입!`, '#ff8906');
   }
+  // 클래스별 스테이지 동기화
+  G.classStages[G.selectedClass] = G.stage;
+  G.classSubStages[G.selectedClass] = G.subStage;
 
   updateTopBar();
   spawnMonster();
@@ -1871,7 +1878,16 @@ function unlockClass(classId) {
 
 function selectClass(classId) {
   if (!G.unlockedClasses.includes(classId)) return;
+  // 현재 클래스 스테이지 저장
+  G.classStages[G.selectedClass] = G.stage;
+  G.classSubStages[G.selectedClass] = G.subStage;
+  G.classMaxStages[G.selectedClass] = G.maxStage;
+  // 새 클래스 스테이지 로드
   G.selectedClass = classId;
+  G.stage = G.classStages[classId] || 1;
+  G.subStage = G.classSubStages[classId] || 1;
+  G.maxStage = G.classMaxStages[classId] || 1;
+  spawnMonster();
   updateAllUI();
 }
 
@@ -2685,6 +2701,12 @@ function loadGame() {
     }
     if (!G.classLevels) G.classLevels = { knight: 1, archer: 1, rogue: 1 };
     if (!G.classXp) G.classXp = { knight: 0, archer: 0, rogue: 0 };
+    // 클래스별 스테이지 마이그레이션
+    if (!G.classStages) {
+      G.classStages = { knight: G.stage||1, archer: 1, rogue: 1 };
+      G.classSubStages = { knight: G.subStage||1, archer: 1, rogue: 1 };
+      G.classMaxStages = { knight: G.maxStage||1, archer: 1, rogue: 1 };
+    }
     // Clean up old fields
     delete G.level; delete G.xp; delete G.xpToNext;
 
@@ -2796,6 +2818,9 @@ function resetGameState() {
   G.classLevels = { knight: 1, archer: 1, rogue: 1 };
   G.classXp = { knight: 0, archer: 0, rogue: 0 };
   G.stage = 1; G.subStage = 1; G.maxStage = 1;
+  G.classStages = { knight: 1, archer: 1, rogue: 1 };
+  G.classSubStages = { knight: 1, archer: 1, rogue: 1 };
+  G.classMaxStages = { knight: 1, archer: 1, rogue: 1 };
   G.baseAtk = 10; G.baseHp = 100; G.currentHp = 100;
   G.lampLevel = 1;
   G.unlockedClasses = ['knight'];
@@ -2836,6 +2861,12 @@ async function loadCloudSave() {
         G[key] = saved[key];
       }
       G.monster = null;
+      // 클래스별 스테이지 마이그레이션
+      if (!G.classStages) {
+        G.classStages = { knight: G.stage||1, archer: 1, rogue: 1 };
+        G.classSubStages = { knight: G.subStage||1, archer: 1, rogue: 1 };
+        G.classMaxStages = { knight: G.maxStage||1, archer: 1, rogue: 1 };
+      }
       console.log('☁️ Cloud save loaded! stage:', G.stage, 'gold:', G.gold);
     } else {
       loadGame();
@@ -2858,7 +2889,7 @@ async function saveCloudGame() {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         gameState: G,
-        combatPower: cp, level: getLevel(), stage: G.stage,
+        combatPower: cp, level: getLevel(), stage: Math.max(...Object.values(G.classMaxStages || {1:1})),
         className: info.name, classStage: info.stageLabel
       })
     });
