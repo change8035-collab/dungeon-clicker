@@ -404,9 +404,12 @@ function itemName(item) {
 }
 function getEquipIcon(item, size) {
   const s = size || 36;
-  // Only generate sprite if missing (preserve saved sprite)
-  if (!item.sprite && item.slot && item.rarityId) {
-    item.sprite = getEquipSprite(item.slot, item.rarityId, item.id);
+  // Fix sprite once using item.id as seed, never change again
+  if (!item._spriteFixed && item.slot && item.rarityId) {
+    const variant = ((item.id || 0) % 3) + 1;
+    const rarityBase = item.rarityId === 'mythic_sss' ? 'mythic_sss' : (item.rarityId.startsWith('mythic') ? 'mythic' : item.rarityId);
+    item.sprite = 'assets/equip/' + item.slot + '_' + rarityBase + '_' + variant + '.png';
+    item._spriteFixed = true;
   }
   if (item.sprite) return '<img src="'+item.sprite+'" style="width:'+s+'px;height:'+s+'px;object-fit:contain;border-radius:4px;">';
   return '<span style="font-size:'+(s-8)+'px;">'+item.icon+'</span>';
