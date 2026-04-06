@@ -37,7 +37,8 @@ def login():
     code_challenge = base64.urlsafe_b64encode(
         hashlib.sha256(code_verifier.encode()).digest()
     ).rstrip(b'=').decode()
-    session['code_verifier'] = code_verifier
+    # code_verifier를 state에 넣어서 세션 의존 제거
+    state = base64.urlsafe_b64encode(code_verifier.encode()).decode()
 
     params = urllib.parse.urlencode({
         'client_id': GOOGLE_CLIENT_ID,
@@ -46,7 +47,8 @@ def login():
         'scope': 'openid email profile',
         'prompt': 'select_account',
         'code_challenge': code_challenge,
-        'code_challenge_method': 'S256'
+        'code_challenge_method': 'S256',
+        'state': state
     })
     return redirect('https://accounts.google.com/o/oauth2/v2/auth?' + params)
 
@@ -57,7 +59,9 @@ def callback():
         if not code:
             return 'No code received', 400
 
-        code_verifier = session.pop('code_verifier', '')
+        # state에서 code_verifier 복원
+        state = request.args.get('state', '')
+        code_verifier = base64.urlsafe_b64decode(state.encode()).decode() if state else ''
 
         # Exchange code for tokens (with PKCE)
         token_res = http_requests.post('https://oauth2.googleapis.com/token', data={
