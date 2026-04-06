@@ -3136,8 +3136,10 @@ updateAllUI = function() {
 // Auto cloud save every 60s
 setInterval(async () => {
   if(currentUser) {
+    await loadServerSettings();
     await claimPendingRewards();
     saveCloudGame();
+    updateTopBar();
   }
 }, 15000);
 // Save on close

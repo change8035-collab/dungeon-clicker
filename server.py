@@ -6,9 +6,10 @@ from supabase import create_client
 app = Flask(__name__, static_folder='.', static_url_path='')
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['PREFERRED_URL_SCHEME'] = 'https'
+app.config['PREFERRED_URL_SCHEME'] = 'https' if os.environ.get('RENDER') else 'http'
 app.config['PERMANENT_SESSION_LIFETIME'] = 60 * 60 * 24 * 30  # 30일
-app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_SECURE'] = bool(os.environ.get('RENDER'))  # HTTPS only on Render
+app.config['SESSION_COOKIE_HTTPONLY'] = True
 
 # Trust proxy headers on Render
 from werkzeug.middleware.proxy_fix import ProxyFix
