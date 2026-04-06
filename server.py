@@ -1,8 +1,6 @@
-import os, json, secrets
-from flask import Flask, request, jsonify, redirect, session, send_from_directory, url_for
-from google_auth_oauthlib.flow import Flow
-from google.oauth2 import id_token
-from google.auth.transport import requests as g_requests
+import os, json, secrets, urllib.parse
+from flask import Flask, request, jsonify, redirect, session, send_from_directory
+import requests as http_requests
 from supabase import create_client
 
 app = Flask(__name__, static_folder='.', static_url_path='')
@@ -23,55 +21,54 @@ ADMIN_EMAILS = ['teuye144@dgsw.hs.kr', 'teuye144@gmail.com']
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-if os.environ.get('RENDER') is None:
-    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # dev only
-
-def get_flow():
-    return Flow.from_client_config(
-        {"web": {
-            "client_id": GOOGLE_CLIENT_ID,
-            "client_secret": GOOGLE_CLIENT_SECRET,
-            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-            "token_uri": "https://oauth2.googleapis.com/token",
-        }},
-        scopes=['openid', 'https://www.googleapis.com/auth/userinfo.email',
-                'https://www.googleapis.com/auth/userinfo.profile']
-    )
-
 # ── Auth ──
-def get_base_url():
-    """Get base URL, forcing HTTPS on production"""
-    url = request.host_url.rstrip('/')
+def get_redirect_uri():
     if os.environ.get('RENDER'):
-        url = url.replace('http://', 'https://')
-    return url
+        return 'https://dungeon-clicker.onrender.com/callback'
+    return 'http://localhost:8090/callback'
 
 @app.route('/login')
 def login():
-    flow = get_flow()
-    flow.redirect_uri = get_base_url() + '/callback'
-    auth_url, state = flow.authorization_url(prompt='select_account')
-    session['state'] = state
-    return redirect(auth_url)
+    params = urllib.parse.urlencode({
+        'client_id': GOOGLE_CLIENT_ID,
+        'redirect_uri': get_redirect_uri(),
+        'response_type': 'code',
+        'scope': 'openid email profile',
+        'prompt': 'select_account'
+    })
+    return redirect('https://accounts.google.com/o/oauth2/v2/auth?' + params)
 
 @app.route('/callback')
 def callback():
     try:
-        flow = get_flow()
-        flow.redirect_uri = get_base_url() + '/callback'
-        # Force HTTPS in authorization_response URL
-        auth_response = request.url
-        if os.environ.get('RENDER'):
-            auth_response = auth_response.replace('http://', 'https://')
-        flow.fetch_token(authorization_response=auth_response)
-        credentials = flow.credentials
-        id_info = id_token.verify_oauth2_token(credentials.id_token, g_requests.Request(), GOOGLE_CLIENT_ID)
+        code = request.args.get('code')
+        if not code:
+            return 'No code received', 400
+
+        # Exchange code for tokens
+        token_res = http_requests.post('https://oauth2.googleapis.com/token', data={
+            'code': code,
+            'client_id': GOOGLE_CLIENT_ID,
+            'client_secret': GOOGLE_CLIENT_SECRET,
+            'redirect_uri': get_redirect_uri(),
+            'grant_type': 'authorization_code'
+        })
+        tokens = token_res.json()
+
+        if 'error' in tokens:
+            return f'Token error: {tokens["error"]} - {tokens.get("error_description","")}', 400
+
+        # Get user info
+        user_res = http_requests.get('https://www.googleapis.com/oauth2/v2/userinfo',
+            headers={'Authorization': 'Bearer ' + tokens['access_token']})
+        user_info = user_res.json()
+
         session['user'] = {
-            'uid': id_info['sub'],
-            'email': id_info.get('email', ''),
-            'name': id_info.get('name', ''),
-            'photo': id_info.get('picture', ''),
-            'is_admin': id_info.get('email', '') in ADMIN_EMAILS
+            'uid': user_info['id'],
+            'email': user_info.get('email', ''),
+            'name': user_info.get('name', ''),
+            'photo': user_info.get('picture', ''),
+            'is_admin': user_info.get('email', '') in ADMIN_EMAILS
         }
         return redirect('/')
     except Exception as e:
