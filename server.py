@@ -219,6 +219,7 @@ def api_admin_give_all():
         return jsonify({'error': 'forbidden'}), 403
     data = request.json
     field, amount = data['field'], data.get('amount', 0)
+    message = data.get('message', '')
     # Get all user UIDs from saves
     saves_res = supabase.table('saves').select('uid').execute()
     uids = [r['uid'] for r in (saves_res.data or [])]
@@ -231,6 +232,11 @@ def api_admin_give_all():
             if isinstance(settings, str): settings = json.loads(settings)
         pending = settings.get('pending_rewards', {})
         pending[field] = pending.get(field, 0) + amount
+        # 공지 문구 저장
+        if message:
+            msgs = settings.get('pending_messages', [])
+            msgs.append(message)
+            settings['pending_messages'] = msgs
         settings['pending_rewards'] = pending
         supabase.table('user_settings').upsert({'uid': uid, 'settings': settings}, on_conflict='uid').execute()
         count += 1
@@ -246,9 +252,10 @@ def api_claim_rewards():
     settings = res.data[0].get('settings') or {}
     if isinstance(settings, str): settings = json.loads(settings)
     pending = settings.pop('pending_rewards', {})
-    if pending:
+    messages = settings.pop('pending_messages', [])
+    if pending or messages:
         supabase.table('user_settings').update({'settings': settings}).eq('uid', uid).execute()
-    return jsonify({'rewards': pending})
+    return jsonify({'rewards': pending, 'messages': messages})
 
 # ── Static ──
 @app.route('/')

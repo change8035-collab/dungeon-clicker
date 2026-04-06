@@ -2841,14 +2841,35 @@ async function claimPendingRewards() {
     const res = await fetch('/api/claim-rewards', { method: 'POST' });
     const data = await res.json();
     const rewards = data.rewards || {};
+    const messages = data.messages || [];
     for (const [field, amount] of Object.entries(rewards)) {
       G[field] = (G[field] || 0) + amount;
-      showFloatText(`🎁 관리자 지급: ${field} +${formatNum(amount)}`, '#4CAF50');
+      showFloatText(`🎁 지급: ${field === 'gold' ? '💰골드' : '💎보석'} +${formatNum(amount)}`, '#4CAF50');
     }
+    // 관리자 공지 메시지 표시
+    messages.forEach(msg => {
+      showAnnouncement(msg);
+    });
     if (Object.keys(rewards).length > 0) {
+      updateTopBar();
       console.log('🎁 Pending rewards claimed:', rewards);
     }
   } catch(e) { console.warn('Reward claim failed:', e); }
+}
+
+function showAnnouncement(msg) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML = `
+    <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border:2px solid var(--gold);border-radius:16px;padding:24px 20px;max-width:340px;text-align:center;">
+      <div style="font-size:24px;margin-bottom:8px;">📢</div>
+      <div style="font-size:16px;font-weight:900;color:var(--gold);margin-bottom:12px;">관리자 공지</div>
+      <div style="font-size:14px;color:#eee;line-height:1.6;white-space:pre-wrap;">${msg}</div>
+      <div style="margin-top:16px;font-size:11px;color:var(--dim);">아무 곳이나 터치하여 닫기</div>
+    </div>
+  `;
+  overlay.onclick = () => overlay.remove();
+  document.body.appendChild(overlay);
 }
 
 async function loadCloudSave() {
@@ -3049,6 +3070,7 @@ function renderAdmin(el) {
 
       <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:#4CAF50;">🎁 서버 전체 지급</div>
       <div style="font-size:10px;color:var(--dim);margin-bottom:8px;">※ 모든 유저에게 보류 보상으로 지급됩니다</div>
+      <div class="admin-row"><label>📢 공지 문구</label><input type="text" id="serverGiveMsg" placeholder="지급 사유 입력..." value="" style="flex:2"></div>
       <div class="admin-row"><label>💰 골드</label><input type="text" id="serverGiveGold" value="10000"><button onclick="giveToAllUsers('gold',Number(document.getElementById('serverGiveGold').value))">전체 지급</button></div>
       <div class="admin-row"><label>💎 보석</label><input type="text" id="serverGiveDia" value="100"><button onclick="giveToAllUsers('dia',Number(document.getElementById('serverGiveDia').value))">전체 지급</button></div>
 
@@ -3142,11 +3164,12 @@ function selectUser(uid, name, email) {
 }
 
 async function giveToAllUsers(field, amount) {
-  if (!confirm(`모든 유저에게 ${field} +${formatNum(amount)} 지급하시겠습니까?`)) return;
+  const msg = document.getElementById('serverGiveMsg')?.value || '';
+  if (!confirm(`모든 유저에게 ${field} +${formatNum(amount)} 지급하시겠습니까?${msg ? '\n공지: '+msg : ''}`)) return;
   try {
     const res = await fetch('/api/admin/give-all', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ field, amount })
+      body: JSON.stringify({ field, amount, message: msg })
     });
     const data = await res.json();
     if (data.ok) showFloatText(`✅ ${data.count}명에게 ${field} +${formatNum(amount)} 전체 지급!`, '#4CAF50');
