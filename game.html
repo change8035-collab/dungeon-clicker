@@ -2749,6 +2749,7 @@ async function checkAuth() {
 
       await loadServerSettings();
       await loadCloudSave();
+      await claimPendingRewards();
       spawnMonster();
       updateAllUI();
       if (!window._gameLoopStarted) {
@@ -2782,6 +2783,21 @@ function resetGameState() {
   G.lastSave = Date.now();
   nextItemId = 1;
   console.log('🆕 새 게임 시작!');
+}
+
+async function claimPendingRewards() {
+  try {
+    const res = await fetch('/api/claim-rewards', { method: 'POST' });
+    const data = await res.json();
+    const rewards = data.rewards || {};
+    for (const [field, amount] of Object.entries(rewards)) {
+      G[field] = (G[field] || 0) + amount;
+      showFloatText(`🎁 관리자 지급: ${field} +${formatNum(amount)}`, '#4CAF50');
+    }
+    if (Object.keys(rewards).length > 0) {
+      console.log('🎁 Pending rewards claimed:', rewards);
+    }
+  } catch(e) { console.warn('Reward claim failed:', e); }
 }
 
 async function loadCloudSave() {
@@ -3107,7 +3123,12 @@ updateAllUI = function() {
 // ==================== INIT WITH AUTH ====================
 // Don't start game until auth resolves (handled in onAuthStateChanged)
 // Auto cloud save every 60s
-setInterval(() => { if(currentUser) saveCloudGame(); }, 15000);
+setInterval(async () => {
+  if(currentUser) {
+    await claimPendingRewards();
+    saveCloudGame();
+  }
+}, 15000);
 // Save on close
 window.addEventListener('beforeunload', () => { saveGame(); if(currentUser) saveCloudGame(); });
 
