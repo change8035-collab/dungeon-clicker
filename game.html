@@ -135,6 +135,10 @@ body { background:var(--bg); color:var(--text); font-family:'Noto Sans KR',sans-
 .pull-item img.pull-icon { width:56px; height:56px; object-fit:contain; border-radius:6px; display:block; margin:0 auto 4px; }
 .pull-item .item-name { font-size:8px; line-height:1.2; margin-top:2px; word-break:keep-all; color:#ddd; }
 .pull-item .item-rarity { font-size:7px; font-weight:700; margin-top:1px; }
+.pull-items.compact .pull-item { padding:3px 2px 2px; border-width:1px; }
+.pull-items.compact .pull-item img.pull-icon { width:28px; height:28px; margin:0 auto 1px; }
+.pull-items.compact .pull-item .item-name { font-size:6px; }
+.pull-items.compact .pull-item .item-rarity { font-size:5px; }
 .pull-item.new-item::after { content:'NEW'; position:absolute; top:-5px; right:-5px; background:#f55; color:#fff; font-size:7px; font-weight:900; padding:1px 4px; border-radius:4px; }
 @keyframes pullPop { 0%{transform:scale(0);opacity:0} 100%{transform:scale(1);opacity:1} }
 .pull-result .close-btn { background:var(--accent); color:#fff; border:none; padding:12px 40px; border-radius:12px; font-weight:700; font-size:15px; cursor:pointer; font-family:inherit; letter-spacing:1px; }
@@ -1886,10 +1890,13 @@ function showPullResult(items, type) {
   else if(bestRarity==='legendary') titleEl.style.color='#ffaa00';
   else titleEl.style.color='var(--gold)';
 
-  // Grid columns: 1 item = 1col, ≤3 = 3col, ≤5 = 5col, else 5
-  const cols = items.length===1?1:items.length<=3?3:5;
+  // Grid columns based on count
+  const isBig = items.length > 10;
+  const cols = items.length===1?1:items.length<=3?3:isBig?10:5;
   container.style.gridTemplateColumns = `repeat(${cols},1fr)`;
-  container.style.maxWidth = cols===1?'120px':cols===3?'220px':'360px';
+  container.style.maxWidth = isBig?'100%':cols===1?'120px':cols===3?'220px':'360px';
+  container.style.gap = isBig?'3px':'6px';
+  container.classList.toggle('compact', isBig);
 
   // Existing inventory for NEW badge
   const existingNames = new Set(G.inventory.map(i=>i.name).concat(Object.values(G.equipment).filter(Boolean).map(i=>i.name)));
