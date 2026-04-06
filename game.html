@@ -2070,6 +2070,9 @@ function renderLamp(el) {
         <button class="lamp-btn multi" onclick="doPullEquip(10)" ${G.dia < cost10 ? 'disabled' : ''}>
           10회 뽑기<span class="cost">💎 ${cost10}</span>
         </button>
+        <button class="lamp-btn multi" onclick="doPullEquip(100)" ${G.dia < cost1 * 100 ? 'disabled' : ''} style="background:linear-gradient(135deg,#ff6b35,#ff4444);margin-top:6px;">
+          💥 100회 뽑기<span class="cost">💎 ${cost1 * 100}</span>
+        </button>
       </div>
       <div class="lamp-upgrade">
         <button onclick="upgradeLamp()" ${G.gold < upgCost ? 'disabled' : ''}>
@@ -2268,9 +2271,6 @@ function renderMore(el) {
       <div class="stat-row"><span class="label">누적 골드</span><span class="val">${formatNum(G.totalGold)}</span></div>
       <div class="stat-row"><span class="label">최고 스테이지</span><span class="val">${G.maxStage}</span></div>
 
-      <div style="font-size:16px;font-weight:700;margin:20px 0 12px;">📺 광고 보상</div>
-      <button class="more-btn ad" onclick="watchAd()">🎬 광고 보고 골드 2배 (30초)</button>
-      <button class="more-btn ad" onclick="freeGems()" style="margin-top:6px;">🎬 광고 보고 💎 50 받기</button>
 
       <div style="font-size:16px;font-weight:700;margin:20px 0 12px;">⚙️ 설정</div>
       <button class="more-btn" onclick="doResetAccount()" style="background:#e74c3c;color:#fff;border:none;padding:10px;border-radius:8px;font-weight:700;cursor:pointer;width:100%;">🗑️ 계정 초기화 (처음부터 시작)</button>
