@@ -160,10 +160,25 @@ def api_sync():
                 }, on_conflict='uid').execute()
             except: pass
         threading.Thread(target=_update_rank, daemon=True).start()
-    # Get latest state (check admin give)
-    latest_res = supabase.table('saves').select('game_state').eq('uid', uid).execute()
-    latest_gs = latest_res.data[0].get('game_state') if latest_res.data else None
-    return jsonify({'ok': True, 'latestState': latest_gs, 'serverSettings': get_server_settings()})
+    # Check pending give (from admin)
+    pending = {}
+    try:
+        us_res = supabase.table('user_settings').select('settings').eq('uid', uid).execute()
+        if us_res.data:
+            settings = us_res.data[0].get('settings') or {}
+            pending = settings.pop('pending_give', {})
+            if pending:
+                # Apply pending to game_state in DB
+                gs_res = supabase.table('saves').select('game_state').eq('uid', uid).execute()
+                if gs_res.data:
+                    curr_gs = gs_res.data[0].get('game_state') or {}
+                    for k, v in pending.items():
+                        curr_gs[k] = curr_gs.get(k, 0) + v
+                    supabase.table('saves').update({'game_state': curr_gs}).eq('uid', uid).execute()
+                # Clear pending
+                supabase.table('user_settings').update({'settings': settings}).eq('uid', uid).execute()
+    except: pass
+    return jsonify({'ok': True, 'pending': pending, 'serverSettings': get_server_settings()})
 
 # Keep old save endpoint for compatibility
 @app.route('/api/save', methods=['POST'])
@@ -258,31 +273,40 @@ def api_admin_users():
 
 @app.route('/api/admin/give', methods=['POST'])
 def api_admin_give():
-    """개인 지급 - game_state 직접 수정"""
+    """개인 지급 - pending_give에 저장 (유저가 sync할 때 자동 수령)"""
     user = get_user()
     if not user or not user.get('is_admin'): return jsonify({'error': 'forbidden'}), 403
     data = request.json
     uid, field, amount = data['uid'], data['field'], int(data.get('amount', 0))
-    res = supabase.table('saves').select('game_state').eq('uid', uid).execute()
-    if not res.data: return jsonify({'error': 'not found'}), 404
-    gs = res.data[0].get('game_state') or {}
-    gs[field] = gs.get(field, 0) + amount
-    supabase.table('saves').update({'game_state': gs}).eq('uid', uid).execute()
-    return jsonify({'ok': True, 'new_value': gs.get(field)})
+    # Get current pending
+    res = supabase.table('user_settings').select('settings').eq('uid', uid).execute()
+    settings = (res.data[0].get('settings') or {}) if res.data else {}
+    pending = settings.get('pending_give', {})
+    pending[field] = pending.get(field, 0) + amount
+    settings['pending_give'] = pending
+    supabase.table('user_settings').upsert({'uid': uid, 'settings': settings}, on_conflict='uid').execute()
+    return jsonify({'ok': True})
 
 @app.route('/api/admin/give-all', methods=['POST'])
 def api_admin_give_all():
-    """전체 지급 - 모든 유저 game_state 직접 수정"""
+    """전체 지급 - 모든 유저 pending_give에 저장"""
     user = get_user()
     if not user or not user.get('is_admin'): return jsonify({'error': 'forbidden'}), 403
     data = request.json
     field, amount = data['field'], int(data.get('amount', 0))
-    res = supabase.table('saves').select('uid,game_state').execute()
+    # 모든 유저 uid 가져오기
+    saves_res = supabase.table('saves').select('uid').execute()
+    uids = [r['uid'] for r in (saves_res.data or [])]
+    # 기존 user_settings 가져오기
+    us_res = supabase.table('user_settings').select('uid,settings').execute()
+    us_map = {r['uid']: r.get('settings') or {} for r in (us_res.data or [])}
     count = 0
-    for row in (res.data or []):
-        gs = row.get('game_state') or {}
-        gs[field] = gs.get(field, 0) + amount
-        supabase.table('saves').update({'game_state': gs}).eq('uid', row['uid']).execute()
+    for uid in uids:
+        settings = us_map.get(uid, {})
+        pending = settings.get('pending_give', {})
+        pending[field] = pending.get(field, 0) + amount
+        settings['pending_give'] = pending
+        supabase.table('user_settings').upsert({'uid': uid, 'settings': settings}, on_conflict='uid').execute()
         count += 1
     return jsonify({'ok': True, 'count': count})
 

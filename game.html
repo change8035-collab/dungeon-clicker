@@ -2104,11 +2104,11 @@ async function syncGame() {
     });
     const data = await res.json();
     if (data.serverSettings) serverSettings = data.serverSettings;
-    // 서버 DB에서 최신 재화 확인 (관리자 지급 반영)
-    if (data.latestState) {
-      const sv = data.latestState;
-      if (sv.gold > G.gold) { showFloatText(`🎁 💰+${formatNum(sv.gold - G.gold)} 지급!`, '#4CAF50'); G.gold = sv.gold; }
-      if (sv.dia > G.dia) { showFloatText(`🎁 💎+${formatNum(sv.dia - G.dia)} 지급!`, '#4CAF50'); G.dia = sv.dia; }
+    // pending 지급 수령
+    if (data.pending) {
+      const p = data.pending;
+      if (p.gold) { G.gold += p.gold; showFloatText(`🎁 💰+${formatNum(p.gold)} 지급!`, '#4CAF50'); }
+      if (p.dia) { G.dia += p.dia; showFloatText(`🎁 💎+${formatNum(p.dia)} 지급!`, '#4CAF50'); }
       updateTopBar();
     }
     saveGame();
