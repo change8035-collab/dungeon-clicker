@@ -2306,21 +2306,14 @@ async function syncWithServer() {
     });
     let data = await res.json();
     if (!data.ok) {
-      // 서버에 없으면 자동 재등록 (DB 초기화된 경우)
-      const nick = localStorage.getItem('userNick') || '모험가';
-      const regRes = await fetch('/api/register', {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ nickname: nick })
-      });
-      const regData = await regRes.json();
-      if (regData.ok) {
-        userUid = regData.uid;
-        localStorage.setItem('userUid', regData.uid);
-        data = { ok: true, nickname: regData.nickname, is_admin: regData.is_admin };
-      } else {
-        console.warn('자동 재등록 실패:', regData.error);
-        return;
-      }
+      // 서버에 계정 없음 (DB 초기화됨) → 닉네임 입력으로
+      localStorage.clear();
+      userUid = '';
+      document.getElementById('loginOverlay').style.display = '';
+      document.getElementById('app').style.display = 'none';
+      document.getElementById('loginStatus').style.display = 'none';
+      document.getElementById('registerForm').style.display = '';
+      return;
     }
     if (data.ok) {
       // 닉네임/관리자 업데이트

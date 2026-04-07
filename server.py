@@ -17,7 +17,7 @@ def get_client_ip():
     return request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip()
 
 def get_user():
-    """Get user by uid header. Auto-creates if uid exists but not in DB."""
+    """Get user by uid header."""
     uid = request.headers.get('X-User-Id', '')
     if uid:
         res = supabase.table('saves').select('uid,name').eq('uid', uid).execute()
@@ -25,10 +25,6 @@ def get_user():
             user = res.data[0]
             user['is_admin'] = user.get('name', '') in ADMIN_NICKS
             return user
-        # uid exists but not in DB (DB was reset) - auto create
-        nick = '모험가_' + uid[:6]
-        supabase.table('saves').insert({'uid': uid, 'name': nick, 'email': '', 'photo': '', 'game_state': {}}).execute()
-        return {'uid': uid, 'name': nick, 'is_admin': False}
     return None
 
 # ── Auth: Auto-login by IP or register ──
