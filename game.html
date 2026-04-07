@@ -290,6 +290,7 @@ body { background:var(--bg); color:var(--text); font-family:'Noto Sans KR',sans-
   let serverSettings = {};
   let userSettings = {};
 </script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 <!-- LOADING OVERLAY -->
@@ -297,10 +298,20 @@ body { background:var(--bg); color:var(--text); font-family:'Noto Sans KR',sans-
   <h1>⚔️ 던전 클리커</h1>
   <p id="loginStatus">접속 중...</p>
   <div id="registerForm" style="display:none;text-align:center;">
-    <input id="nickInput" type="text" placeholder="닉네임 입력 (2~12자)" maxlength="12"
-      style="padding:10px 16px;border-radius:8px;border:2px solid var(--accent);background:#1a1930;color:#fff;font-size:16px;font-family:inherit;width:200px;text-align:center;">
-    <div id="nickError" style="color:#ff4444;font-size:12px;display:none;margin-top:6px;"></div>
-    <button onclick="doRegister()" style="margin-top:12px;background:linear-gradient(135deg,var(--accent),#6c3ec1);color:#fff;border:none;padding:12px 40px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;">시작하기</button>
+    <div id="g_id_onload"
+      data-client_id="362966934345-chc1dngqgtifsh0cegqvsvv4v4v7hb50.apps.googleusercontent.com"
+      data-callback="onGoogleLogin"
+      data-auto_prompt="false">
+    </div>
+    <div class="g_id_signin"
+      data-type="standard"
+      data-shape="rectangular"
+      data-theme="filled_black"
+      data-text="signin_with"
+      data-size="large"
+      data-logo_alignment="left">
+    </div>
+    <div id="nickError" style="color:#ff4444;font-size:12px;display:none;margin-top:10px;"></div>
   </div>
 </div>
 
@@ -2168,6 +2179,29 @@ let userUid = localStorage.getItem('userUid') || '';
 function authHeaders() {
   return { 'X-User-Id': userUid || localStorage.getItem('userUid') || '' };
 }
+
+// Google Sign-In callback
+async function onGoogleLogin(response) {
+  const errEl = document.getElementById('nickError');
+  errEl.textContent = '로그인 중...'; errEl.style.display = ''; errEl.style.color = '#4fc3f7';
+  try {
+    const res = await fetch('/api/google-login', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ credential: response.credential })
+    });
+    const data = await res.json();
+    if (data.error) { errEl.textContent = data.error; errEl.style.color = '#ff4444'; return; }
+    localStorage.setItem('userUid', data.uid);
+    localStorage.setItem('userNick', data.nickname);
+    localStorage.setItem('userEmail', data.email || '');
+    localStorage.setItem('isAdmin', data.is_admin ? 'true' : 'false');
+    userUid = data.uid;
+    errEl.textContent = '✅ 로그인 완료!'; errEl.style.color = '#4CAF50';
+    setTimeout(() => location.reload(), 300);
+  } catch(e) {
+    errEl.textContent = '로그인 실패: ' + e.message; errEl.style.color = '#ff4444';
+  }
+}
 function authFetch(url, opts = {}, timeout = 10000) {
   const ctrl = new AbortController();
   setTimeout(() => ctrl.abort(), timeout);
@@ -2275,24 +2309,10 @@ async function checkAuth() {
     return;
   }
 
-  // uid 없으면 서버 확인 (첫 방문)
-  try {
-    const ctrl = new AbortController();
-    setTimeout(() => ctrl.abort(), 8000);
-    const res = await fetch('/api/auto-login', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ uid: '' }),
-      signal: ctrl.signal
-    });
-    const data = await res.json();
-    // 첫 방문 → 닉네임 입력
-    document.getElementById('loginOverlay').style.display = '';
-    document.getElementById('loginStatus').style.display = 'none';
-    document.getElementById('registerForm').style.display = '';
-  } catch(e) {
-    document.getElementById('loginStatus').textContent = '서버 연결 실패. 닉네임을 입력하세요.';
-    document.getElementById('registerForm').style.display = '';
-  }
+  // uid 없으면 Google 로그인 표시
+  document.getElementById('loginOverlay').style.display = '';
+  document.getElementById('loginStatus').style.display = 'none';
+  document.getElementById('registerForm').style.display = '';
 }
 checkAuth();
 

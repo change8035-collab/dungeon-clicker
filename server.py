@@ -1,4 +1,4 @@
-import os, json, secrets
+import os, json, secrets, requests as http_requests
 from flask import Flask, request, jsonify, send_from_directory
 from supabase import create_client
 
@@ -9,7 +9,8 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 SUPABASE_URL = os.environ.get('SUPABASE_URL', 'https://pvwcpowcsstdcvcghjff.supabase.co')
 SUPABASE_KEY = os.environ.get('SUPABASE_KEY', 'sb_secret_NvQiIbELqA7FGe9W6wq8YA_yAxTiQf0')
-ADMIN_NICKS = os.environ.get('ADMIN_NICKS', '관리자').split(',')
+ADMIN_EMAILS = os.environ.get('ADMIN_EMAILS', 'teuye144@dgsw.hs.kr').split(',')
+GOOGLE_CLIENT_ID = '362966934345-chc1dngqgtifsh0cegqvsvv4v4v7hb50.apps.googleusercontent.com'
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -20,26 +21,60 @@ def get_user():
     """Get user by uid header."""
     uid = request.headers.get('X-User-Id', '')
     if uid:
-        res = supabase.table('saves').select('uid,name').eq('uid', uid).execute()
+        res = supabase.table('saves').select('uid,name,email').eq('uid', uid).execute()
         if res.data and len(res.data) > 0:
             user = res.data[0]
-            user['is_admin'] = user.get('name', '') in ADMIN_NICKS
+            user['is_admin'] = user.get('email', '') in ADMIN_EMAILS
             return user
     return None
 
-# ── Auth: Auto-login by IP or register ──
+# ── Auth ──
+@app.route('/api/google-login', methods=['POST'])
+def api_google_login():
+    """Verify Google ID token and create/find user"""
+    data = request.json or {}
+    token = data.get('credential', '')
+    if not token:
+        return jsonify({'error': 'no token'}), 400
+    # Verify token with Google
+    try:
+        verify_res = http_requests.get('https://oauth2.googleapis.com/tokeninfo?id_token=' + token)
+        if verify_res.status_code != 200:
+            return jsonify({'error': 'invalid token'}), 401
+        info = verify_res.json()
+        if info.get('aud') != GOOGLE_CLIENT_ID:
+            return jsonify({'error': 'wrong audience'}), 401
+    except:
+        return jsonify({'error': 'verification failed'}), 500
+
+    uid = info['sub']  # Google unique user ID
+    email = info.get('email', '')
+    name = info.get('name', '') or email.split('@')[0]
+    photo = info.get('picture', '')
+    is_admin = email in ADMIN_EMAILS
+
+    # Check if user exists
+    res = supabase.table('saves').select('uid,name,email').eq('uid', uid).execute()
+    if res.data and len(res.data) > 0:
+        user = res.data[0]
+        # Update name/email/photo if changed
+        supabase.table('saves').update({'name': name, 'email': email, 'photo': photo}).eq('uid', uid).execute()
+        return jsonify({'ok': True, 'uid': uid, 'nickname': user['name'], 'email': email, 'is_admin': is_admin})
+
+    # New user - create
+    supabase.table('saves').insert({'uid': uid, 'name': name, 'email': email, 'photo': photo, 'game_state': {}}).execute()
+    return jsonify({'ok': True, 'uid': uid, 'nickname': name, 'email': email, 'is_admin': is_admin, 'new': True})
+
 @app.route('/api/auto-login', methods=['POST'])
 def api_auto_login():
-    """Try to find existing account by uid in localStorage, or create new one"""
+    """Check if uid exists in DB"""
     data = request.json or {}
     uid = data.get('uid', '')
-    # If uid provided, check if exists
     if uid:
-        res = supabase.table('saves').select('uid,name').eq('uid', uid).execute()
+        res = supabase.table('saves').select('uid,name,email').eq('uid', uid).execute()
         if res.data and len(res.data) > 0:
             user = res.data[0]
-            return jsonify({'ok': True, 'uid': user['uid'], 'nickname': user['name'], 'is_admin': user['name'] in ADMIN_NICKS})
-    # No uid or not found - don't auto-create, show register screen
+            return jsonify({'ok': True, 'uid': user['uid'], 'nickname': user['name'], 'is_admin': user.get('email','') in ADMIN_EMAILS})
     return jsonify({'ok': False, 'needRegister': True})
 
 @app.route('/api/register', methods=['POST'])
@@ -56,7 +91,7 @@ def api_register():
     supabase.table('saves').insert({
         'uid': uid, 'name': nickname, 'email': '', 'photo': '', 'game_state': {}
     }).execute()
-    return jsonify({'ok': True, 'uid': uid, 'nickname': nickname, 'is_admin': nickname in ADMIN_NICKS})
+    return jsonify({'ok': True, 'uid': uid, 'nickname': nickname, 'is_admin': False})
 
 @app.route('/api/check-nick', methods=['POST'])
 def api_check_nick():
