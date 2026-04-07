@@ -275,6 +275,27 @@ def api_claim_rewards():
         supabase.table('user_settings').update({'settings': settings}).eq('uid', uid).execute()
     return jsonify({'rewards': pending, 'messages': messages})
 
+# ── Beacon save (for beforeunload) ──
+@app.route('/api/save-beacon', methods=['POST'])
+def api_save_beacon():
+    uid = request.args.get('uid', '')
+    if not uid: return '', 204
+    res = supabase.table('saves').select('uid,name').eq('uid', uid).execute()
+    if not res.data: return '', 204
+    user = res.data[0]
+    data = request.json or {}
+    supabase.table('saves').update({'game_state': data.get('gameState', {})}).eq('uid', uid).execute()
+    supabase.table('rankings').upsert({
+        'uid': uid, 'name': user['name'],
+        'combat_power': data.get('combatPower', 0),
+        'level': data.get('level', 1), 'stage': data.get('stage', 1),
+        'knight_stage': data.get('knightStage', 0),
+        'archer_stage': data.get('archerStage', 0),
+        'rogue_stage': data.get('rogueStage', 0),
+        'class_name': data.get('className', ''), 'class_stage': data.get('classStage', '')
+    }, on_conflict='uid').execute()
+    return '', 204
+
 # ── Static ──
 @app.route('/')
 def index():

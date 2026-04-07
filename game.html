@@ -3173,7 +3173,24 @@ async function syncGame() {
 }
 
 setInterval(syncGame, 5000);
-window.addEventListener('beforeunload', () => { saveGame(); });
+window.addEventListener('beforeunload', () => {
+  saveGame();
+  // 동기적 클라우드 저장 (sendBeacon은 페이지 닫혀도 전송됨)
+  if (currentUser) {
+    const cp = getCombatPower();
+    const info = getClassInfo(G.selectedClass, getLevel());
+    const body = JSON.stringify({
+      gameState: G,
+      combatPower: cp, level: getLevel(),
+      stage: Math.max(...Object.values(G.classMaxStages || {knight:1})),
+      knightStage: (G.classMaxStages||{}).knight || 0,
+      archerStage: (G.classMaxStages||{}).archer || 0,
+      rogueStage: (G.classMaxStages||{}).rogue || 0,
+      className: info.name, classStage: info.stageLabel
+    });
+    navigator.sendBeacon('/api/save-beacon?uid=' + userUid, new Blob([body], {type:'application/json'}));
+  }
+});
 
 // Apply admin multipliers to XP and gold
 const _origOnMonsterKill = onMonsterKill;
