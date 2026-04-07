@@ -1724,9 +1724,26 @@ function animateEffect(ctx) {
 }
 
 // ==================== COMBAT ====================
+// Cache DOM refs once
+let _charEl, _msEl, _battleEl;
+function initDomRefs() {
+  _charEl = document.getElementById('charCanvas');
+  _msEl = document.getElementById('monsterSprite');
+  _battleEl = document.getElementById('battleArea');
+}
+
+// Cache stats - recalc only when equipment/skills change
+let _cachedStats = null;
+let _statsDirty = true;
+function markStatsDirty() { _statsDirty = true; _cachedStats = null; }
+function getCachedStats() {
+  if (_statsDirty || !_cachedStats) { _cachedStats = getPlayerStats(); _statsDirty = false; }
+  return _cachedStats;
+}
+
 function attack() {
   if (!G.monster) return;
-  const stats = getPlayerStats();
+  const stats = getCachedStats();
   let dmg = stats.atk;
   let isCrit = Math.random() < stats.crit;
   if (isCrit) dmg = Math.ceil(dmg * stats.critDmg);
@@ -1734,31 +1751,18 @@ function attack() {
   G.monsterHp -= dmg;
   showDamage(dmg, isCrit);
 
-  // Skill effect (sprite only, no particles)
-  const evo = getEvolution();
-  drawEffectSprite(G.selectedClass, evo.stage);
+  // Effect - throttle to max 5fps
+  if (!attack._lastFx || Date.now() - attack._lastFx > 200) {
+    attack._lastFx = Date.now();
+    drawEffectSprite(G.selectedClass, getEvolution().stage);
+  }
 
-  // ── Character attack motion ──
-  const charEl = document.getElementById('charCanvas');
-  const atkClass = G.selectedClass === 'knight' ? 'atk-slash' : G.selectedClass === 'archer' ? 'atk-shoot' : 'atk-stab';
-  charEl.classList.remove('atk-slash','atk-shoot','atk-stab','atk-crit');
-  void charEl.offsetWidth; // force reflow for re-trigger
-  charEl.classList.add(atkClass);
-  if (isCrit) charEl.classList.add('atk-crit');
-  setTimeout(() => {
-    charEl.classList.remove(atkClass, 'atk-crit');
-  }, G.selectedClass === 'rogue' ? 200 : (G.selectedClass === 'archer' ? 300 : 250));
+  // Monster hit - simple class toggle (no forced reflow)
+  if (_msEl) { _msEl.classList.remove('hit'); requestAnimationFrame(() => _msEl.classList.add('hit')); }
 
-  // ── Monster hit reaction ──
-  const ms = document.getElementById('monsterSprite');
-  ms.classList.add('hit');
-  setTimeout(() => ms.classList.remove('hit'), 250);
-
-  // Screen shake on crit
-  if (isCrit) {
-    const battle = document.getElementById('battleArea');
-    battle.classList.add('shake');
-    setTimeout(() => battle.classList.remove('shake'), 150);
+  if (isCrit && _battleEl) {
+    _battleEl.classList.remove('shake');
+    requestAnimationFrame(() => _battleEl.classList.add('shake'));
   }
 
   if (G.monsterHp <= 0) {
@@ -1815,14 +1819,25 @@ function onMonsterKill() {
   saveCloudGame();
 }
 
+// Damage text pool - reuse DOM elements instead of creating new ones
+const _dmgPool = [];
+const _DMG_POOL_SIZE = 8;
 function showDamage(dmg, crit) {
-  const el = document.createElement('div');
-  el.className = 'dmg-text' + (crit ? ' crit' : '');
+  let el;
+  if (_dmgPool.length >= _DMG_POOL_SIZE) {
+    el = _dmgPool.shift();
+    el.className = 'dmg-text' + (crit ? ' crit' : '');
+  } else {
+    el = document.createElement('div');
+    el.className = 'dmg-text' + (crit ? ' crit' : '');
+    _battleEl.appendChild(el);
+  }
   el.textContent = (crit ? '💥 ' : '') + formatNum(dmg);
   el.style.right = (50 + Math.random() * 40) + 'px';
   el.style.bottom = (80 + Math.random() * 60) + 'px';
-  document.getElementById('battleArea').appendChild(el);
-  setTimeout(() => el.remove(), 700);
+  el.style.opacity = '1';
+  _dmgPool.push(el);
+  setTimeout(() => { el.style.opacity = '0'; }, 500);
 }
 
 function showFloatText(text, color) {
@@ -2059,6 +2074,7 @@ function updateTopBar() {
 }
 
 function updateAllUI() {
+  markStatsDirty();
   updateTopBar();
   const evo = getEvolution();
   const charCanvas = document.getElementById('charCanvas');
@@ -2975,6 +2991,7 @@ async function checkAuth() {
     document.getElementById('loginOverlay').style.display = 'none';
     document.getElementById('app').style.display = '';
     loadGame();
+    initDomRefs();
     spawnMonster();
     updateAllUI();
     if (!window._gameLoopStarted) { window._gameLoopStarted = true; gameLoop(); }
