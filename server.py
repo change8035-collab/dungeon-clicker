@@ -196,13 +196,17 @@ def api_admin_give():
     if not user or not user.get('is_admin'): return jsonify({'error': 'forbidden'}), 403
     data = request.json
     target_uid, field, amount = data['uid'], data['field'], data.get('amount', 0)
-    res = supabase.table('saves').select('game_state').eq('uid', target_uid).execute()
-    if not res.data: return jsonify({'error': 'not found'}), 404
-    gs = res.data[0].get('game_state') or {}
-    if isinstance(gs, str): gs = json.loads(gs)
-    gs[field] = gs.get(field, 0) + amount
-    supabase.table('saves').update({'game_state': gs}).eq('uid', target_uid).execute()
-    return jsonify({'ok': True, 'new_value': gs.get(field)})
+    # Add to pending rewards (safe from overwrite)
+    res = supabase.table('user_settings').select('settings').eq('uid', target_uid).execute()
+    settings = {}
+    if res.data and len(res.data) > 0:
+        settings = res.data[0].get('settings') or {}
+        if isinstance(settings, str): settings = json.loads(settings)
+    pending = settings.get('pending_rewards', {})
+    pending[field] = pending.get(field, 0) + amount
+    settings['pending_rewards'] = pending
+    supabase.table('user_settings').upsert({'uid': target_uid, 'settings': settings}, on_conflict='uid').execute()
+    return jsonify({'ok': True})
 
 @app.route('/api/admin/give-all', methods=['POST'])
 def api_admin_give_all():
@@ -210,16 +214,24 @@ def api_admin_give_all():
     if not user or not user.get('is_admin'): return jsonify({'error': 'forbidden'}), 403
     data = request.json
     field, amount, message = data['field'], data.get('amount', 0), data.get('message', '')
-    saves_res = supabase.table('saves').select('uid,game_state').execute()
+    saves_res = supabase.table('saves').select('uid').execute()
     count = 0
     for row in (saves_res.data or []):
-        gs = row.get('game_state') or {}
-        if isinstance(gs, str): gs = json.loads(gs)
-        gs[field] = gs.get(field, 0) + amount
-        supabase.table('saves').update({'game_state': gs}).eq('uid', row['uid']).execute()
+        uid = row['uid']
+        res = supabase.table('user_settings').select('settings').eq('uid', uid).execute()
+        settings = {}
+        if res.data and len(res.data) > 0:
+            settings = res.data[0].get('settings') or {}
+            if isinstance(settings, str): settings = json.loads(settings)
+        pending = settings.get('pending_rewards', {})
+        pending[field] = pending.get(field, 0) + amount
+        settings['pending_rewards'] = pending
+        if message:
+            msgs = settings.get('pending_messages', [])
+            msgs.append(message)
+            settings['pending_messages'] = msgs
+        supabase.table('user_settings').upsert({'uid': uid, 'settings': settings}, on_conflict='uid').execute()
         count += 1
-    if message:
-        supabase.table('server_settings').upsert({'key': 'notice', 'value': 0}, on_conflict='key').execute()
     return jsonify({'ok': True, 'count': count})
 
 @app.route('/api/claim-rewards', methods=['POST'])
