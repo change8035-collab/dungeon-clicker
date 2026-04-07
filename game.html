@@ -2813,20 +2813,24 @@ async function giveToAllUsers(field, amount) {
   G[field] = (G[field] || 0) + amount;
   updateTopBar();
   showFloatText(`⏳ 전체 지급 중...`, '#f1c40f');
-  // 유저 목록 가져와서 하나씩 지급
-  try {
-    const res = await authFetch('/api/admin/users', {}, 15000);
-    const data = await res.json();
-    const users = data.users || [];
-    let ok = 0;
-    for (const u of users) {
-      authFetch('/api/admin/give-one', {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ uid: u.uid, field, amount })
-      }, 15000).then(() => { ok++; if(ok===users.length) showFloatText(`✅ ${ok}명 지급 완료!`, '#4CAF50'); }).catch(() => {});
-    }
-    showFloatText(`✅ ${users.length}명에게 지급 요청!`, '#4CAF50');
-  } catch(e) { showFloatText('⚠️ 유저 목록 로드 실패', '#ff4444'); }
+  // 캐시된 유저목록 우선 사용, 없으면 서버에서 가져옴
+  let users = allUsers.length ? allUsers : JSON.parse(localStorage.getItem('adminUsers') || '[]');
+  if (!users.length) {
+    try {
+      const res = await authFetch('/api/admin/users', {}, 30000);
+      const data = await res.json();
+      users = data.users || [];
+    } catch(e) { showFloatText('⚠️ 유저 목록 없음. 유저관리 탭에서 먼저 새로고침하세요', '#ff4444'); return; }
+  }
+  if (!users.length) { showFloatText('⚠️ 유저 없음', '#ff4444'); return; }
+  let ok = 0, fail = 0;
+  for (const u of users) {
+    authFetch('/api/admin/give-one', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ uid: u.uid, field, amount })
+    }, 30000).then(() => { ok++; if(ok+fail===users.length) showFloatText(`✅ ${ok}/${users.length}명 지급 완료!`, '#4CAF50'); }).catch(() => { fail++; if(ok+fail===users.length) showFloatText(`✅ ${ok}/${users.length}명 지급 완료!`, '#4CAF50'); });
+  }
+  showFloatText(`📤 ${users.length}명에게 지급 요청 전송!`, '#4CAF50');
 }
 
 async function giveToUser(field, amount) {
