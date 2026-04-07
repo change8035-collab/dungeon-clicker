@@ -1627,6 +1627,8 @@ function renderMore(el) {
 
 
       <div style="font-size:16px;font-weight:700;margin:20px 0 12px;">⚙️ 설정</div>
+      <button class="more-btn" onclick="changeNickname()" style="background:var(--card2);color:var(--text);border:1px solid var(--accent);padding:10px;border-radius:8px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px;">✏️ 닉네임 변경</button>
+      <button class="more-btn" onclick="doLogout()" style="background:#555;color:#fff;border:none;padding:10px;border-radius:8px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px;">🚪 로그아웃</button>
       <button class="more-btn" onclick="doResetAccount()" style="background:#e74c3c;color:#fff;border:none;padding:10px;border-radius:8px;font-weight:700;cursor:pointer;width:100%;">🗑️ 계정 초기화 (처음부터 시작)</button>
 
       <div style="text-align:center;margin-top:24px;font-size:11px;color:var(--dim);">
@@ -1679,6 +1681,13 @@ function upgradeAllSkills() {
   }
   if (upgraded > 0) showFloatText(`⚡ 스킬 ${upgraded}회 강화!`, '#7f5af0');
   updateAllUI();
+}
+
+function doLogout() {
+  if (!confirm('로그아웃 하시겠습니까?\n(게임 데이터는 서버에 저장됩니다)')) return;
+  saveCloudGame();
+  localStorage.clear();
+  location.reload();
 }
 
 async function doResetAccount() {
