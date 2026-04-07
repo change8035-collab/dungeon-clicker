@@ -2223,9 +2223,23 @@ async function changeNickname() {
     if (data.error) { alert(data.error); return; }
     currentUser.name = data.nickname;
     isAdmin = data.is_admin;
+    localStorage.setItem('userNick', data.nickname);
+    localStorage.setItem('isAdmin', data.is_admin ? 'true' : 'false');
     document.getElementById('userName').textContent = data.nickname;
+    // 관리자 탭 표시/숨기기
+    if (isAdmin && !document.querySelector('[data-tab="admin"]')) {
+      const btn = document.createElement('button');
+      btn.className = 'tab-btn';
+      btn.dataset.tab = 'admin';
+      btn.innerHTML = '<span class="tab-icon">🔧</span>관리자';
+      document.querySelector('.tab-bar').appendChild(btn);
+    } else if (!isAdmin) {
+      const adminBtn = document.querySelector('[data-tab="admin"]');
+      if (adminBtn) adminBtn.remove();
+    }
+    saveCloudGame(); // 즉시 저장
     showFloatText('✅ 닉네임 변경: ' + data.nickname, '#4CAF50');
-  } catch(e) { alert('변경 실패'); }
+  } catch(e) { alert('변경 실패: ' + e.message); }
 }
 
 
