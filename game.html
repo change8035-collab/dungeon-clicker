@@ -1846,16 +1846,26 @@ function onMonsterKill() {
   saveCloudGame();
 }
 
+let _dmgAccum = 0, _dmgCrit = false, _dmgTimer = null;
 function showDamage(dmg, crit) {
   if (!_battleEl) _battleEl = document.getElementById('battleArea');
   if (!_battleEl) return;
-  const el = document.createElement('div');
-  el.className = 'dmg-text' + (crit ? ' crit' : '');
-  el.textContent = (crit ? '💥 ' : '') + formatNum(dmg);
-  el.style.right = (50 + Math.random() * 40) + 'px';
-  el.style.bottom = (80 + Math.random() * 60) + 'px';
-  _battleEl.appendChild(el);
-  setTimeout(() => el.remove(), 700);
+  // Accumulate damage, show every 150ms max
+  _dmgAccum += dmg;
+  if (crit) _dmgCrit = true;
+  if (_dmgTimer) return;
+  _dmgTimer = setTimeout(() => {
+    const el = document.createElement('div');
+    el.className = 'dmg-text' + (_dmgCrit ? ' crit' : '');
+    el.textContent = (_dmgCrit ? '💥 ' : '') + formatNum(_dmgAccum);
+    el.style.right = (50 + Math.random() * 40) + 'px';
+    el.style.bottom = (80 + Math.random() * 60) + 'px';
+    _battleEl.appendChild(el);
+    setTimeout(() => el.remove(), 900);
+    _dmgAccum = 0;
+    _dmgCrit = false;
+    _dmgTimer = null;
+  }, 150);
 }
 
 function showFloatText(text, color) {
