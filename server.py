@@ -20,20 +20,10 @@ def get_user():
     """Get user by uid header"""
     uid = request.headers.get('X-User-Id', '')
     if uid:
-        res = supabase.table('saves').select('uid,name,email').eq('uid', uid).execute()
+        res = supabase.table('saves').select('uid,name').eq('uid', uid).execute()
         if res.data and len(res.data) > 0:
             user = res.data[0]
-            ip = get_client_ip()
-            # Admin check: nickname must match AND IP must match stored admin IP
-            is_admin = user.get('name', '') in ADMIN_NICKS
-            if is_admin:
-                stored_ip = user.get('email', '')  # reuse email field for admin IP
-                if not stored_ip:
-                    # First login as admin - store IP
-                    supabase.table('saves').update({'email': ip}).eq('uid', uid).execute()
-                elif stored_ip != ip:
-                    is_admin = False  # Different IP, deny admin
-            user['is_admin'] = is_admin
+            user['is_admin'] = user.get('name', '') in ADMIN_NICKS
             return user
     return None
 
