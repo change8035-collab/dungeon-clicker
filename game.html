@@ -2749,13 +2749,16 @@ async function renderAdmin(el) {
 let allUsers = [];
 async function loadUserList() {
   const listEl = document.getElementById('adminUserList');
-  listEl.innerHTML = '<div style="color:var(--dim);text-align:center;padding:8px;">로딩중...</div>';
+  // 캐시 먼저 표시
+  try { const c = JSON.parse(localStorage.getItem('adminUsers') || '[]'); if (c.length) { allUsers = c; renderUserList(allUsers); } } catch(e){}
+  listEl.insertAdjacentHTML('beforeend', '<div style="color:var(--dim);text-align:center;padding:4px;font-size:10px;">갱신 중...</div>');
   try {
-    const res = await authFetch('/api/admin/users');
+    const res = await authFetch('/api/admin/users', {}, 8000);
     const data = await res.json();
     allUsers = (data.users || []).sort((a, b) => (b.combat_power || 0) - (a.combat_power || 0));
+    localStorage.setItem('adminUsers', JSON.stringify(allUsers));
     renderUserList(allUsers);
-  } catch(e) { listEl.innerHTML = '<div style="color:#ff4444;">로드 실패: ' + e.message + '</div>'; }
+  } catch(e) { if (!allUsers.length) listEl.innerHTML = '<div style="color:#ff4444;">로드 실패</div>'; }
 }
 
 function filterUserList() {
