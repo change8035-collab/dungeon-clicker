@@ -2820,7 +2820,7 @@ async function giveToAllUsers(field, amount) {
       // 자기 자신에게도 바로 반영
       G[field] = (G[field] || 0) + amount;
       updateTopBar();
-      showFloatText(`✅ ${data.count}명에게 ${field} +${formatNum(amount)} 전체 지급!`, '#4CAF50');
+      showFloatText(`✅ ${field} +${formatNum(amount)} 전체 지급 완료!`, '#4CAF50');
     }
     else alert('지급 실패: ' + (data.error || ''));
   } catch(e) { alert('지급 실패: ' + e.message); }

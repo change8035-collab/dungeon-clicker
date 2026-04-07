@@ -265,21 +265,34 @@ def api_admin_give():
     supabase.table('saves').update({'game_state': gs}).eq('uid', target_uid).execute()
     return jsonify({'ok': True, 'new_value': gs.get(field)})
 
+import threading
+
 @app.route('/api/admin/give-all', methods=['POST'])
 def api_admin_give_all():
     user = get_user()
     if not user or not user.get('is_admin'): return jsonify({'error': 'forbidden'}), 403
     data = request.json
     field, amount = data['field'], data.get('amount', 0)
-    saves_res = supabase.table('saves').select('uid,game_state').execute()
-    count = 0
-    for row in (saves_res.data or []):
-        gs = row.get('game_state') or {}
+    # 즉시 응답하고 백그라운드에서 처리
+    def do_give():
+        try:
+            saves_res = supabase.table('saves').select('uid,game_state').execute()
+            for row in (saves_res.data or []):
+                gs = row.get('game_state') or {}
+                if isinstance(gs, str): gs = json.loads(gs)
+                gs[field] = gs.get(field, 0) + amount
+                supabase.table('saves').update({'game_state': gs}).eq('uid', row['uid']).execute()
+        except Exception as e:
+            print(f'Give-all error: {e}')
+    threading.Thread(target=do_give, daemon=True).start()
+    # 자기 자신은 즉시 처리
+    my_gs_res = supabase.table('saves').select('game_state').eq('uid', user['uid']).execute()
+    if my_gs_res.data:
+        gs = my_gs_res.data[0].get('game_state') or {}
         if isinstance(gs, str): gs = json.loads(gs)
         gs[field] = gs.get(field, 0) + amount
-        supabase.table('saves').update({'game_state': gs}).eq('uid', row['uid']).execute()
-        count += 1
-    return jsonify({'ok': True, 'count': count})
+        supabase.table('saves').update({'game_state': gs}).eq('uid', user['uid']).execute()
+    return jsonify({'ok': True, 'count': -1})
 
 @app.route('/api/claim-rewards', methods=['POST'])
 def api_claim_rewards():
