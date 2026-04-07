@@ -676,374 +676,6 @@ function drawEffectSprite(classId, stage) {
 }
 
 // Removed old canvas-drawn functions - using sprite sheets
-function _unused_drawKnight(ctx, stage, pal, p) {
-  const cx = 36; // center x for body
-  const by = 32; // body top y
-
-  // Cape (stage 4-5)
-  if (pal.cape) {
-    ctx.fillStyle = pal.cape;
-    ctx.fillRect(cx - p, by + p, p * 6, p * 8);
-    ctx.globalAlpha = 0.6;
-    ctx.fillRect(cx - p, by + p * 9, p * 6, p * 2);
-    ctx.globalAlpha = 1;
-  }
-
-  // Legs
-  ctx.fillStyle = pal.legs;
-  ctx.fillRect(cx, by + p * 8, p * 2, p * 4); // left leg
-  ctx.fillRect(cx + p * 3, by + p * 8, p * 2, p * 4); // right leg
-
-  // Boots
-  ctx.fillStyle = pal.boots;
-  ctx.fillRect(cx - p, by + p * 11, p * 3, p * 2); // left boot
-  ctx.fillRect(cx + p * 3, by + p * 11, p * 3, p * 2); // right boot
-
-  // Body / Armor
-  ctx.fillStyle = pal.body;
-  ctx.fillRect(cx, by + p * 2, p * 5, p * 6);
-  // Body detail
-  ctx.fillStyle = pal.body2;
-  ctx.fillRect(cx + p, by + p * 3, p * 3, p * 4);
-
-  // Shoulder pads (stage 2+)
-  if (stage >= 2) {
-    ctx.fillStyle = pal.body;
-    ctx.fillRect(cx - p, by + p * 2, p, p * 2);
-    ctx.fillRect(cx + p * 5, by + p * 2, p, p * 2);
-  }
-
-  // Belt (stage 3+)
-  if (stage >= 3) {
-    ctx.fillStyle = '#8a7030';
-    ctx.fillRect(cx, by + p * 7, p * 5, p);
-    ctx.fillStyle = '#f0c040';
-    ctx.fillRect(cx + p * 2, by + p * 7, p, p); // buckle
-  }
-
-  // Head
-  if (pal.helmet && stage >= 2) {
-    // Helmet
-    ctx.fillStyle = pal.helmet;
-    ctx.fillRect(cx, by - p * 3, p * 5, p * 5);
-    // Visor slit
-    ctx.fillStyle = '#1a1a2e';
-    ctx.fillRect(cx + p, by - p, p * 3, p);
-    // Eye glow for stage 4-5
-    if (stage >= 4 && pal.glow) {
-      ctx.fillStyle = pal.glow;
-      ctx.fillRect(cx + p, by - p, p, p);
-      ctx.fillRect(cx + p * 3, by - p, p, p);
-    }
-    // Plume (stage 3)
-    if (pal.plume) {
-      ctx.fillStyle = pal.plume;
-      ctx.fillRect(cx + p * 2, by - p * 5, p, p * 3);
-      ctx.fillRect(cx + p * 3, by - p * 4, p, p * 2);
-    }
-    // Crown (stage 5)
-    if (pal.crown) {
-      ctx.fillStyle = pal.crown;
-      ctx.fillRect(cx, by - p * 4, p, p * 2);
-      ctx.fillRect(cx + p * 2, by - p * 5, p, p * 2);
-      ctx.fillRect(cx + p * 4, by - p * 4, p, p * 2);
-    }
-  } else {
-    // Bare head
-    ctx.fillStyle = pal.skin;
-    ctx.fillRect(cx + p, by - p * 2, p * 3, p * 4);
-    // Hair
-    ctx.fillStyle = pal.hair;
-    ctx.fillRect(cx, by - p * 3, p * 5, p * 2);
-    ctx.fillRect(cx, by - p * 2, p, p * 2);
-    // Eyes
-    ctx.fillStyle = '#1a1a2e';
-    ctx.fillRect(cx + p, by - p, p, p);
-    ctx.fillRect(cx + p * 3, by - p, p, p);
-    // Mouth
-    ctx.fillStyle = '#d09070';
-    ctx.fillRect(cx + p * 2, by + p, p, p);
-  }
-
-  // Weapon (sword) - right side
-  ctx.fillStyle = pal.weaponEdge;
-  ctx.fillRect(cx + p * 6, by - p * 2, p, p * 6);
-  ctx.fillStyle = pal.weapon;
-  ctx.fillRect(cx + p * 6, by + p * 4, p, p * 2); // handle
-  if (stage >= 3) {
-    // Larger sword
-    ctx.fillStyle = pal.weaponEdge;
-    ctx.fillRect(cx + p * 6, by - p * 4, p, p * 2);
-    ctx.fillRect(cx + p * 5, by + p * 3, p * 3, p); // crossguard
-  }
-  if (stage >= 5) {
-    // Flame effect on sword
-    ctx.fillStyle = 'rgba(255,100,0,0.7)';
-    ctx.fillRect(cx + p * 5, by - p * 4, p, p * 2);
-    ctx.fillRect(cx + p * 7, by - p * 3, p, p * 2);
-    ctx.fillStyle = 'rgba(255,200,0,0.6)';
-    ctx.fillRect(cx + p * 6, by - p * 5, p, p);
-  }
-
-  // Shield - left side
-  if (stage >= 2 && pal.shield) {
-    ctx.fillStyle = pal.shield;
-    const sw = stage >= 3 ? p * 3 : p * 2;
-    const sh = stage >= 3 ? p * 5 : p * 4;
-    ctx.fillRect(cx - p * 3, by + p, sw, sh);
-    // Shield emblem (stage 4+)
-    if (stage >= 4) {
-      ctx.fillStyle = pal.glow || '#fff';
-      ctx.fillRect(cx - p * 2, by + p * 2, p, p * 2);
-    }
-    // Shield border
-    ctx.strokeStyle = pal.body2;
-    ctx.lineWidth = 1;
-    ctx.strokeRect(cx - p * 3, by + p, sw, sh);
-  }
-}
-
-function drawArcher(ctx, stage, pal, p) {
-  const cx = 36;
-  const by = 32;
-
-  // Cape (stage 5)
-  if (pal.cape) {
-    ctx.fillStyle = pal.cape;
-    ctx.fillRect(cx - p, by + p, p * 6, p * 7);
-    ctx.globalAlpha = 0.5;
-    ctx.fillRect(cx, by + p * 8, p * 4, p * 3);
-    ctx.globalAlpha = 1;
-  }
-
-  // Legs
-  ctx.fillStyle = pal.legs;
-  ctx.fillRect(cx + p, by + p * 8, p * 2, p * 3);
-  ctx.fillRect(cx + p * 3, by + p * 8, p * 2, p * 3);
-
-  // Boots
-  ctx.fillStyle = pal.boots;
-  ctx.fillRect(cx, by + p * 10, p * 3, p * 2);
-  ctx.fillRect(cx + p * 3, by + p * 10, p * 3, p * 2);
-
-  // Body
-  ctx.fillStyle = pal.body;
-  ctx.fillRect(cx, by + p * 2, p * 5, p * 6);
-  ctx.fillStyle = pal.body2;
-  ctx.fillRect(cx + p, by + p * 3, p * 3, p * 3);
-
-  // Quiver (stage 3+)
-  if (pal.quiver) {
-    ctx.fillStyle = pal.quiver;
-    ctx.fillRect(cx - p * 2, by + p, p, p * 5);
-    ctx.fillStyle = pal.arrow || '#c0a060';
-    ctx.fillRect(cx - p * 2, by - p, p, p * 2);
-    ctx.fillRect(cx - p * 2 + 2, by - p * 2, 2, p);
-  }
-
-  // Head
-  if (pal.hood) {
-    // Hood
-    ctx.fillStyle = pal.hood;
-    ctx.fillRect(cx, by - p * 3, p * 5, p * 2);
-    ctx.fillRect(cx, by - p * 2, p * 5, p * 3);
-    // Face visible area
-    ctx.fillStyle = pal.skin || '#f0c090';
-    ctx.fillRect(cx + p, by - p, p * 3, p * 2);
-    // Eyes
-    ctx.fillStyle = '#1a1a2e';
-    ctx.fillRect(cx + p, by - p, p, p);
-    ctx.fillRect(cx + p * 3, by - p, p, p);
-    if (stage >= 4 && pal.glow) {
-      ctx.fillStyle = pal.glow;
-      ctx.fillRect(cx + p, by - p, p, p);
-      ctx.fillRect(cx + p * 3, by - p, p, p);
-    }
-    // Crown (stage 5)
-    if (pal.crown) {
-      ctx.fillStyle = pal.crown;
-      ctx.fillRect(cx, by - p * 4, p, p);
-      ctx.fillRect(cx + p * 2, by - p * 5, p, p * 2);
-      ctx.fillRect(cx + p * 4, by - p * 4, p, p);
-    }
-  } else if (pal.crown) {
-    // Stage 5 no hood
-    ctx.fillStyle = pal.skin;
-    ctx.fillRect(cx + p, by - p * 2, p * 3, p * 4);
-    ctx.fillStyle = pal.crown;
-    ctx.fillRect(cx, by - p * 3, p * 5, p * 2);
-    ctx.fillRect(cx, by - p * 4, p, p);
-    ctx.fillRect(cx + p * 2, by - p * 5, p, p * 2);
-    ctx.fillRect(cx + p * 4, by - p * 4, p, p);
-    ctx.fillStyle = '#1a1a2e';
-    ctx.fillRect(cx + p, by - p, p, p);
-    ctx.fillRect(cx + p * 3, by - p, p, p);
-  } else {
-    // Bare head
-    ctx.fillStyle = pal.skin;
-    ctx.fillRect(cx + p, by - p * 2, p * 3, p * 4);
-    ctx.fillStyle = pal.hair;
-    ctx.fillRect(cx, by - p * 3, p * 5, p * 2);
-    ctx.fillRect(cx + p * 4, by - p * 2, p, p * 2);
-    ctx.fillStyle = '#1a1a2e';
-    ctx.fillRect(cx + p, by - p, p, p);
-    ctx.fillRect(cx + p * 3, by - p, p, p);
-    ctx.fillStyle = '#d09070';
-    ctx.fillRect(cx + p * 2, by + p, p, p);
-  }
-
-  // Bow - right side
-  ctx.strokeStyle = pal.bow;
-  ctx.lineWidth = stage >= 3 ? 3 : 2;
-  ctx.beginPath();
-  const bowX = cx + p * 7;
-  const bowH = stage >= 3 ? p * 7 : p * 5;
-  ctx.moveTo(bowX, by - p);
-  ctx.quadraticCurveTo(bowX + p * 2, by + bowH / 2 - p, bowX, by + bowH - p);
-  ctx.stroke();
-  // String
-  ctx.strokeStyle = pal.bowString;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(bowX, by - p);
-  ctx.lineTo(bowX, by + bowH - p);
-  ctx.stroke();
-  // Arrow
-  if (stage >= 2 && pal.arrow) {
-    ctx.fillStyle = pal.arrow;
-    ctx.fillRect(bowX - p * 2, by + p * 2, p * 3, 2);
-    // Arrowhead
-    ctx.fillRect(bowX - p * 3, by + p * 2 - 2, p, 6);
-  }
-
-  // Glow arrows (stage 4-5)
-  if (stage >= 4 && pal.glow) {
-    ctx.fillStyle = pal.glow;
-    ctx.globalAlpha = 0.6;
-    ctx.fillRect(bowX - p * 3, by + p * 2 - 2, p, 6);
-    ctx.globalAlpha = 1;
-  }
-}
-
-function drawRogue(ctx, stage, pal, p) {
-  const cx = 36;
-  const by = 32;
-
-  // Cape (stage 5)
-  if (pal.cape) {
-    ctx.fillStyle = pal.cape;
-    ctx.globalAlpha = 0.7;
-    ctx.fillRect(cx - p, by + p, p * 7, p * 8);
-    ctx.globalAlpha = 1;
-  }
-
-  // Legs
-  ctx.fillStyle = pal.legs;
-  ctx.fillRect(cx + p, by + p * 8, p * 2, p * 3);
-  ctx.fillRect(cx + p * 3, by + p * 8, p * 2, p * 3);
-
-  // Boots
-  ctx.fillStyle = pal.boots;
-  ctx.fillRect(cx, by + p * 10, p * 3, p * 2);
-  ctx.fillRect(cx + p * 3, by + p * 10, p * 3, p * 2);
-
-  // Body
-  ctx.fillStyle = pal.body;
-  ctx.fillRect(cx, by + p * 2, p * 5, p * 6);
-  ctx.fillStyle = pal.body2;
-  ctx.fillRect(cx + p, by + p * 3, p * 3, p * 4);
-
-  // Belt with daggers holster
-  if (stage >= 2) {
-    ctx.fillStyle = '#504030';
-    ctx.fillRect(cx, by + p * 7, p * 5, p);
-  }
-
-  // Head
-  if (pal.hood) {
-    ctx.fillStyle = pal.hood;
-    ctx.fillRect(cx, by - p * 3, p * 5, p * 2);
-    ctx.fillRect(cx, by - p * 2, p * 5, p * 3);
-    if (pal.mask) {
-      // Masked face
-      ctx.fillStyle = pal.mask;
-      ctx.fillRect(cx + p, by - p, p * 3, p * 2);
-      // Eye slits
-      ctx.fillStyle = stage >= 4 && pal.glow ? pal.glow : '#ff3030';
-      ctx.fillRect(cx + p, by - p, p, p);
-      ctx.fillRect(cx + p * 3, by - p, p, p);
-    } else {
-      // Face under hood
-      ctx.fillStyle = pal.skin || '#f0c090';
-      ctx.fillRect(cx + p, by - p, p * 3, p * 2);
-      ctx.fillStyle = '#1a1a2e';
-      ctx.fillRect(cx + p, by - p, p, p);
-      ctx.fillRect(cx + p * 3, by - p, p, p);
-    }
-    // Crown (stage 5)
-    if (pal.crown) {
-      ctx.fillStyle = pal.crown;
-      ctx.fillRect(cx, by - p * 4, p, p);
-      ctx.fillRect(cx + p * 2, by - p * 5, p, p * 2);
-      ctx.fillRect(cx + p * 4, by - p * 4, p, p);
-    }
-  } else {
-    // Bare head
-    ctx.fillStyle = pal.skin;
-    ctx.fillRect(cx + p, by - p * 2, p * 3, p * 4);
-    ctx.fillStyle = pal.hair;
-    ctx.fillRect(cx, by - p * 3, p * 5, p * 2);
-    ctx.fillRect(cx, by - p * 2, p, p);
-    ctx.fillRect(cx + p * 4, by - p * 2, p, p);
-    ctx.fillStyle = '#1a1a2e';
-    ctx.fillRect(cx + p, by - p, p, p);
-    ctx.fillRect(cx + p * 3, by - p, p, p);
-    ctx.fillStyle = '#d09070';
-    ctx.fillRect(cx + p * 2, by + p, p, p);
-  }
-
-  // Dual daggers
-  // Left dagger
-  ctx.fillStyle = pal.dagger;
-  const dLen = stage >= 3 ? p * 5 : p * 3;
-  ctx.fillRect(cx - p * 2, by + p, 2, dLen);
-  ctx.fillStyle = pal.daggerHandle;
-  ctx.fillRect(cx - p * 2, by + p + dLen, 2, p * 2);
-  // Right dagger
-  ctx.fillStyle = pal.dagger;
-  ctx.fillRect(cx + p * 6, by + p, 2, dLen);
-  ctx.fillStyle = pal.daggerHandle;
-  ctx.fillRect(cx + p * 6, by + p + dLen, 2, p * 2);
-
-  // Crossguards (stage 3+)
-  if (stage >= 3) {
-    ctx.fillStyle = pal.dagger;
-    ctx.fillRect(cx - p * 3, by + p + dLen - p, p * 2, 2);
-    ctx.fillRect(cx + p * 5 + 2, by + p + dLen - p, p * 2, 2);
-  }
-
-  // Glow on blades (stage 4+)
-  if (stage >= 4 && pal.glow) {
-    ctx.fillStyle = pal.glow;
-    ctx.globalAlpha = 0.5;
-    ctx.fillRect(cx - p * 2 - 1, by + p, 4, dLen);
-    ctx.fillRect(cx + p * 6 - 1, by + p, 4, dLen);
-    ctx.globalAlpha = 1;
-  }
-
-  // Shadow particles (stage 5)
-  if (stage >= 5) {
-    ctx.fillStyle = pal.glow;
-    const t = Date.now() / 200;
-    for (let i = 0; i < 5; i++) {
-      const px = cx + Math.sin(t + i * 1.3) * 24;
-      const py = by + 20 + Math.cos(t + i * 1.7) * 20;
-      ctx.globalAlpha = 0.3 + 0.2 * Math.sin(t + i);
-      ctx.fillRect(px, py, p, p);
-    }
-    ctx.globalAlpha = 1;
-  }
-}
 
 const SKILLS = [
   { id:'power_strike', name:'파워 스트라이크', icon:'💥', desc:'공격력 +10%', maxLv:9999, costBase:50, costScale:1.08,
@@ -1096,7 +728,6 @@ function getMonsterHp(stage) {
   const stageScale = ss('monHpStageScale', 0.5);
   return Math.ceil(base * Math.pow(growth, stage - 1) * (1 + stage * stageScale));
 }
-function getMonsterAtk(stage) { return Math.ceil(3 * Math.pow(1.08, stage - 1)); }
 function getMonsterGold(stage) { return Math.ceil(2 * Math.pow(1.1, stage - 1)); }
 function getLampCost(level) { return Math.ceil(100 * Math.pow(1.5, level - 1)); } // 골드: 100, 150, 225...
 function getPullCost() { return 10; } // 보석 10개 (10회=100, 100회=1000)
@@ -1252,19 +883,6 @@ function updateMonsterHp() {
 let effectParticles = [];
 let effectAnimFrame = null;
 
-function playSkillEffect(classId, stage) {
-  const canvas = document.getElementById('effectCanvas');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-
-  // Effect origin (character side) → target (monster side)
-  const ox = 120, oy = 150; // character position
-  const tx = 360, ty = 140; // monster position
-
-  if (classId === 'knight') playKnightEffect(ctx, stage, ox, oy, tx, ty);
-  else if (classId === 'archer') playArcherEffect(ctx, stage, ox, oy, tx, ty);
-  else if (classId === 'rogue') playRogueEffect(ctx, stage, ox, oy, tx, ty);
-}
 
 // Knight: slash effects
 function playKnightEffect(ctx, stage, ox, oy, tx, ty) {
@@ -2021,20 +1639,27 @@ function sellAllCommon() {
   updateAllUI();
 }
 
+function getEffectiveStatValue(item) {
+  const enhLv = item.enhanceLevel || 0;
+  return item.statValue + Math.ceil(item.statValue * enhLv * 0.1);
+}
 function equipBestAll() {
   EQUIP_SLOTS.forEach(slot => {
     const candidates = G.inventory.filter(i => i.slot === slot.id);
     if (candidates.length === 0) return;
-    // 같은 스탯이면 id가 낮은 걸 선택 (안정적 정렬)
-    const best = candidates.reduce((a, b) => b.statValue > a.statValue ? b : (b.statValue === a.statValue ? (a.id < b.id ? a : b) : a));
+    const best = candidates.reduce((a, b) => {
+      const va = getEffectiveStatValue(a), vb = getEffectiveStatValue(b);
+      return vb > va ? b : (vb === va ? (a.id < b.id ? a : b) : a);
+    });
     const current = G.equipment[slot.id];
-    // 같은 스탯이면 현재 장착 유지 (교체 안 함)
-    if (!current || best.statValue > current.statValue) {
+    // 현재 장비보다 확실히 좋을 때만 교체
+    if (!current || getEffectiveStatValue(best) > getEffectiveStatValue(current)) {
       if (current) G.inventory.push(current);
       G.equipment[slot.id] = best;
       G.inventory = G.inventory.filter(i => i.id !== best.id);
     }
   });
+  markStatsDirty();
   updateAllUI();
   renderTab('equip');
   saveCloudGame();
@@ -2433,14 +2058,14 @@ async function doResetAccount() {
   showFloatText('🗑️ 계정 초기화 완료!', '#e74c3c');
 }
 
-function watchAd() { alert('광고 연동 후 사용 가능합니다.\n(테스트: 골드 500 지급)'); G.gold += 500; updateAllUI(); }
-function freeGems() { alert('광고 연동 후 사용 가능합니다.\n(테스트: 💎 50 지급)'); G.dia += 50; updateAllUI(); }
 
 // ==================== ENHANCEMENT (강화) ====================
 function getEnhanceCost(item) {
   const enhLv = item.enhanceLevel || 0;
   const ri = RARITIES.findIndex(r => r.id === item.rarityId);
-  return Math.ceil(50 * (enhLv + 1) * (ri + 1));
+  // 등급 배율: 일반x1, 고급x3, 희귀x8, 영웅x20, 전설x50, 신화x150, 신화S+x500...
+  const rarityMul = [1, 3, 8, 20, 50, 150, 300, 500, 800, 1200, 2000][ri] || 1;
+  return Math.ceil(100 * Math.pow(2, enhLv) * rarityMul);
 }
 
 function enhanceItem(itemId) {
@@ -2973,12 +2598,6 @@ async function changeNickname() {
   } catch(e) { alert('변경 실패'); }
 }
 
-function doLogout() {
-  if (!confirm('로그아웃 하시겠습니까?\n(닉네임을 기억해두세요!)')) return;
-  localStorage.removeItem('userUid');
-  userUid = '';
-  location.reload();
-}
 
 async function checkAuth() {
   try {
