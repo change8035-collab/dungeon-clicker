@@ -699,7 +699,6 @@ let G = {
 let nextItemId = 1;
 let activeTab = 'lamp';
 let pullSubTab = 'equip'; // 'equip' or 'class'
-let dmgTexts = [];
 
 function getXpToNext(lv) { return Math.ceil(10 * Math.pow(1.25, lv - 1)); }
 function getLevel() { return G.classLevels[G.selectedClass] || 1; }
@@ -763,7 +762,8 @@ function getPlayerStats() {
   const classMulBonus = Math.pow(1.8, classCount - 1);
   atk *= classMulBonus;
 
-  return { atk: Math.ceil(atk), hp: Math.ceil(hp), crit: Math.min(crit, 0.80), critDmg: Math.max(critDmg, 1.5), goldBonus, spdBonus, classMulBonus };
+  atk = Math.ceil(atk * ss('atkMul',1));
+  return { atk, hp: Math.ceil(hp), crit: Math.min(crit, 0.80), critDmg: Math.max(critDmg, 1.5), goldBonus, spdBonus, classMulBonus };
 }
 
 function getEvolution() {
@@ -1219,6 +1219,7 @@ function updateAllUI() {
   if (activeTab !== 'admin' && activeTab !== 'ranking') {
     renderTab(activeTab);
   }
+  updateCombatPower();
 }
 
 function renderTab(tab) {
@@ -1917,10 +1918,7 @@ function loadGame() {
     if (!raw) return;
     const data = JSON.parse(raw);
 
-    if (data.ownedHeroes !== undefined) delete data.ownedHeroes;
-    if (data.selectedHeroId !== undefined) delete data.selectedHeroId;
-    if (data.companions !== undefined) delete data.companions;
-    if (data.charLampLevel !== undefined) delete data.charLampLevel;
+    delete data.ownedHeroes; delete data.selectedHeroId; delete data.companions; delete data.charLampLevel;
 
     Object.assign(G, data);
     G.monster = null;
@@ -1928,18 +1926,9 @@ function loadGame() {
     if (!G.unlockedClasses) G.unlockedClasses = ['knight'];
     if (!G.selectedClass || !CLASSES[G.selectedClass]) G.selectedClass = 'knight';
 
-    if (G.level !== undefined && !G.classLevels) {
-      G.classLevels = { knight: G.level || 1, archer: 1, rogue: 1 };
-      G.classXp = { knight: G.xp || 0, archer: 0, rogue: 0 };
-    }
     if (!G.classLevels) G.classLevels = { knight: 1, archer: 1, rogue: 1 };
     if (!G.classXp) G.classXp = { knight: 0, archer: 0, rogue: 0 };
-    if (!G.classStages) {
-      G.classStages = { knight: G.stage||1, archer: 1, rogue: 1 };
-      G.classSubStages = { knight: G.subStage||1, archer: 1, rogue: 1 };
-      G.classMaxStages = { knight: G.maxStage||1, archer: 1, rogue: 1 };
-    }
-    delete G.level; delete G.xp; delete G.xpToNext;
+    if (!G.classStages) { G.classStages = { knight: G.stage||1, archer: 1, rogue: 1 }; G.classSubStages = { knight: G.subStage||1, archer: 1, rogue: 1 }; G.classMaxStages = { knight: G.maxStage||1, archer: 1, rogue: 1 }; }
 
     const allItems = [...G.inventory, ...Object.values(G.equipment).filter(Boolean)];
     if (allItems.length > 0) nextItemId = Math.max(...allItems.map(i => i.id)) + 1;
@@ -2598,18 +2587,6 @@ async function resetGame() {
   } catch(e) { alert('초기화 실패: ' + e.message); }
 }
 
-const _origGetPlayerStats = getPlayerStats;
-getPlayerStats = function() {
-  const s = _origGetPlayerStats();
-  s.atk = Math.ceil(s.atk * ss('atkMul',1));
-  return s;
-};
-
-const _origUpdateAllUI = updateAllUI;
-updateAllUI = function() {
-  _origUpdateAllUI();
-  updateCombatPower();
-};
 
 async function syncGame() {
   if (!currentUser) return;
@@ -2658,10 +2635,6 @@ window.addEventListener('beforeunload', () => {
   }
 });
 
-const _origOnMonsterKill = onMonsterKill;
-onMonsterKill = function() {
-  _origOnMonsterKill();
-};
 </script>
 </body>
 </html>
