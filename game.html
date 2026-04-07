@@ -2166,7 +2166,7 @@ function gameLoop() {
 let userUid = localStorage.getItem('userUid') || '';
 
 function authHeaders() {
-  return { 'X-User-Id': userUid };
+  return { 'X-User-Id': userUid || localStorage.getItem('userUid') || '' };
 }
 function authFetch(url, opts = {}, timeout = 10000) {
   const ctrl = new AbortController();
