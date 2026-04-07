@@ -293,7 +293,13 @@ body { background:var(--bg); color:var(--text); font-family:'Noto Sans KR',sans-
 <!-- LOADING OVERLAY -->
 <div class="login-overlay" id="loginOverlay">
   <h1>⚔️ 던전 클리커</h1>
-  <p>접속 중...</p>
+  <p id="loginStatus">접속 중...</p>
+  <div id="registerForm" style="display:none;text-align:center;">
+    <input id="nickInput" type="text" placeholder="닉네임 입력 (2~12자)" maxlength="12"
+      style="padding:10px 16px;border-radius:8px;border:2px solid var(--accent);background:#1a1930;color:#fff;font-size:16px;font-family:inherit;width:200px;text-align:center;">
+    <div id="nickError" style="color:#ff4444;font-size:12px;display:none;margin-top:6px;"></div>
+    <button onclick="doRegister()" style="margin-top:12px;background:linear-gradient(135deg,var(--accent),#6c3ec1);color:#fff;border:none;padding:12px 40px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;">시작하기</button>
+  </div>
 </div>
 
 <div id="app" style="display:none;">
@@ -2545,8 +2551,11 @@ let userUid = localStorage.getItem('userUid') || '';
 function authHeaders() {
   return { 'X-User-Id': userUid };
 }
-function authFetch(url, opts = {}) {
+function authFetch(url, opts = {}, timeout = 10000) {
+  const ctrl = new AbortController();
+  setTimeout(() => ctrl.abort(), timeout);
   opts.headers = { ...(opts.headers || {}), ...authHeaders() };
+  opts.signal = ctrl.signal;
   return fetch(url, opts);
 }
 
@@ -2601,10 +2610,12 @@ async function changeNickname() {
 
 async function checkAuth() {
   try {
-    // Auto login: send uid from localStorage, server will create account if needed
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), 8000); // 8초 타임아웃
     const res = await fetch('/api/auto-login', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ uid: userUid })
+      body: JSON.stringify({ uid: userUid }),
+      signal: ctrl.signal
     });
     const data = await res.json();
     if (data.ok) {
@@ -2638,21 +2649,18 @@ async function checkAuth() {
         gameLoop();
       }
     } else {
-      // needRegister - show login overlay (nickname input)
+      // needRegister - show nickname input form
       document.getElementById('loginOverlay').style.display = '';
       document.getElementById('app').style.display = 'none';
+      document.getElementById('loginStatus').style.display = 'none';
+      document.getElementById('registerForm').style.display = '';
       localStorage.removeItem('userUid');
     }
   } catch(e) {
     console.error('Auth failed:', e);
-    // 오프라인이면 로컬로 시작
-    document.getElementById('loginOverlay').style.display = 'none';
-    document.getElementById('app').style.display = '';
-    loadGame();
-    initDomRefs();
-    spawnMonster();
-    updateAllUI();
-    if (!window._gameLoopStarted) { window._gameLoopStarted = true; gameLoop(); }
+    // 서버 연결 실패 - 닉네임 입력 보여주기
+    document.getElementById('loginStatus').textContent = '서버 연결 실패. 닉네임을 입력하세요.';
+    document.getElementById('registerForm').style.display = '';
   }
 }
 checkAuth();
