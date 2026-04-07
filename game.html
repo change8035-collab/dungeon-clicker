@@ -376,7 +376,6 @@ body { background:var(--bg); color:var(--text); font-family:'Noto Sans KR',sans-
 </div>
 
 <script>
-// ==================== DATA ====================
 const RARITIES = [
   { id:'common', name:'일반', color:'#888', weight:55, statMul:1 },
   { id:'uncommon', name:'고급', color:'#2cb67d', weight:28, statMul:2 },
@@ -400,24 +399,19 @@ const EQUIP_SLOTS = [
   { id:'necklace', name:'목걸이', icon:'📿', statType:'atk' },
 ];
 
-// Equipment sprite path generator
 function getEquipSprite(slotId, rarityId, nameIdx) {
-  // mythic 이상(S, S+, SS 등)은 모두 mythic 아이콘 사용
   const rarityBase = rarityId === 'mythic_sss' ? 'mythic_sss' : (rarityId.startsWith('mythic') ? 'mythic' : rarityId);
   const variant = (nameIdx != null ? nameIdx % 3 : Math.floor(Math.random()*3)) + 1;
   return 'assets/equip/' + slotId + '_' + rarityBase + '_' + variant + '.png';
 }
-// 아이템 이름에 신화 등급 접미사 자동 부착
 const _MYTHIC_TAG = { mythic_s:' S', mythic_sp:' S+', mythic_ss:' SS', mythic_ssp:' SS+', mythic_sss:' SSS' };
 function itemName(item) {
   const tag = _MYTHIC_TAG[item.rarityId] || '';
-  // 이미 태그가 붙어있으면 중복 방지
   if (tag && item.name.endsWith(tag.trim())) return item.name;
   return item.name + tag;
 }
 function getEquipIcon(item, size) {
   const s = size || 36;
-  // Fix sprite once using item.id as seed, never change again
   if (!item._spriteFixed && item.slot && item.rarityId) {
     const variant = ((item.id || 0) % 3) + 1;
     const rarityBase = item.rarityId === 'mythic_sss' ? 'mythic_sss' : (item.rarityId.startsWith('mythic') ? 'mythic' : item.rarityId);
@@ -428,7 +422,6 @@ function getEquipIcon(item, size) {
   return '<span style="font-size:'+(s-8)+'px;">'+item.icon+'</span>';
 }
 
-// 등급별 3종 이름 (common, uncommon, rare, epic, legendary, mythic)
 const WEAPON_NAMES = {
   common:['나무검','돌칼','녹슨검'], uncommon:['철검','강철검','장검'],
   rare:['미스릴검','룬검','마법검'], epic:['불꽃검','번개검','암흑검'],
@@ -485,7 +478,6 @@ const BOSSES = [
   { name:'☠️ 죽음의 용', sprite:'assets/monsters/skeleton_8.png', hpMul:18, atkMul:5, goldMul:15 },
 ];
 
-// ==================== CLASS SYSTEM ====================
 const CLASSES = {
   knight: {
     id: 'knight', name: '기사', baseAtk: 10, baseHp: 100,
@@ -549,8 +541,6 @@ function getClassInfo(classId, level) {
   };
 }
 
-// ==================== SPRITE SHEET SYSTEM ====================
-// Individual sprite images (pre-cropped with transparent backgrounds)
 const charSprites = {};
 const effectSprites = {};
 let spritesLoaded = 0;
@@ -558,7 +548,6 @@ const totalSprites = 3 * 5 + 3 * 6; // 15 chars + 18 effects
 function onSpriteLoad() {
   spritesLoaded++;
   if (spritesLoaded >= totalSprites) {
-    // All sprites loaded, redraw character
     updateAllUI();
   }
 }
@@ -579,7 +568,6 @@ function onSpriteLoad() {
   }
 });
 
-// Preload ALL monster images
 const _imgCache = {};
 function preloadImg(src) {
   if (_imgCache[src]) return;
@@ -590,27 +578,22 @@ function preloadImg(src) {
 MONSTERS.forEach(m => preloadImg(m.sprite));
 BOSSES.forEach(m => preloadImg(m.sprite));
 
-// Equipment images: lazy load (only when needed, not 126 at startup)
-
 function drawCharacter(canvas, classId, stageNum) {
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   const img = charSprites[classId + '_' + stageNum];
   if (!img || !img.complete || !img.naturalWidth) {
-    // Image not loaded yet, retry in 200ms
     setTimeout(() => drawCharacter(canvas, classId, stageNum), 200);
     return;
   }
 
-  // Fit image centered in canvas, maintaining aspect ratio
   const scale = Math.min(canvas.width / img.naturalWidth, canvas.height / img.naturalHeight) * 0.9;
   const w = img.naturalWidth * scale;
   const h = img.naturalHeight * scale;
   const x = (canvas.width - w) / 2;
   const y = canvas.height - h - 2; // align to bottom
   ctx.drawImage(img, x, y, w, h);
-  // Clear STAGE text area at top
   ctx.clearRect(0, 0, canvas.width, 20);
 }
 
@@ -620,13 +603,11 @@ function drawEffectSprite(classId, stage) {
   if (!canvas) { console.warn('EFFECT: no canvas'); return; }
   const ctx = canvas.getContext('2d');
 
-  // Map 5 game stages to 6 effect images: 1→1, 2→2, 3→3, 4→4, 5→6
   const stageMap = {1:1, 2:2, 3:3, 4:4, 5:6};
   const effIdx = stageMap[stage] || stage;
   const img = effectSprites[classId + '_' + effIdx] || effectSprites[classId + '_' + stage] || effectSprites[classId + '_1'];
   if (!img || !img.complete || !img.naturalWidth) { console.warn('EFFECT: img not loaded', classId, stage, effIdx, img?.src); return; }
 
-  // Cancel previous animation and restart immediately
   if (effectAnimId) cancelAnimationFrame(effectAnimId);
 
   const startX = canvas.width * 0.18;
@@ -635,7 +616,6 @@ function drawEffectSprite(classId, stage) {
   const endY = classId === 'archer' ? canvas.height * 0.5 : classId === 'rogue' ? canvas.height * 0.43 : canvas.height * 0.35;
   const size = classId === 'archer' ? 14 : classId === 'rogue' ? 50 : 80;
 
-  // Effect always flies for 300ms regardless of attack speed
   const totalMs = 300;
   const totalFrames = Math.round(totalMs / 16);
 
@@ -655,24 +635,20 @@ function drawEffectSprite(classId, stage) {
     const eased = 1 - Math.pow(1 - travel, 3);
 
     const x = startX + (endX - startX) * eased;
-    // Archer arrows: slight random Y wobble each shot
     const yOffset = classId === 'archer' ? (Math.sin(t * 8 + effectSeed) * 12) : 0;
     const y = startY + (endY - startY) * eased + yOffset;
 
-    // Scale: starts small, grows to full at impact, then slightly bigger + fade
     let scale, alpha;
     if (t <= 1) {
       scale = 0.5 + eased * 0.5;
       alpha = 0.7 + eased * 0.3;
     } else {
-      // Impact: flash bigger then fade
       const fade = (t - 1) / 0.5;
       scale = 1 + fade * 0.3;
       alpha = 1 - fade;
     }
 
     const s = size * scale;
-    // Maintain original aspect ratio
     const iw = img.naturalWidth || 1;
     const ih = img.naturalHeight || 1;
     const ratio = iw / ih;
@@ -687,8 +663,6 @@ function drawEffectSprite(classId, stage) {
   effectAnimId = requestAnimationFrame(drawFrame);
 }
 
-// Removed old canvas-drawn functions - using sprite sheets
-
 const SKILLS = [
   { id:'power_strike', name:'파워 스트라이크', icon:'💥', desc:'공격력 +10%', maxLv:9999, costBase:50, costScale:1.08,
     effect:(lv) => ({ atkPct: lv * 0.10 }) },
@@ -702,7 +676,6 @@ const SKILLS = [
     effect:(lv) => ({ spdPct: lv * 0.05 }) },
 ];
 
-// ==================== GAME STATE ====================
 let G = {
   gold: 0, dia: 100,
   classLevels: { knight: 1, archer: 1, rogue: 1 },
@@ -720,7 +693,6 @@ let G = {
   skillLevels: {},
   kills: 0, totalGold: 0,
   lastSave: Date.now(),
-  // Runtime
   monster: null, monsterHp: 0, monsterMaxHp: 0,
   attackTimer: 0, attackSpeed: 1000,
 };
@@ -729,7 +701,6 @@ let activeTab = 'lamp';
 let pullSubTab = 'equip'; // 'equip' or 'class'
 let dmgTexts = [];
 
-// ==================== FORMULAS ====================
 function getXpToNext(lv) { return Math.ceil(10 * Math.pow(1.25, lv - 1)); }
 function getLevel() { return G.classLevels[G.selectedClass] || 1; }
 function getXp() { return G.classXp[G.selectedClass] || 0; }
@@ -760,7 +731,6 @@ function getPlayerStats() {
   let goldBonus = 1;
   let spdBonus = 1;
 
-  // Equipment (with enhancement multiplier)
   Object.values(G.equipment).forEach(item => {
     if (!item) return;
     const enhMul = 1 + (item.enhanceLevel || 0) * 0.1;
@@ -772,7 +742,6 @@ function getPlayerStats() {
     if (item.statType === 'spd') spdBonus += val / 100;
   });
 
-  // Skills (클래스 단계별 효과 증폭: 1단계=1x, 2단계=1.5x, 3단계=2x, 4단계=3x, 5단계=5x)
   const stageBonus = [1, 1.5, 2, 3, 5][info.stage - 1] || 1;
   SKILLS.forEach(sk => {
     const lv = G.skillLevels[sk.id] || 0;
@@ -787,11 +756,9 @@ function getPlayerStats() {
     }
   });
 
-  // 레벨 비례 데미지 보너스
   const lvDmgBonus = 1 + (lv - 1) * (ss('lvDmgPct',3) / 100);
   atk *= lvDmgBonus;
 
-  // 보유 클래스 수 보너스: 클래스 1개당 1.8배 (기사=1배, +궁수=1.8배, +도적=3.24배)
   const classCount = G.unlockedClasses.length;
   const classMulBonus = Math.pow(1.8, classCount - 1);
   atk *= classMulBonus;
@@ -804,7 +771,6 @@ function getEvolution() {
   return { name: info.name, stage: info.stage };
 }
 
-// ==================== ITEM GENERATION ====================
 function generateItem(lampLv) {
   const weights = RARITIES.map((r, i) => {
     if (r.weight === 0) return 0; // fusion-only rarities cannot appear in gacha
@@ -860,7 +826,6 @@ function generateItem(lampLv) {
   };
 }
 
-// ==================== MONSTER ====================
 function spawnMonster() {
   const isBoss = G.subStage === 10;
   const stageIdx = ((G.stage - 1) % MONSTERS.length);
@@ -891,25 +856,18 @@ function updateMonsterHp() {
   document.getElementById('monsterHpFill').style.width = pct + '%';
 }
 
-// ==================== SKILL EFFECTS ====================
-// (removed unused particle system - using sprite effects instead)
-
-// ==================== COMBAT ====================
-// Cache DOM refs once
 let _charEl, _msEl, _battleEl;
 function initDomRefs() {
   _charEl = document.getElementById('charCanvas');
   _msEl = document.getElementById('monsterSprite');
   _battleEl = document.getElementById('battleArea');
 }
-// Auto-init when DOM ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initDomRefs);
 } else {
   initDomRefs();
 }
 
-// Cache stats - recalc only when equipment/skills change
 let _cachedStats = null;
 let _statsDirty = true;
 function markStatsDirty() { _statsDirty = true; _cachedStats = null; }
@@ -929,13 +887,11 @@ function attack() {
   G.monsterHp -= dmg;
   showDamage(dmg, isCrit);
 
-  // Effect - throttle to max 5fps
   if (!attack._lastFx || Date.now() - attack._lastFx > 200) {
     attack._lastFx = Date.now();
     drawEffectSprite(G.selectedClass, getEvolution().stage);
   }
 
-  // Monster hit - simple class toggle (no forced reflow)
   if (_msEl) { _msEl.classList.remove('hit'); requestAnimationFrame(() => _msEl.classList.add('hit')); }
 
   if (isCrit && _battleEl) {
@@ -963,7 +919,6 @@ function onMonsterKill() {
   G.gold += gold;
   G.totalGold += gold;
 
-  // Boss diamond reward (기본 5개 + 확률 보너스)
   if (G.monster.isBoss) {
     let bonusDia = 5;
     const roll = Math.random() * 100;
@@ -976,7 +931,6 @@ function onMonsterKill() {
     saveCloudGame();
   }
 
-  // Per-class XP
   G.classXp[G.selectedClass] = (G.classXp[G.selectedClass] || 0) + xp;
   G.kills++;
 
@@ -994,7 +948,6 @@ function onMonsterKill() {
     G.classMaxStages[G.selectedClass] = G.maxStage;
     showFloatText(`🏰 스테이지 ${G.stage} 돌입!`, '#ff8906');
   }
-  // 클래스별 스테이지 동기화
   G.classStages[G.selectedClass] = G.stage;
   G.classSubStages[G.selectedClass] = G.subStage;
 
@@ -1007,7 +960,6 @@ let _dmgAccum = 0, _dmgCrit = false, _dmgTimer = null;
 function showDamage(dmg, crit) {
   if (!_battleEl) _battleEl = document.getElementById('battleArea');
   if (!_battleEl) return;
-  // Accumulate damage, show every 150ms max
   _dmgAccum += dmg;
   if (crit) _dmgCrit = true;
   if (_dmgTimer) return;
@@ -1041,7 +993,6 @@ function showFloatText(text, color) {
   setTimeout(() => el.remove(), 1200);
 }
 
-// ==================== PULL (뽑기) ====================
 function doPullEquip(count) {
   const cost = getPullCost() * count;
   if (G.dia < cost) { showFloatText('💎 보석이 부족합니다!', '#e74c3c'); return; }
@@ -1076,11 +1027,9 @@ function unlockClass(classId) {
 
 function selectClass(classId) {
   if (!G.unlockedClasses.includes(classId)) return;
-  // 현재 클래스 스테이지 저장
   G.classStages[G.selectedClass] = G.stage;
   G.classSubStages[G.selectedClass] = G.subStage;
   G.classMaxStages[G.selectedClass] = G.maxStage;
-  // 새 클래스 스테이지 로드
   G.selectedClass = classId;
   G.stage = G.classStages[classId] || 1;
   G.subStage = G.classSubStages[classId] || 1;
@@ -1094,7 +1043,6 @@ function showPullResult(items, type) {
   const container = document.getElementById('pullItems');
   container.innerHTML = '';
 
-  // Build summary (highlight best rarity)
   const rarityOrder = ['mythic_sss','mythic_ssp','mythic_ss','mythic_sp','mythic_s','mythic','legendary','epic','rare','uncommon','common'];
   let bestRarity = null;
   const countMap = {};
@@ -1111,13 +1059,11 @@ function showPullResult(items, type) {
   }
   document.getElementById('pullSummary').innerHTML = summaryParts.length ? summaryParts.join(' · ') : '&nbsp;';
 
-  // Title glow by best rarity
   const titleEl = document.getElementById('pullResultTitle');
   if(bestRarity && bestRarity.startsWith('mythic')) titleEl.style.color='#ff4444';
   else if(bestRarity==='legendary') titleEl.style.color='#ffaa00';
   else titleEl.style.color='var(--gold)';
 
-  // Grid columns based on count
   const isBig = items.length > 10;
   const cols = items.length===1?1:items.length<=3?3:isBig?10:5;
   container.style.gridTemplateColumns = `repeat(${cols},1fr)`;
@@ -1125,14 +1071,12 @@ function showPullResult(items, type) {
   container.style.gap = isBig?'3px':'6px';
   container.classList.toggle('compact', isBig);
 
-  // Existing inventory for NEW badge
   const existingNames = new Set(G.inventory.map(i=>i.name).concat(Object.values(G.equipment).filter(Boolean).map(i=>i.name)));
 
   items.forEach((item, i) => {
     const el = document.createElement('div');
     el.className = `pull-item rarity-${item.rarityId}`;
     el.style.animationDelay = (i * 0.06) + 's';
-    // Get sprite path
     const spriteSrc = item.sprite || getEquipSprite(item.slot||'weapon', item.rarityId, item.id||i);
     el.innerHTML = `
       <img class="pull-icon" src="${spriteSrc}" onerror="this.style.display='none'">
@@ -1148,7 +1092,6 @@ function closePullResult() {
   document.getElementById('pullResult').classList.remove('show');
 }
 
-// ==================== EQUIP ====================
 function equipItem(item) {
   if (G.equipment[item.slot]) {
     G.inventory.push(G.equipment[item.slot]);
@@ -1191,7 +1134,6 @@ function equipBestAll() {
       return vb > va ? b : (vb === va ? (a.id < b.id ? a : b) : a);
     });
     const current = G.equipment[slot.id];
-    // 현재 장비보다 확실히 좋을 때만 교체
     if (!current || getEffectiveStatValue(best) > getEffectiveStatValue(current)) {
       if (current) G.inventory.push(current);
       G.equipment[slot.id] = best;
@@ -1241,7 +1183,6 @@ function unequipItem(slot) {
   }
 }
 
-// ==================== UI RENDERING ====================
 function formatNum(n) {
   if (n < 1000) return Math.floor(n).toString();
   const units = ['K','M','B','T','Qa','Qi','Sx','Sp','Oc','No','Dc'];
@@ -1275,7 +1216,6 @@ function updateAllUI() {
   charNameEl.textContent = evo.name;
   charNameEl.style.color = 'var(--blue)';
 
-  // Render active tab (skip admin/ranking to preserve input state)
   if (activeTab !== 'admin' && activeTab !== 'ranking') {
     renderTab(activeTab);
   }
@@ -1333,7 +1273,6 @@ function renderLamp(el) {
       </div>
     `;
   } else {
-    // Class selection tab
     const classIds = ['knight', 'archer', 'rogue'];
     let classListHtml = '';
 
@@ -1343,7 +1282,6 @@ function renderLamp(el) {
       const isSelected = G.selectedClass === cid;
       const info = getClassInfo(cid, G.classLevels[cid] || 1);
 
-      // Create a small preview canvas id
       const canvasId = `classPreview_${cid}`;
 
       if (isUnlocked) {
@@ -1399,7 +1337,6 @@ function renderLamp(el) {
     </div>
   `;
 
-  // Draw class preview canvases after DOM is ready
   if (!isEquip) {
     requestAnimationFrame(() => {
       ['knight', 'archer', 'rogue'].forEach(cid => {
@@ -1543,7 +1480,6 @@ function renderMore(el) {
   `;
 }
 
-// ==================== ACTIONS ====================
 function upgradeLamp() {
   const cost = getLampCost(G.lampLevel);
   if (G.gold < cost) return;
@@ -1587,12 +1523,6 @@ function upgradeAllSkills() {
   updateAllUI();
 }
 
-function doLogout() {
-  if (!confirm('로그아웃 하시겠습니까?\n(게임 데이터는 서버에 저장됩니다)')) return;
-  saveCloudGame();
-  localStorage.clear();
-  location.reload();
-}
 
 async function doResetAccount() {
   if (!confirm('정말 계정을 초기화하시겠습니까?\n모든 진행 데이터가 삭제됩니다!')) return;
@@ -1605,11 +1535,9 @@ async function doResetAccount() {
   showFloatText('🗑️ 계정 초기화 완료!', '#e74c3c');
 }
 
-// ==================== ENHANCEMENT (강화) ====================
 function getEnhanceCost(item) {
   const enhLv = item.enhanceLevel || 0;
   const ri = RARITIES.findIndex(r => r.id === item.rarityId);
-  // 등급 배율: 일반x1, 고급x3, 희귀x8, 영웅x20, 전설x50, 신화x150, 신화S+x500...
   const rarityMul = [1, 3, 8, 20, 50, 150, 300, 500, 800, 1200, 2000][ri] || 1;
   return Math.ceil(100 * Math.pow(2, enhLv) * rarityMul);
 }
@@ -1629,7 +1557,6 @@ function enhanceItem(itemId) {
   saveCloudGame();
 }
 
-// ==================== FUSION (합성) ====================
 let fusionSlot1 = null; // item id
 let fusionSlot2 = null;
 let fusionPickingSlot = 0; // 0=none, 1=slot1, 2=slot2
@@ -1639,7 +1566,6 @@ function fuseItems(item1Id, item2Id) {
   const item2 = G.inventory.find(i => i.id === item2Id);
   if (!item1 || !item2) return null;
   if (item1.rarityId !== item2.rarityId || item1.slot !== item2.slot) return null;
-  // 같은 이름만 합성 가능 (등급 접미사 제거 후 비교)
   const n1 = (item1.name||'').replace(/ S\+?$| SS\+?$| SSS$/,'');
   const n2 = (item2.name||'').replace(/ S\+?$| SS\+?$| SSS$/,'');
   if (n1 !== n2) { showFloatText('같은 이름의 장비만 합성 가능!', '#e74c3c'); return null; }
@@ -1652,7 +1578,6 @@ function fuseItems(item1Id, item2Id) {
   if (G.gold < fusionCost) { showFloatText('💰 골드가 부족합니다!', '#e74c3c'); return null; }
   G.gold -= fusionCost;
 
-  // Remove both items (also unequip if equipped)
   Object.keys(G.equipment).forEach(slot => {
     if (G.equipment[slot] && (G.equipment[slot].id === item1Id || G.equipment[slot].id === item2Id)) {
       G.equipment[slot] = null;
@@ -1721,7 +1646,6 @@ function autoFuseAll() {
 
   while (keepGoing) {
     keepGoing = false;
-    // Group inventory by slot + rarity + name (same name only)
     const groups = {};
     G.inventory.forEach(item => {
       const baseName = (item.name || '').replace(/ S\+?$| SS\+?$| SSS$/,'');
@@ -1730,14 +1654,11 @@ function autoFuseAll() {
       groups[key].push(item);
     });
 
-    // Find first group with 2+ items and fuse them
     for (const key of Object.keys(groups)) {
       const items = groups[key];
       if (items.length >= 2) {
-        // Check rarity is not max
         const ridx = RARITIES.findIndex(r => r.id === items[0].rarityId);
         if (ridx >= RARITIES.length - 1) continue;
-        // Check gold
         const cost = Math.ceil(100 * Math.pow(ridx + 1, 2));
         if (G.gold < cost) continue;
 
@@ -1769,7 +1690,6 @@ function selectFusionSlot(slotNum) {
 function pickFusionItem(itemId) {
   if (fusionPickingSlot === 1) {
     fusionSlot1 = itemId;
-    // If slot2 has same item, clear it
     if (fusionSlot2 === itemId) fusionSlot2 = null;
   } else if (fusionPickingSlot === 2) {
     fusionSlot2 = itemId;
@@ -1880,7 +1800,6 @@ function renderFusion(el, headerHtml) {
   const item1 = fusionSlot1 ? G.inventory.find(i => i.id === fusionSlot1) : null;
   const item2 = fusionSlot2 ? G.inventory.find(i => i.id === fusionSlot2) : null;
 
-  // Check if items no longer exist
   if (fusionSlot1 && !item1) fusionSlot1 = null;
   if (fusionSlot2 && !item2) fusionSlot2 = null;
 
@@ -1920,25 +1839,21 @@ function renderFusion(el, headerHtml) {
     resultHtml = `<div class="fusion-result"><div style="color:var(--red);font-size:13px;">같은 등급, 같은 부위의 장비 2개가 필요합니다</div></div>`;
   }
 
-  // Build pick list if selecting
   let pickListHtml = '';
   if (fusionPickingSlot > 0) {
     const otherItem = fusionPickingSlot === 1 ? item2 : item1;
     let candidates = [...G.inventory];
 
-    // If other slot has an item, filter to same rarity and slot
     if (otherItem) {
       candidates = candidates.filter(i => i.rarityId === otherItem.rarityId && i.slot === otherItem.slot && i.id !== otherItem.id);
     }
 
-    // Sort by rarity desc
     candidates.sort((a, b) => {
       const ai = RARITIES.findIndex(r => r.id === a.rarityId);
       const bi = RARITIES.findIndex(r => r.id === b.rarityId);
       return bi - ai;
     });
 
-    // Exclude max rarity items
     candidates = candidates.filter(i => {
       const ri = RARITIES.findIndex(r => r.id === i.rarityId);
       return ri < RARITIES.length - 1;
@@ -1982,7 +1897,6 @@ function renderFusion(el, headerHtml) {
   `;
 }
 
-// ==================== SAVE / LOAD ====================
 function getSaveKey() {
   return currentUser ? 'idle_save_' + currentUser.uid : 'idle_save_guest';
 }
@@ -1994,18 +1908,15 @@ function saveGame() {
 
 function loadGame() {
   try {
-    // 일회성 강제 초기화
     if (!localStorage.getItem('_reset_done_v3')) {
       localStorage.clear();
       localStorage.setItem('_reset_done_v3', '1');
-      console.log('🧹 로컬 강제 초기화 완료');
       return;
     }
     const raw = localStorage.getItem(getSaveKey());
     if (!raw) return;
     const data = JSON.parse(raw);
 
-    // Migrate old saves
     if (data.ownedHeroes !== undefined) delete data.ownedHeroes;
     if (data.selectedHeroId !== undefined) delete data.selectedHeroId;
     if (data.companions !== undefined) delete data.companions;
@@ -2014,31 +1925,25 @@ function loadGame() {
     Object.assign(G, data);
     G.monster = null;
 
-    // Ensure new fields exist
     if (!G.unlockedClasses) G.unlockedClasses = ['knight'];
     if (!G.selectedClass || !CLASSES[G.selectedClass]) G.selectedClass = 'knight';
 
-    // Migrate old single-level save to per-class levels
     if (G.level !== undefined && !G.classLevels) {
       G.classLevels = { knight: G.level || 1, archer: 1, rogue: 1 };
       G.classXp = { knight: G.xp || 0, archer: 0, rogue: 0 };
     }
     if (!G.classLevels) G.classLevels = { knight: 1, archer: 1, rogue: 1 };
     if (!G.classXp) G.classXp = { knight: 0, archer: 0, rogue: 0 };
-    // 클래스별 스테이지 마이그레이션
     if (!G.classStages) {
       G.classStages = { knight: G.stage||1, archer: 1, rogue: 1 };
       G.classSubStages = { knight: G.subStage||1, archer: 1, rogue: 1 };
       G.classMaxStages = { knight: G.maxStage||1, archer: 1, rogue: 1 };
     }
-    // Clean up old fields
     delete G.level; delete G.xp; delete G.xpToNext;
 
-    // Recalc nextItemId
     const allItems = [...G.inventory, ...Object.values(G.equipment).filter(Boolean)];
     if (allItems.length > 0) nextItemId = Math.max(...allItems.map(i => i.id)) + 1;
 
-    // Offline rewards
     const offlineMs = Date.now() - (data.lastSave || Date.now());
     const offlineSec = Math.min(offlineMs / 1000, 8 * 3600);
     if (offlineSec > 60) {
@@ -2055,8 +1960,6 @@ function loadGame() {
   } catch(e) { console.warn('Load failed', e); }
 }
 
-// ==================== TAB SWITCHING ====================
-// Tab switching with event delegation (supports dynamically added tabs)
 document.querySelector('.tab-bar').addEventListener('click', (e) => {
   const btn = e.target.closest('.tab-btn');
   if (!btn) return;
@@ -2066,7 +1969,6 @@ document.querySelector('.tab-bar').addEventListener('click', (e) => {
   renderTab(activeTab);
 });
 
-// ==================== GAME LOOP ====================
 let lastTick = Date.now();
 function gameLoop() {
   const now = Date.now();
@@ -2082,17 +1984,12 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
-// ==================== INIT ====================
-
-// ==================== AUTH (Nickname) ====================
-// ==================== NICKNAME AUTH ====================
 let userUid = localStorage.getItem('userUid') || '';
 
 function authHeaders() {
   return { 'X-User-Id': userUid || localStorage.getItem('userUid') || '' };
 }
 
-// Google Sign-In callback
 async function onGoogleLogin(response) {
   const errEl = document.getElementById('nickError');
   errEl.textContent = '로그인 중...'; errEl.style.display = ''; errEl.style.color = '#4fc3f7';
@@ -2137,7 +2034,6 @@ async function doRegister() {
     });
     const data = await res.json();
     if (data.error) { errEl.textContent = data.error; errEl.style.color = '#ff4444'; return; }
-    // 이전 유저 데이터 클리어 후 새 유저 저장
     localStorage.clear();
     localStorage.setItem('userUid', data.uid);
     localStorage.setItem('userNick', data.nickname);
@@ -2151,7 +2047,6 @@ async function doRegister() {
   }
 }
 
-// Enter키로 시작
 document.addEventListener('DOMContentLoaded', () => {
   const inp = document.getElementById('nickInput');
   if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') doRegister(); });
@@ -2172,7 +2067,6 @@ async function changeNickname() {
     localStorage.setItem('userNick', data.nickname);
     localStorage.setItem('isAdmin', data.is_admin ? 'true' : 'false');
     document.getElementById('userName').textContent = data.nickname;
-    // 관리자 탭 표시/숨기기
     if (isAdmin && !document.querySelector('[data-tab="admin"]')) {
       const btn = document.createElement('button');
       btn.className = 'tab-btn';
@@ -2196,7 +2090,6 @@ async function checkAuth() {
     currentUser = { uid: userUid, name: savedNick, is_admin: savedAdmin };
     isAdmin = savedAdmin;
 
-    // 즉시 게임 표시
     document.getElementById('loginOverlay').style.display = 'none';
     document.getElementById('app').style.display = '';
     document.getElementById('userName').textContent = savedNick;
@@ -2208,36 +2101,30 @@ async function checkAuth() {
       document.querySelector('.tab-bar').appendChild(btn);
     }
 
-    // 로컬 세이브로 바로 시작
     loadGame();
     initDomRefs();
     spawnMonster();
     updateAllUI();
     if (!window._gameLoopStarted) { window._gameLoopStarted = true; gameLoop(); }
 
-    // 백그라운드에서 서버 동기화 (클라우드 세이브가 더 최신이면 덮어쓰기)
     syncWithServer();
     return;
   }
 
-  // uid 없으면 Google 로그인 표시
   document.getElementById('loginOverlay').style.display = '';
   document.getElementById('loginStatus').style.display = 'none';
   document.getElementById('registerForm').style.display = '';
 }
 checkAuth();
 
-// ==================== BACKGROUND SYNC ====================
 async function syncWithServer() {
   try {
-    // 1. 서버에서 계정 확인
     const res = await fetch('/api/auto-login', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ uid: userUid })
     });
     let data = await res.json();
     if (!data.ok) {
-      // 서버에 없으면 조용히 재등록 (게임 중단 없음)
       const nick = localStorage.getItem('userNick') || '모험가';
       try {
         await fetch('/api/register', {
@@ -2245,11 +2132,9 @@ async function syncWithServer() {
           body: JSON.stringify({ nickname: nick })
         });
       } catch(e) {}
-      console.warn('서버에 계정 없음 → 자동 재등록 시도');
       return;
     }
     if (data.ok) {
-      // 닉네임/관리자 업데이트
       localStorage.setItem('userNick', data.nickname);
       localStorage.setItem('isAdmin', data.is_admin ? 'true' : 'false');
       currentUser.name = data.nickname;
@@ -2263,13 +2148,11 @@ async function syncWithServer() {
         document.querySelector('.tab-bar').appendChild(btn);
       }
 
-      // 2. 클라우드 세이브 로드 (더 최신이면 덮어쓰기)
       const loadRes = await authFetch('/api/load');
       const loadData = await loadRes.json();
       if (loadData && loadData.gameState) {
         const saved = typeof loadData.gameState === 'string' ? JSON.parse(loadData.gameState) : loadData.gameState;
         if (saved && Object.keys(saved).length > 2) {
-          // 클라우드가 더 최신인지 비교 (스테이지+골드로 간단 비교)
           const cloudStage = Math.max(...Object.values(saved.classMaxStages || {knight:1}));
           const localStage = Math.max(...Object.values(G.classMaxStages || {knight:1}));
           if (cloudStage > localStage || (cloudStage === localStage && (saved.gold||0) > G.gold)) {
@@ -2277,20 +2160,16 @@ async function syncWithServer() {
             G.monster = null;
             spawnMonster();
             updateAllUI();
-            console.log('☁️ 클라우드 세이브로 업데이트됨');
           }
         }
       }
 
-      // 3. 서버 설정 로드
       await loadServerSettings();
     }
   } catch(e) {
-    console.warn('백그라운드 동기화 실패 (오프라인?):', e.message);
   }
 }
 
-// ==================== CLOUD SAVE ====================
 function resetGameState() {
   G.gold = 0; G.dia = 100;
   G.classLevels = { knight: 1, archer: 1, rogue: 1 };
@@ -2309,7 +2188,6 @@ function resetGameState() {
   G.attackTimer = 0; G.attackSpeed = 1000;
   G.lastSave = Date.now();
   nextItemId = 1;
-  console.log('🆕 새 게임 시작!');
 }
 
 function showAnnouncement(msg) {
@@ -2327,40 +2205,6 @@ function showAnnouncement(msg) {
   document.body.appendChild(overlay);
 }
 
-async function loadCloudSave() {
-  // 1. 로컬 세이브 먼저 로드 (안전장치)
-  loadGame();
-  try {
-    const res = await authFetch('/api/load');
-    const data = await res.json();
-    if (data && data.gameState) {
-      const saved = typeof data.gameState === 'string' ? JSON.parse(data.gameState) : data.gameState;
-      if (saved && Object.keys(saved).length > 2) {
-        // 클라우드 데이터가 충분히 있으면 덮어쓰기
-        console.log('☁️ Cloud data keys:', Object.keys(saved));
-        resetGameState();
-        for (const key of Object.keys(saved)) {
-          G[key] = saved[key];
-        }
-        G.monster = null;
-        // 클래스별 스테이지 마이그레이션
-        if (!G.classStages) {
-          G.classStages = { knight: G.stage||1, archer: 1, rogue: 1 };
-          G.classSubStages = { knight: G.subStage||1, archer: 1, rogue: 1 };
-          G.classMaxStages = { knight: G.maxStage||1, archer: 1, rogue: 1 };
-        }
-        console.log('☁️ Cloud save loaded! stage:', G.stage, 'gold:', G.gold);
-      } else {
-        console.log('☁️ Cloud data too small, using local save');
-      }
-    } else {
-      console.log('☁️ No cloud save, using local save');
-    }
-  } catch(e) {
-    console.warn('☁️ Cloud load failed:', e);
-    loadGame();
-  }
-}
 
 let _lastSaveTime = 0;
 let _savePending = false;
@@ -2368,7 +2212,6 @@ function saveCloudGame() {
   if (!currentUser) return;
   saveGame();
   const now = Date.now();
-  // 쓰로틀: 2초 내 중복 → 2초 후 자동 저장
   if (now - _lastSaveTime < 2000) {
     if (!_savePending) {
       _savePending = true;
@@ -2397,13 +2240,10 @@ async function _doCloudSave() {
       })
     });
   } catch(e) {
-    console.warn('Cloud save failed:', e);
   }
 }
 
-// ==================== COMBAT POWER ====================
 function getCombatPower() {
-  // 장비 능력치 기반 전투력
   let equipAtk = 0, equipCrit = 0, equipCritDmg = 0, equipSpd = 0;
   Object.values(G.equipment).forEach(item => {
     if (!item) return;
@@ -2430,18 +2270,15 @@ function updateCombatPower() {
   if (el) el.textContent = formatNum(cp);
 }
 
-// ==================== RANKING ====================
 let rankTab = 'power';
 let _rankCache = JSON.parse(localStorage.getItem('rankCache') || 'null');
 let _rankLoading = false;
 
 async function renderRanking(el, forceRefresh = false) {
-  // 캐시 있으면 즉시 표시
   if (_rankCache && !forceRefresh) {
     _renderRankHTML(el, _rankCache);
     return;
   }
-  // 캐시 없어도 일단 빈 화면 대신 "로딩" + 백그라운드 로드
   if (!_rankCache) {
     el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--dim);">랭킹 로딩 중...</div>';
   }
@@ -2464,7 +2301,6 @@ async function _fetchRankings(el) {
   _rankLoading = false;
 }
 
-// 10초마다 백그라운드 랭킹 갱신
 setInterval(() => {
   _fetchRankings(activeTab === 'ranking' ? document.getElementById('tabContent') : null);
 }, 10000);
@@ -2520,7 +2356,6 @@ function _renderRankHTML(el, allRanks) {
     el.innerHTML = html;
 }
 
-// ==================== ADMIN PANEL ====================
 async function applyServerSetting(key, val) {
   if (!isAdmin) return;
   serverSettings[key] = val;
@@ -2533,10 +2368,8 @@ async function applyServerSetting(key, val) {
 }
 
 async function loadServerSettings() {
-  // 캐시에서 먼저 로드
   try { serverSettings = JSON.parse(localStorage.getItem('serverSettings') || '{}'); } catch(e) {}
   try { userSettings = JSON.parse(localStorage.getItem('userSettings') || '{}'); } catch(e) {}
-  // 백그라운드에서 서버 갱신
   try {
     const res = await authFetch('/api/server-settings', {}, 5000);
     serverSettings = await res.json();
@@ -2547,7 +2380,6 @@ async function loadServerSettings() {
   } catch(e) { console.warn('설정 로드 실패 (캐시 사용)', e); }
 }
 function ss(key, def) {
-  // 개인 설정 우선, 없으면 서버 설정, 없으면 기본값
   if (userSettings[key] !== undefined && userSettings[key] !== 1) return userSettings[key] * (serverSettings[key] !== undefined ? serverSettings[key] : def);
   return serverSettings[key] !== undefined ? serverSettings[key] : def;
 }
@@ -2559,7 +2391,6 @@ function switchAdminTab(tab) {
 }
 
 async function renderAdmin(el) {
-  // Use cached settings, don't fetch every time
   if (!isAdmin) { el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--dim);">접근 권한 없음</div>'; return; }
 
   const tabs = [
@@ -2652,7 +2483,6 @@ async function renderAdmin(el) {
 let allUsers = [];
 async function loadUserList() {
   const listEl = document.getElementById('adminUserList');
-  // 캐시 먼저 표시
   try { const c = JSON.parse(localStorage.getItem('adminUsers') || '[]'); if (c.length) { allUsers = c; renderUserList(allUsers); } } catch(e){}
   listEl.insertAdjacentHTML('beforeend', '<div style="color:var(--dim);text-align:center;padding:4px;font-size:10px;">갱신 중...</div>');
   try {
@@ -2664,7 +2494,6 @@ async function loadUserList() {
   } catch(e) { if (!allUsers.length && listEl) listEl.innerHTML = '<div style="color:#ff4444;">로드 실패</div>'; }
 }
 
-// 10초마다 유저목록 자동갱신 (관리자 탭 열려있을 때)
 setInterval(() => {
   if (isAdmin && adminSubTab === 'users' && activeTab === 'admin') {
     loadUserList();
@@ -2704,11 +2533,9 @@ function selectUser(uid, name, email) {
 async function giveToAllUsers(field, amount) {
   const msg = document.getElementById('serverGiveMsg')?.value || '';
   if (!confirm(`모든 유저에게 ${field} +${formatNum(amount)} 지급하시겠습니까?`)) return;
-  // 자기 자신 즉시 반영
   G[field] = (G[field] || 0) + amount;
   updateTopBar();
   showFloatText(`⏳ 전체 지급 중...`, '#f1c40f');
-  // 캐시된 유저목록 우선 사용, 없으면 서버에서 가져옴
   let users = allUsers.length ? allUsers : JSON.parse(localStorage.getItem('adminUsers') || '[]');
   if (!users.length) {
     try {
@@ -2771,8 +2598,6 @@ async function resetGame() {
   } catch(e) { alert('초기화 실패: ' + e.message); }
 }
 
-// ==================== APPLY ADMIN MULTIPLIERS ====================
-// Patch getPlayerStats to apply admin atk multiplier
 const _origGetPlayerStats = getPlayerStats;
 getPlayerStats = function() {
   const s = _origGetPlayerStats();
@@ -2780,17 +2605,12 @@ getPlayerStats = function() {
   return s;
 };
 
-// Patch updateAllUI to update combat power
 const _origUpdateAllUI = updateAllUI;
 updateAllUI = function() {
   _origUpdateAllUI();
   updateCombatPower();
 };
 
-// ==================== INIT WITH AUTH ====================
-// Don't start game until auth resolves (handled in onAuthStateChanged)
-// Auto cloud save every 60s
-// Combined sync: save + claim rewards + get settings in ONE request
 async function syncGame() {
   if (!currentUser) return;
   try {
@@ -2807,14 +2627,12 @@ async function syncGame() {
       })
     });
     const data = await res.json();
-    // Apply rewards
     const rewards = data.rewards || {};
     for (const [field, amount] of Object.entries(rewards)) {
       G[field] = (G[field] || 0) + amount;
       showFloatText(`🎁 ${field === 'gold' ? '💰골드' : '💎보석'} +${formatNum(amount)} 지급!`, '#4CAF50');
     }
     (data.messages || []).forEach(msg => showAnnouncement(msg));
-    // Apply server settings
     if (data.serverSettings) serverSettings = data.serverSettings;
     if (Object.keys(rewards).length > 0) updateTopBar();
     saveGame(); // local backup
@@ -2824,7 +2642,6 @@ async function syncGame() {
 setInterval(syncGame, 5000);
 window.addEventListener('beforeunload', () => {
   saveGame();
-  // 동기적 클라우드 저장 (sendBeacon은 페이지 닫혀도 전송됨)
   if (currentUser) {
     const cp = getCombatPower();
     const info = getClassInfo(G.selectedClass, getLevel());
@@ -2841,10 +2658,8 @@ window.addEventListener('beforeunload', () => {
   }
 });
 
-// Apply admin multipliers to XP and gold
 const _origOnMonsterKill = onMonsterKill;
 onMonsterKill = function() {
-  // Temporarily patch to apply admin multipliers
   _origOnMonsterKill();
 };
 </script>
