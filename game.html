@@ -2192,9 +2192,11 @@ async function doRegister() {
     const data = await res.json();
     if (data.error) { errEl.textContent = data.error; errEl.style.color = '#ff4444'; return; }
     localStorage.setItem('userUid', data.uid);
+    localStorage.setItem('userNick', data.nickname);
+    localStorage.setItem('isAdmin', data.is_admin ? 'true' : 'false');
     userUid = data.uid;
-    errEl.textContent = '✅ 등록 완료! 로딩 중...'; errEl.style.color = '#4CAF50';
-    setTimeout(() => location.reload(), 500);
+    errEl.textContent = '✅ 등록 완료!'; errEl.style.color = '#4CAF50';
+    setTimeout(() => location.reload(), 300);
   } catch(e) {
     errEl.textContent = '서버 연결 실패 — 잠시 후 다시 시도해주세요';
     errEl.style.color = '#ff4444';
@@ -2226,64 +2228,110 @@ async function changeNickname() {
 
 
 async function checkAuth() {
+  // uid가 있으면 로컬 데이터로 즉시 시작 (서버 기다리지 않음!)
+  if (userUid) {
+    const savedNick = localStorage.getItem('userNick') || '모험가';
+    const savedAdmin = localStorage.getItem('isAdmin') === 'true';
+    currentUser = { uid: userUid, name: savedNick, is_admin: savedAdmin };
+    isAdmin = savedAdmin;
+
+    // 즉시 게임 표시
+    document.getElementById('loginOverlay').style.display = 'none';
+    document.getElementById('app').style.display = '';
+    document.getElementById('userName').textContent = savedNick;
+    if (isAdmin && !document.querySelector('[data-tab="admin"]')) {
+      const btn = document.createElement('button');
+      btn.className = 'tab-btn';
+      btn.dataset.tab = 'admin';
+      btn.innerHTML = '<span class="tab-icon">🔧</span>관리자';
+      document.querySelector('.tab-bar').appendChild(btn);
+    }
+
+    // 로컬 세이브로 바로 시작
+    loadGame();
+    initDomRefs();
+    spawnMonster();
+    updateAllUI();
+    if (!window._gameLoopStarted) { window._gameLoopStarted = true; gameLoop(); }
+
+    // 백그라운드에서 서버 동기화 (클라우드 세이브가 더 최신이면 덮어쓰기)
+    syncWithServer();
+    return;
+  }
+
+  // uid 없으면 서버 확인 (첫 방문)
   try {
     const ctrl = new AbortController();
-    setTimeout(() => ctrl.abort(), 8000); // 8초 타임아웃
+    setTimeout(() => ctrl.abort(), 8000);
     const res = await fetch('/api/auto-login', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ uid: userUid }),
+      body: JSON.stringify({ uid: '' }),
       signal: ctrl.signal
     });
     const data = await res.json();
-    if (data.ok) {
-      userUid = data.uid;
-      localStorage.setItem('userUid', data.uid);
-      currentUser = { uid: data.uid, name: data.nickname, is_admin: data.is_admin };
-      isAdmin = data.is_admin;
-
-      document.getElementById('loginOverlay').style.display = 'none';
-      document.getElementById('app').style.display = '';
-      document.getElementById('userName').textContent = data.nickname;
-
-      if (isAdmin) {
-        const tabBar = document.querySelector('.tab-bar');
-        if (!document.querySelector('[data-tab="admin"]')) {
-          const btn = document.createElement('button');
-          btn.className = 'tab-btn';
-          btn.dataset.tab = 'admin';
-          btn.innerHTML = '<span class="tab-icon">🔧</span>관리자';
-          tabBar.appendChild(btn);
-        }
-      }
-
-      await loadServerSettings();
-      await loadCloudSave();
-      initDomRefs();
-      spawnMonster();
-      updateAllUI();
-      if (!window._gameLoopStarted) {
-        window._gameLoopStarted = true;
-        gameLoop();
-      }
-    } else {
-      // needRegister - show nickname input form
-      document.getElementById('loginOverlay').style.display = '';
-      document.getElementById('app').style.display = 'none';
-      document.getElementById('loginStatus').style.display = 'none';
-      document.getElementById('registerForm').style.display = '';
-      // uid가 원래 없었을 때만 삭제 (기존 계정 보호)
-      if (!userUid) localStorage.removeItem('userUid');
-    }
+    // 첫 방문 → 닉네임 입력
+    document.getElementById('loginOverlay').style.display = '';
+    document.getElementById('loginStatus').style.display = 'none';
+    document.getElementById('registerForm').style.display = '';
   } catch(e) {
-    console.error('Auth failed:', e);
-    // 서버 연결 실패 - 닉네임 입력 보여주기
     document.getElementById('loginStatus').textContent = '서버 연결 실패. 닉네임을 입력하세요.';
     document.getElementById('registerForm').style.display = '';
   }
 }
 checkAuth();
 
-// ==================== CLOUD SAVE (Realtime DB) ====================
+// ==================== BACKGROUND SYNC ====================
+async function syncWithServer() {
+  try {
+    // 1. 서버에서 계정 확인
+    const res = await fetch('/api/auto-login', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ uid: userUid })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      // 닉네임/관리자 업데이트
+      localStorage.setItem('userNick', data.nickname);
+      localStorage.setItem('isAdmin', data.is_admin ? 'true' : 'false');
+      currentUser.name = data.nickname;
+      isAdmin = data.is_admin;
+      document.getElementById('userName').textContent = data.nickname;
+      if (isAdmin && !document.querySelector('[data-tab="admin"]')) {
+        const btn = document.createElement('button');
+        btn.className = 'tab-btn';
+        btn.dataset.tab = 'admin';
+        btn.innerHTML = '<span class="tab-icon">🔧</span>관리자';
+        document.querySelector('.tab-bar').appendChild(btn);
+      }
+
+      // 2. 클라우드 세이브 로드 (더 최신이면 덮어쓰기)
+      const loadRes = await authFetch('/api/load');
+      const loadData = await loadRes.json();
+      if (loadData && loadData.gameState) {
+        const saved = typeof loadData.gameState === 'string' ? JSON.parse(loadData.gameState) : loadData.gameState;
+        if (saved && Object.keys(saved).length > 2) {
+          // 클라우드가 더 최신인지 비교 (스테이지+골드로 간단 비교)
+          const cloudStage = Math.max(...Object.values(saved.classMaxStages || {knight:1}));
+          const localStage = Math.max(...Object.values(G.classMaxStages || {knight:1}));
+          if (cloudStage > localStage || (cloudStage === localStage && (saved.gold||0) > G.gold)) {
+            for (const key of Object.keys(saved)) G[key] = saved[key];
+            G.monster = null;
+            spawnMonster();
+            updateAllUI();
+            console.log('☁️ 클라우드 세이브로 업데이트됨');
+          }
+        }
+      }
+
+      // 3. 서버 설정 로드
+      await loadServerSettings();
+    }
+  } catch(e) {
+    console.warn('백그라운드 동기화 실패 (오프라인?):', e.message);
+  }
+}
+
+// ==================== CLOUD SAVE ====================
 function resetGameState() {
   G.gold = 0; G.dia = 100;
   G.classLevels = { knight: 1, archer: 1, rogue: 1 };
