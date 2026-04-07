@@ -2809,38 +2809,26 @@ function selectUser(uid, name, email) {
 async function giveToAllUsers(field, amount) {
   const msg = document.getElementById('serverGiveMsg')?.value || '';
   if (!confirm(`모든 유저에게 ${field} +${formatNum(amount)} 지급하시겠습니까?${msg ? '\n공지: '+msg : ''}`)) return;
-  try {
-    showFloatText('⏳ 지급 중...', '#f1c40f');
-    const res = await authFetch('/api/admin/give-all', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ field, amount, message: msg })
-    }, 60000);
-    const data = await res.json();
-    if (data.ok) {
-      // 자기 자신에게도 바로 반영
-      G[field] = (G[field] || 0) + amount;
-      updateTopBar();
-      showFloatText(`✅ ${field} +${formatNum(amount)} 전체 지급 완료!`, '#4CAF50');
-    }
-    else alert('지급 실패: ' + (data.error || ''));
-  } catch(e) { alert('지급 실패: ' + e.message); }
+  // 자기 자신은 즉시 반영
+  G[field] = (G[field] || 0) + amount;
+  updateTopBar();
+  showFloatText(`✅ ${field} +${formatNum(amount)} 전체 지급 요청!`, '#4CAF50');
+  // 서버에 비동기 요청 (실패해도 무시)
+  authFetch('/api/admin/give-all', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ field, amount, message: msg })
+  }, 60000).catch(() => {});
 }
 
 async function giveToUser(field, amount) {
   const uid = document.getElementById('targetUid').value;
   if (!uid) { alert('대상 UID를 선택하세요'); return; }
-  try {
-    const res = await authFetch('/api/admin/give', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ uid, field, amount })
-    }, 30000);
-    const data = await res.json();
-    if (data.ok) {
-      if (uid === currentUser.uid) { G[field] = (G[field] || 0) + amount; updateTopBar(); }
-      showFloatText('✅ ' + field + ' +' + formatNum(amount) + ' 지급!', '#4CAF50');
-    }
-    else alert('지급 실패: ' + (data.error || ''));
-  } catch(e) { alert('지급 실패: ' + e.message); }
+  if (uid === currentUser.uid) { G[field] = (G[field] || 0) + amount; updateTopBar(); }
+  showFloatText('✅ ' + field + ' +' + formatNum(amount) + ' 지급!', '#4CAF50');
+  authFetch('/api/admin/give', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ uid, field, amount })
+  }, 30000).catch(() => {});
 }
 
 async function setUserSetting(key, val) {
