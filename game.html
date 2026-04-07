@@ -2654,7 +2654,8 @@ async function checkAuth() {
       document.getElementById('app').style.display = 'none';
       document.getElementById('loginStatus').style.display = 'none';
       document.getElementById('registerForm').style.display = '';
-      localStorage.removeItem('userUid');
+      // uid가 원래 없었을 때만 삭제 (기존 계정 보호)
+      if (!userUid) localStorage.removeItem('userUid');
     }
   } catch(e) {
     console.error('Auth failed:', e);
