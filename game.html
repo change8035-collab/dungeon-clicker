@@ -2563,8 +2563,10 @@ async function _fetchRankings(el) {
   _rankLoading = false;
 }
 
-// 게임 시작 후 30초마다 백그라운드 랭킹 갱신
-setInterval(() => _fetchRankings(null), 30000);
+// 10초마다 백그라운드 랭킹 갱신
+setInterval(() => {
+  _fetchRankings(activeTab === 'ranking' ? document.getElementById('tabContent') : null);
+}, 10000);
 
 function _renderRankHTML(el, allRanks) {
     if (!allRanks.length) {
@@ -2758,8 +2760,15 @@ async function loadUserList() {
     allUsers = (data.users || []).sort((a, b) => (b.combat_power || 0) - (a.combat_power || 0));
     localStorage.setItem('adminUsers', JSON.stringify(allUsers));
     renderUserList(allUsers);
-  } catch(e) { if (!allUsers.length) listEl.innerHTML = '<div style="color:#ff4444;">로드 실패</div>'; }
+  } catch(e) { if (!allUsers.length && listEl) listEl.innerHTML = '<div style="color:#ff4444;">로드 실패</div>'; }
 }
+
+// 10초마다 유저목록 자동갱신 (관리자 탭 열려있을 때)
+setInterval(() => {
+  if (isAdmin && adminSubTab === 'users' && activeTab === 'admin') {
+    loadUserList();
+  }
+}, 10000);
 
 function filterUserList() {
   const q = (document.getElementById('adminUserSearch').value || '').toLowerCase();
