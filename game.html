@@ -2531,7 +2531,7 @@ function updateCombatPower() {
 
 // ==================== RANKING ====================
 let rankTab = 'power';
-let _rankCache = null;
+let _rankCache = JSON.parse(localStorage.getItem('rankCache') || 'null');
 let _rankLoading = false;
 
 async function renderRanking(el, forceRefresh = false) {
@@ -2540,20 +2540,31 @@ async function renderRanking(el, forceRefresh = false) {
     _renderRankHTML(el, _rankCache);
     return;
   }
+  // 캐시 없어도 일단 빈 화면 대신 "로딩" + 백그라운드 로드
+  if (!_rankCache) {
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--dim);">랭킹 로딩 중...</div>';
+  }
+  _fetchRankings(el);
+}
+
+async function _fetchRankings(el) {
   if (_rankLoading) return;
   _rankLoading = true;
-  el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--dim);">로딩 중...</div>';
   try {
-    if (currentUser) saveCloudGame(); // await 안 함 (빠르게)
-    const res = await authFetch('/api/rankings', {}, 5000);
+    const res = await authFetch('/api/rankings', {}, 8000);
     const data = await res.json();
     _rankCache = data.rankings || [];
+    localStorage.setItem('rankCache', JSON.stringify(_rankCache));
+    if (el) _renderRankHTML(el, _rankCache);
   } catch(e) {
-    _rankCache = _rankCache || [];
+    if (!_rankCache) _rankCache = [];
+    if (el) _renderRankHTML(el, _rankCache);
   }
   _rankLoading = false;
-  _renderRankHTML(el, _rankCache);
 }
+
+// 게임 시작 후 30초마다 백그라운드 랭킹 갱신
+setInterval(() => _fetchRankings(null), 30000);
 
 function _renderRankHTML(el, allRanks) {
     if (!allRanks.length) {
@@ -2602,7 +2613,7 @@ function _renderRankHTML(el, allRanks) {
         </div>`;
     });
     html += '</div>';
-    html += `<button onclick="renderRanking(document.getElementById('tabContent'),true)" style="display:block;margin:12px auto;padding:8px 24px;background:var(--card2);color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">🔄 랭킹 새로고침</button>`;
+    html += `<button onclick="this.textContent='갱신 중...';_fetchRankings(document.getElementById('tabContent'))" style="display:block;margin:12px auto;padding:8px 24px;background:var(--card2);color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">🔄 랭킹 새로고침</button>`;
     el.innerHTML = html;
 }
 
@@ -2619,12 +2630,18 @@ async function applyServerSetting(key, val) {
 }
 
 async function loadServerSettings() {
+  // 캐시에서 먼저 로드
+  try { serverSettings = JSON.parse(localStorage.getItem('serverSettings') || '{}'); } catch(e) {}
+  try { userSettings = JSON.parse(localStorage.getItem('userSettings') || '{}'); } catch(e) {}
+  // 백그라운드에서 서버 갱신
   try {
-    const res = await authFetch('/api/server-settings');
+    const res = await authFetch('/api/server-settings', {}, 5000);
     serverSettings = await res.json();
-    const res2 = await authFetch('/api/my-settings');
+    localStorage.setItem('serverSettings', JSON.stringify(serverSettings));
+    const res2 = await authFetch('/api/my-settings', {}, 5000);
     userSettings = await res2.json();
-  } catch(e) { console.warn('설정 로드 실패', e); }
+    localStorage.setItem('userSettings', JSON.stringify(userSettings));
+  } catch(e) { console.warn('설정 로드 실패 (캐시 사용)', e); }
 }
 function ss(key, def) {
   // 개인 설정 우선, 없으면 서버 설정, 없으면 기본값
