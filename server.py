@@ -121,40 +121,49 @@ def api_me():
     if not user: return jsonify({'loggedIn': False})
     return jsonify({'loggedIn': True, 'uid': user['uid'], 'name': user['name'], 'is_admin': user.get('is_admin', False)})
 
-# ── Game Save/Load (combined sync endpoint) ──
+# ── Server settings cache (avoid DB call every sync) ──
+_ss_cache = {}
+_ss_cache_time = 0
+
+def get_server_settings():
+    global _ss_cache, _ss_cache_time
+    import time
+    if time.time() - _ss_cache_time < 10:  # 10초 캐시
+        return _ss_cache
+    res = supabase.table('server_settings').select('*').execute()
+    _ss_cache = {r['key']: r['value'] for r in (res.data or [])}
+    _ss_cache_time = time.time()
+    return _ss_cache
+
+# ── Game Sync (save + check for admin gives) ──
 @app.route('/api/sync', methods=['POST'])
 def api_sync():
-    """Single endpoint: save game + claim rewards + get server settings"""
     user = get_user()
     if not user: return jsonify({'error': 'not logged in'}), 401
     data = request.json or {}
     uid = user['uid']
-
-    # 1. Save game state
     gs = data.get('gameState')
     if gs:
+        # Save + get latest in one flow (2 DB calls instead of 4)
         supabase.table('saves').update({'game_state': gs}).eq('uid', uid).execute()
-        supabase.table('rankings').upsert({
-            'uid': uid, 'name': user['name'],
-            'combat_power': data.get('combatPower', 0),
-            'level': data.get('level', 1), 'stage': data.get('stage', 1),
-            'knight_stage': data.get('knightStage', 0),
-            'archer_stage': data.get('archerStage', 0),
-            'rogue_stage': data.get('rogueStage', 0),
-            'class_name': data.get('className', ''), 'class_stage': data.get('classStage', '')
-        }, on_conflict='uid').execute()
-
-    # 2. Get latest game_state from DB (may have been modified by admin give)
+        # Rankings update async (non-blocking)
+        def _update_rank():
+            try:
+                supabase.table('rankings').upsert({
+                    'uid': uid, 'name': user['name'],
+                    'combat_power': data.get('combatPower', 0),
+                    'level': data.get('level', 1), 'stage': data.get('stage', 1),
+                    'knight_stage': data.get('knightStage', 0),
+                    'archer_stage': data.get('archerStage', 0),
+                    'rogue_stage': data.get('rogueStage', 0),
+                    'class_name': data.get('className', ''), 'class_stage': data.get('classStage', '')
+                }, on_conflict='uid').execute()
+            except: pass
+        threading.Thread(target=_update_rank, daemon=True).start()
+    # Get latest state (check admin give)
     latest_res = supabase.table('saves').select('game_state').eq('uid', uid).execute()
-    latest_gs = None
-    if latest_res.data:
-        latest_gs = latest_res.data[0].get('game_state')
-
-    # 3. Get server settings
-    ss_res = supabase.table('server_settings').select('*').execute()
-    server_settings = {r['key']: r['value'] for r in (ss_res.data or [])}
-
-    return jsonify({'ok': True, 'latestState': latest_gs, 'serverSettings': server_settings})
+    latest_gs = latest_res.data[0].get('game_state') if latest_res.data else None
+    return jsonify({'ok': True, 'latestState': latest_gs, 'serverSettings': get_server_settings()})
 
 # Keep old save endpoint for compatibility
 @app.route('/api/save', methods=['POST'])
