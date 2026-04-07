@@ -144,23 +144,17 @@ def api_sync():
             'class_name': data.get('className', ''), 'class_stage': data.get('classStage', '')
         }, on_conflict='uid').execute()
 
-    # 2. Claim pending rewards
-    rewards = {}
-    messages = []
-    us_res = supabase.table('user_settings').select('settings').eq('uid', uid).execute()
-    if us_res.data and len(us_res.data) > 0:
-        settings = us_res.data[0].get('settings') or {}
-        if isinstance(settings, str): settings = json.loads(settings)
-        rewards = settings.pop('pending_rewards', {})
-        messages = settings.pop('pending_messages', [])
-        if rewards or messages:
-            supabase.table('user_settings').update({'settings': settings}).eq('uid', uid).execute()
+    # 2. Get latest game_state from DB (may have been modified by admin give)
+    latest_res = supabase.table('saves').select('game_state').eq('uid', uid).execute()
+    latest_gs = None
+    if latest_res.data:
+        latest_gs = latest_res.data[0].get('game_state')
 
     # 3. Get server settings
     ss_res = supabase.table('server_settings').select('*').execute()
     server_settings = {r['key']: r['value'] for r in (ss_res.data or [])}
 
-    return jsonify({'ok': True, 'rewards': rewards, 'messages': messages, 'serverSettings': server_settings})
+    return jsonify({'ok': True, 'latestState': latest_gs, 'serverSettings': server_settings})
 
 # Keep old save endpoint for compatibility
 @app.route('/api/save', methods=['POST'])
@@ -255,47 +249,33 @@ def api_admin_users():
 
 @app.route('/api/admin/give', methods=['POST'])
 def api_admin_give():
+    """개인 지급 - game_state 직접 수정"""
     user = get_user()
     if not user or not user.get('is_admin'): return jsonify({'error': 'forbidden'}), 403
     data = request.json
-    target_uid, field, amount = data['uid'], data['field'], data.get('amount', 0)
-    res = supabase.table('saves').select('game_state').eq('uid', target_uid).execute()
-    if not res.data: return jsonify({'error': 'user not found'}), 404
+    uid, field, amount = data['uid'], data['field'], int(data.get('amount', 0))
+    res = supabase.table('saves').select('game_state').eq('uid', uid).execute()
+    if not res.data: return jsonify({'error': 'not found'}), 404
     gs = res.data[0].get('game_state') or {}
-    if isinstance(gs, str): gs = json.loads(gs)
     gs[field] = gs.get(field, 0) + amount
-    supabase.table('saves').update({'game_state': gs}).eq('uid', target_uid).execute()
+    supabase.table('saves').update({'game_state': gs}).eq('uid', uid).execute()
     return jsonify({'ok': True, 'new_value': gs.get(field)})
 
-@app.route('/api/admin/give-one', methods=['POST'])
-def api_admin_give_one():
-    """단일 유저 지급 (프론트에서 루프 돌림)"""
+@app.route('/api/admin/give-all', methods=['POST'])
+def api_admin_give_all():
+    """전체 지급 - 모든 유저 game_state 직접 수정"""
     user = get_user()
     if not user or not user.get('is_admin'): return jsonify({'error': 'forbidden'}), 403
     data = request.json
-    target_uid, field, amount = data['uid'], data['field'], data.get('amount', 0)
-    res = supabase.table('saves').select('game_state').eq('uid', target_uid).execute()
-    if not res.data: return jsonify({'ok': False}), 404
-    gs = res.data[0].get('game_state') or {}
-    if isinstance(gs, str): gs = json.loads(gs)
-    gs[field] = gs.get(field, 0) + amount
-    supabase.table('saves').update({'game_state': gs}).eq('uid', target_uid).execute()
-    return jsonify({'ok': True})
-
-@app.route('/api/claim-rewards', methods=['POST'])
-def api_claim_rewards():
-    user = get_user()
-    if not user: return jsonify({'error': 'not logged in'}), 401
-    uid = user['uid']
-    res = supabase.table('user_settings').select('settings').eq('uid', uid).execute()
-    if not res.data: return jsonify({'rewards': {}, 'messages': []})
-    settings = res.data[0].get('settings') or {}
-    if isinstance(settings, str): settings = json.loads(settings)
-    pending = settings.pop('pending_rewards', {})
-    messages = settings.pop('pending_messages', [])
-    if pending or messages:
-        supabase.table('user_settings').update({'settings': settings}).eq('uid', uid).execute()
-    return jsonify({'rewards': pending, 'messages': messages})
+    field, amount = data['field'], int(data.get('amount', 0))
+    res = supabase.table('saves').select('uid,game_state').execute()
+    count = 0
+    for row in (res.data or []):
+        gs = row.get('game_state') or {}
+        gs[field] = gs.get(field, 0) + amount
+        supabase.table('saves').update({'game_state': gs}).eq('uid', row['uid']).execute()
+        count += 1
+    return jsonify({'ok': True, 'count': count})
 
 # ── Beacon save (for beforeunload) ──
 @app.route('/api/save-beacon', methods=['POST'])

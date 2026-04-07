@@ -2028,38 +2028,35 @@ function selectUser(uid, name, email) {
   document.getElementById('targetUserInfo').textContent = '선택: ' + name + ' (' + email + ')';
 }
 async function giveToAllUsers(field, amount) {
-  const msg = document.getElementById('serverGiveMsg')?.value || '';
-  if (!confirm(`모든 유저에게 ${field} +${formatNum(amount)} 지급하시겠습니까?`)) return;
+  if (!confirm(`모든 유저에게 ${field === 'gold' ? '💰골드' : '💎보석'} +${formatNum(amount)} 지급?`)) return;
   G[field] = (G[field] || 0) + amount;
   updateTopBar();
-  showFloatText(`⏳ 전체 지급 중...`, '#f1c40f');
-  let users = allUsers.length ? allUsers : JSON.parse(localStorage.getItem('adminUsers') || '[]');
-  if (!users.length) {
-    try {
-      const res = await authFetch('/api/admin/users', {}, 30000);
-      const data = await res.json();
-      users = data.users || [];
-    } catch(e) { showFloatText('⚠️ 유저 목록 없음. 유저관리 탭에서 먼저 새로고침하세요', '#ff4444'); return; }
-  }
-  if (!users.length) { showFloatText('⚠️ 유저 없음', '#ff4444'); return; }
-  let ok = 0, fail = 0;
-  for (const u of users) {
-    authFetch('/api/admin/give-one', {
+  showFloatText(`⏳ 전체 지급 처리 중...`, '#f1c40f');
+  try {
+    const res = await authFetch('/api/admin/give-all', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ uid: u.uid, field, amount })
-    }, 30000).then(() => { ok++; if(ok+fail===users.length) showFloatText(`✅ ${ok}/${users.length}명 지급 완료!`, '#4CAF50'); }).catch(() => { fail++; if(ok+fail===users.length) showFloatText(`✅ ${ok}/${users.length}명 지급 완료!`, '#4CAF50'); });
+      body: JSON.stringify({ field, amount })
+    }, 60000);
+    const data = await res.json();
+    showFloatText(`✅ ${data.count || 0}명에게 ${field === 'gold' ? '💰' : '💎'}+${formatNum(amount)} 지급 완료!`, '#4CAF50');
+  } catch(e) {
+    showFloatText('⚠️ 지급 요청 전송됨 (서버 처리 중)', '#f1c40f');
   }
-  showFloatText(`📤 ${users.length}명에게 지급 요청 전송!`, '#4CAF50');
 }
 async function giveToUser(field, amount) {
   const uid = document.getElementById('targetUid').value;
   if (!uid) { alert('대상 UID를 선택하세요'); return; }
-  if (uid === currentUser.uid) { G[field] = (G[field] || 0) + amount; updateTopBar(); }
-  showFloatText('✅ ' + field + ' +' + formatNum(amount) + ' 지급!', '#4CAF50');
-  authFetch('/api/admin/give', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ uid, field, amount })
-  }, 30000).catch(() => {});
+  try {
+    const res = await authFetch('/api/admin/give', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ uid, field, amount })
+    }, 30000);
+    const data = await res.json();
+    if (data.ok) {
+      if (uid === currentUser.uid) { G[field] = (G[field] || 0) + amount; updateTopBar(); }
+      showFloatText(`✅ ${field === 'gold' ? '💰' : '💎'}+${formatNum(amount)} 지급 완료!`, '#4CAF50');
+    } else { showFloatText('❌ 지급 실패: ' + (data.error || ''), '#ff4444'); }
+  } catch(e) { showFloatText('⚠️ 지급 요청 전송됨', '#f1c40f'); }
 }
 async function setUserSetting(key, val) {
   const uid = document.getElementById('targetUid').value;
@@ -2106,15 +2103,15 @@ async function syncGame() {
       })
     });
     const data = await res.json();
-    const rewards = data.rewards || {};
-    for (const [field, amount] of Object.entries(rewards)) {
-      G[field] = (G[field] || 0) + amount;
-      showFloatText(`🎁 ${field === 'gold' ? '💰골드' : '💎보석'} +${formatNum(amount)} 지급!`, '#4CAF50');
-    }
-    (data.messages || []).forEach(msg => showAnnouncement(msg));
     if (data.serverSettings) serverSettings = data.serverSettings;
-    if (Object.keys(rewards).length > 0) updateTopBar();
-    saveGame(); // local backup
+    // 서버 DB에서 최신 재화 확인 (관리자 지급 반영)
+    if (data.latestState) {
+      const sv = data.latestState;
+      if (sv.gold > G.gold) { showFloatText(`🎁 💰+${formatNum(sv.gold - G.gold)} 지급!`, '#4CAF50'); G.gold = sv.gold; }
+      if (sv.dia > G.dia) { showFloatText(`🎁 💎+${formatNum(sv.dia - G.dia)} 지급!`, '#4CAF50'); G.dia = sv.dia; }
+      updateTopBar();
+    }
+    saveGame();
   } catch(e) { console.warn('Sync failed:', e); }
 }
 setInterval(syncGame, 5000);
