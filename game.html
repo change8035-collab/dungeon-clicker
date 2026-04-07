@@ -1064,11 +1064,17 @@ function onMonsterKill() {
   G.gold += gold;
   G.totalGold += gold;
 
-  // Boss diamond reward
+  // Boss diamond reward (기본 5개 + 확률 보너스)
   if (G.monster.isBoss) {
-    G.dia += 5;
-    showFloatText('💎 +5 보석!', '#7f5af0');
-    saveCloudGame(); // 보스 킬 시 즉시 저장
+    let bonusDia = 5;
+    const roll = Math.random() * 100;
+    if (roll < 0.5) { bonusDia = 500; showFloatText('🌟 잭팟! 💎 +500!', '#ff0000'); }
+    else if (roll < 1.5) { bonusDia = 300; showFloatText('🎉 대박! 💎 +300!', '#ff4444'); }
+    else if (roll < 4) { bonusDia = 100; showFloatText('🎊 💎 +100!', '#ff8906'); }
+    else if (roll < 10) { bonusDia = 50; showFloatText('✨ 💎 +50!', '#f1c40f'); }
+    else { showFloatText('💎 +5 보석!', '#7f5af0'); }
+    G.dia += bonusDia;
+    saveCloudGame();
   }
 
   // Per-class XP
