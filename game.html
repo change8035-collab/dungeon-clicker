@@ -2810,10 +2810,11 @@ async function giveToAllUsers(field, amount) {
   const msg = document.getElementById('serverGiveMsg')?.value || '';
   if (!confirm(`모든 유저에게 ${field} +${formatNum(amount)} 지급하시겠습니까?${msg ? '\n공지: '+msg : ''}`)) return;
   try {
+    showFloatText('⏳ 지급 중...', '#f1c40f');
     const res = await authFetch('/api/admin/give-all', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ field, amount, message: msg })
-    });
+    }, 60000);
     const data = await res.json();
     if (data.ok) {
       // 자기 자신에게도 바로 반영
@@ -2832,7 +2833,7 @@ async function giveToUser(field, amount) {
     const res = await authFetch('/api/admin/give', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ uid, field, amount })
-    });
+    }, 30000);
     const data = await res.json();
     if (data.ok) {
       if (uid === currentUser.uid) { G[field] = (G[field] || 0) + amount; updateTopBar(); }
