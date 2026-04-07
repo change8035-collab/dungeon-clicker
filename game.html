@@ -2531,13 +2531,31 @@ function updateCombatPower() {
 
 // ==================== RANKING ====================
 let rankTab = 'power';
-async function renderRanking(el) {
+let _rankCache = null;
+let _rankLoading = false;
+
+async function renderRanking(el, forceRefresh = false) {
+  // 캐시 있으면 즉시 표시
+  if (_rankCache && !forceRefresh) {
+    _renderRankHTML(el, _rankCache);
+    return;
+  }
+  if (_rankLoading) return;
+  _rankLoading = true;
   el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--dim);">로딩 중...</div>';
-  if (currentUser) await saveCloudGame();
   try {
-    const res = await authFetch('/api/rankings');
+    if (currentUser) saveCloudGame(); // await 안 함 (빠르게)
+    const res = await authFetch('/api/rankings', {}, 5000);
     const data = await res.json();
-    const allRanks = data.rankings || [];
+    _rankCache = data.rankings || [];
+  } catch(e) {
+    _rankCache = _rankCache || [];
+  }
+  _rankLoading = false;
+  _renderRankHTML(el, _rankCache);
+}
+
+function _renderRankHTML(el, allRanks) {
     if (!allRanks.length) {
       el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--dim);">아직 랭킹 데이터가 없습니다</div>';
       return;
@@ -2584,10 +2602,8 @@ async function renderRanking(el) {
         </div>`;
     });
     html += '</div>';
+    html += `<button onclick="renderRanking(document.getElementById('tabContent'),true)" style="display:block;margin:12px auto;padding:8px 24px;background:var(--card2);color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">🔄 랭킹 새로고침</button>`;
     el.innerHTML = html;
-  } catch(e) {
-    el.innerHTML = '<div style="padding:20px;color:#ff4444;">랭킹 로드 실패</div>';
-  }
 }
 
 // ==================== ADMIN PANEL ====================
