@@ -2191,6 +2191,8 @@ async function doRegister() {
     });
     const data = await res.json();
     if (data.error) { errEl.textContent = data.error; errEl.style.color = '#ff4444'; return; }
+    // 이전 유저 데이터 클리어 후 새 유저 저장
+    localStorage.clear();
     localStorage.setItem('userUid', data.uid);
     localStorage.setItem('userNick', data.nickname);
     localStorage.setItem('isAdmin', data.is_admin ? 'true' : 'false');
