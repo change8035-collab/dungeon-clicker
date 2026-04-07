@@ -3496,16 +3496,39 @@ updateAllUI = function() {
 // ==================== INIT WITH AUTH ====================
 // Don't start game until auth resolves (handled in onAuthStateChanged)
 // Auto cloud save every 60s
-setInterval(async () => {
-  if(currentUser) {
-    await loadServerSettings();
-    await claimPendingRewards();
-    saveCloudGame();
-    updateTopBar();
-  }
-}, 5000);
-// Save on close
-window.addEventListener('beforeunload', () => { saveGame(); if(currentUser) saveCloudGame(); });
+// Combined sync: save + claim rewards + get settings in ONE request
+async function syncGame() {
+  if (!currentUser) return;
+  try {
+    const info = getClassInfo(G.selectedClass, getLevel());
+    const res = await authFetch('/api/sync', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        gameState: G,
+        combatPower: getCombatPower(), level: getLevel(), stage: G.classStages ? G.classStages[G.selectedClass] || 1 : G.stage,
+        knightStage: G.classStages ? G.classStages.knight || 0 : 0,
+        archerStage: G.classStages ? G.classStages.archer || 0 : 0,
+        rogueStage: G.classStages ? G.classStages.rogue || 0 : 0,
+        className: info.name, classStage: info.stageLabel
+      })
+    });
+    const data = await res.json();
+    // Apply rewards
+    const rewards = data.rewards || {};
+    for (const [field, amount] of Object.entries(rewards)) {
+      G[field] = (G[field] || 0) + amount;
+      showFloatText(`🎁 ${field === 'gold' ? '💰골드' : '💎보석'} +${formatNum(amount)} 지급!`, '#4CAF50');
+    }
+    (data.messages || []).forEach(msg => showAnnouncement(msg));
+    // Apply server settings
+    if (data.serverSettings) serverSettings = data.serverSettings;
+    if (Object.keys(rewards).length > 0) updateTopBar();
+    saveGame(); // local backup
+  } catch(e) { console.warn('Sync failed:', e); }
+}
+
+setInterval(syncGame, 5000);
+window.addEventListener('beforeunload', () => { saveGame(); });
 
 // Apply admin multipliers to XP and gold
 const _origOnMonsterKill = onMonsterKill;
