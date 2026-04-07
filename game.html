@@ -3372,7 +3372,12 @@ async function giveToAllUsers(field, amount) {
       body: JSON.stringify({ field, amount, message: msg })
     });
     const data = await res.json();
-    if (data.ok) showFloatText(`✅ ${data.count}명에게 ${field} +${formatNum(amount)} 전체 지급!`, '#4CAF50');
+    if (data.ok) {
+      // 자기 자신에게도 바로 반영
+      G[field] = (G[field] || 0) + amount;
+      updateTopBar();
+      showFloatText(`✅ ${data.count}명에게 ${field} +${formatNum(amount)} 전체 지급!`, '#4CAF50');
+    }
     else alert('지급 실패: ' + (data.error || ''));
   } catch(e) { alert('지급 실패: ' + e.message); }
 }
@@ -3386,7 +3391,10 @@ async function giveToUser(field, amount) {
       body: JSON.stringify({ uid, field, amount })
     });
     const data = await res.json();
-    if (data.ok) showFloatText('✅ ' + field + ' +' + formatNum(amount) + ' 지급!', '#4CAF50');
+    if (data.ok) {
+      if (uid === currentUser.uid) { G[field] = (G[field] || 0) + amount; updateTopBar(); }
+      showFloatText('✅ ' + field + ' +' + formatNum(amount) + ' 지급!', '#4CAF50');
+    }
     else alert('지급 실패: ' + (data.error || ''));
   } catch(e) { alert('지급 실패: ' + e.message); }
 }
