@@ -560,6 +560,26 @@ function onSpriteLoad() {
   }
 });
 
+// Preload ALL monster images
+const _imgCache = {};
+function preloadImg(src) {
+  if (_imgCache[src]) return;
+  const img = new Image();
+  img.src = src;
+  _imgCache[src] = img;
+}
+MONSTERS.forEach(m => preloadImg(m.sprite));
+BOSSES.forEach(m => preloadImg(m.sprite));
+
+// Preload ALL equipment images
+const EQUIP_SLOTS_IDS = ['weapon','helmet','armor','boots','ring','necklace'];
+const EQUIP_RARITIES = ['common','uncommon','rare','epic','legendary','mythic','mythic_sss'];
+EQUIP_SLOTS_IDS.forEach(slot => {
+  EQUIP_RARITIES.forEach(r => {
+    for (let v = 1; v <= 3; v++) preloadImg('assets/equip/' + slot + '_' + r + '_' + v + '.png');
+  });
+});
+
 function drawCharacter(canvas, classId, stageNum) {
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
