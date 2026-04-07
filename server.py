@@ -39,13 +39,8 @@ def api_auto_login():
         if res.data and len(res.data) > 0:
             user = res.data[0]
             return jsonify({'ok': True, 'uid': user['uid'], 'nickname': user['name'], 'is_admin': user['name'] in ADMIN_NICKS})
-    # No uid or not found - create new account
-    new_uid = secrets.token_hex(16)
-    nickname = '모험가_' + new_uid[:6]
-    supabase.table('saves').insert({
-        'uid': new_uid, 'name': nickname, 'email': '', 'photo': '', 'game_state': {}
-    }).execute()
-    return jsonify({'ok': True, 'uid': new_uid, 'nickname': nickname, 'is_admin': False, 'new': True})
+    # No uid or not found - don't auto-create, show register screen
+    return jsonify({'ok': False, 'needRegister': True})
 
 @app.route('/api/register', methods=['POST'])
 def api_register():

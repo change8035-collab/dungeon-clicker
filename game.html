@@ -3005,13 +3005,19 @@ async function checkAuth() {
       }
 
       await loadServerSettings();
-      if (!data.new) await loadCloudSave();
+      await loadCloudSave();
+      initDomRefs();
       spawnMonster();
       updateAllUI();
       if (!window._gameLoopStarted) {
         window._gameLoopStarted = true;
         gameLoop();
       }
+    } else {
+      // needRegister - show login overlay (nickname input)
+      document.getElementById('loginOverlay').style.display = '';
+      document.getElementById('app').style.display = 'none';
+      localStorage.removeItem('userUid');
     }
   } catch(e) {
     console.error('Auth failed:', e);
@@ -3090,11 +3096,13 @@ async function loadCloudSave() {
   try {
     const res = await authFetch('/api/load');
     const data = await res.json();
-    if (data && data.gameState) {
+    if (data && data.gameState && Object.keys(data.gameState).length > 0) {
       const saved = typeof data.gameState === 'string' ? JSON.parse(data.gameState) : data.gameState;
-      console.log('☁️ Cloud data keys:', Object.keys(saved));
-      for (const key of Object.keys(saved)) {
-        G[key] = saved[key];
+      if (Object.keys(saved).length > 0) {
+        console.log('☁️ Cloud data keys:', Object.keys(saved));
+        for (const key of Object.keys(saved)) {
+          G[key] = saved[key];
+        }
       }
       G.monster = null;
       // 클래스별 스테이지 마이그레이션
