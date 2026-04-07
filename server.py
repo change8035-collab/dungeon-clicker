@@ -1,4 +1,4 @@
-import os, json, secrets, requests as http_requests
+import os, json, secrets, threading, requests as http_requests
 from flask import Flask, request, jsonify, send_from_directory
 from supabase import create_client
 
@@ -264,8 +264,6 @@ def api_admin_give():
     gs[field] = gs.get(field, 0) + amount
     supabase.table('saves').update({'game_state': gs}).eq('uid', target_uid).execute()
     return jsonify({'ok': True, 'new_value': gs.get(field)})
-
-import threading
 
 @app.route('/api/admin/give-all', methods=['POST'])
 def api_admin_give_all():
