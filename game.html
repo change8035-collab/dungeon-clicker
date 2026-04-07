@@ -7,282 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" media="print" onload="this.media='all'">
-<style>
-* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; }
-:root {
-  --bg: #0f0e17; --card: #1a1930; --card2: #232145;
-  --accent: #ff8906; --green: #2cb67d; --red: #e74c3c;
-  --purple: #7f5af0; --blue: #2ec4b6; --gold: #f1c40f;
-  --text: #fffffe; --dim: #94a1b2;
-}
-body { background:var(--bg); color:var(--text); font-family:'Noto Sans KR',sans-serif; overflow:hidden; height:100vh; }
-
-/* ===== LAYOUT ===== */
-#app { display:flex; flex-direction:column; height:100vh; max-width:480px; margin:0 auto; position:relative; }
-
-/* TOP BAR */
-.top-bar { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:var(--card); border-bottom:1px solid #2a2850; }
-.top-bar .res { display:flex; align-items:center; gap:4px; font-size:13px; font-weight:700; }
-.top-bar .res.gold { color:var(--gold); }
-.top-bar .res.dia { color:var(--purple); }
-.top-bar .res.ruby { color:var(--red); }
-
-/* BATTLE AREA */
-.battle-area { flex:0 0 280px; position:relative; background:linear-gradient(180deg,#1a1840 0%,#0f1528 100%); overflow:hidden; border-bottom:2px solid #2a2850; }
-.stage-info { position:absolute; top:8px; left:0; width:100%; text-align:center; font-size:13px; color:var(--dim); z-index:5; }
-.stage-info span { color:var(--accent); font-weight:700; }
-
-/* Character */
-.char-container { position:absolute; bottom:50px; left:20px; text-align:center; z-index:3; }
-.char-sprite { font-size:56px; animation:charBob 1s ease-in-out infinite; filter:drop-shadow(0 0 10px rgba(127,90,240,0.4)); }
-#charCanvas { animation:charBob 1s ease-in-out infinite; filter:drop-shadow(0 0 10px rgba(127,90,240,0.4)); transform-origin:bottom center; }
-@keyframes charBob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
-@keyframes floatUp { 0%{opacity:1;transform:translate(-50%,-50%) scale(1)} 30%{opacity:1;transform:translate(-50%,-70%) scale(1.1)} 100%{opacity:0;transform:translate(-50%,-120%) scale(0.9)} }
-/* Attack motions */
-#charCanvas.atk-slash {
-  animation:atkSlash 0.25s ease-out forwards !important;
-}
-@keyframes atkSlash {
-  0%{transform:translateX(0) translateY(0) rotate(0deg) scale(1)}
-  25%{transform:translateX(8px) translateY(-8px) rotate(-8deg) scale(1.05)}
-  50%{transform:translateX(35px) translateY(-4px) rotate(12deg) scale(1.1); filter:drop-shadow(0 0 18px rgba(255,200,50,0.6)) brightness(1.15)}
-  75%{transform:translateX(20px) translateY(2px) rotate(5deg) scale(1.02)}
-  100%{transform:translateX(0) translateY(0) rotate(0deg) scale(1)}
-}
-#charCanvas.atk-shoot {
-  animation:atkShoot 0.3s ease-out forwards !important;
-}
-@keyframes atkShoot {
-  0%{transform:translateX(0) translateY(0) scale(1)}
-  20%{transform:translateX(-8px) translateY(-3px) scale(1.04); filter:drop-shadow(0 0 12px rgba(100,220,100,0.5))}
-  40%{transform:translateX(5px) translateY(-2px) scale(0.98)}
-  60%{transform:translateX(15px) translateY(0) scale(1.02); filter:drop-shadow(0 0 16px rgba(100,255,100,0.6)) brightness(1.1)}
-  100%{transform:translateX(0) translateY(0) scale(1)}
-}
-#charCanvas.atk-stab {
-  animation:atkStab 0.2s ease-out forwards !important;
-}
-@keyframes atkStab {
-  0%{transform:translateX(0) translateY(0) scale(1) rotate(0deg)}
-  15%{transform:translateX(-5px) translateY(-10px) scale(0.95) rotate(-5deg)}
-  40%{transform:translateX(40px) translateY(-6px) scale(1.08) rotate(3deg); filter:drop-shadow(0 0 14px rgba(180,100,255,0.6)) brightness(1.15)}
-  60%{transform:translateX(30px) translateY(0) scale(1.02) rotate(1deg)}
-  100%{transform:translateX(0) translateY(0) scale(1) rotate(0deg)}
-}
-/* Critical hit flash */
-#charCanvas.atk-crit {
-  filter:drop-shadow(0 0 24px rgba(255,255,100,0.8)) brightness(1.3) !important;
-}
-/* Screen shake on hit */
-@keyframes screenShake {
-  0%{transform:translate(0,0)} 20%{transform:translate(-3px,2px)} 40%{transform:translate(3px,-2px)}
-  60%{transform:translate(-2px,1px)} 80%{transform:translate(2px,-1px)} 100%{transform:translate(0,0)}
-}
-.shake { animation:screenShake 0.15s ease-out !important; }
-.char-name { font-size:11px; color:var(--blue); margin-top:2px; }
-.char-level { font-size:10px; color:var(--dim); }
-
-/* Monster */
-.monster-container { position:absolute; bottom:50px; right:30px; text-align:center; z-index:3; }
-.monster-sprite { transition:transform 0.1s, filter 0.1s; filter:drop-shadow(0 0 8px rgba(231,76,60,0.3)); object-fit:contain; }
-.monster-sprite.hit { transform:scale(0.88) translateX(-8px); filter:drop-shadow(0 0 16px rgba(255,30,30,0.7)) brightness(1.6) saturate(1.3); transition:transform 0.08s ease-out, filter 0.08s; }
-.monster-name { font-size:11px; color:var(--red); margin-top:2px; }
-.monster-hp-bar { width:100px; height:8px; background:#333; border-radius:4px; overflow:hidden; margin:4px auto 0; }
-.monster-hp-fill { height:100%; background:linear-gradient(90deg,var(--red),#ff6b6b); transition:width 0.15s; border-radius:4px; }
-
-/* Battle effects */
-.dmg-text { position:absolute; font-weight:900; font-size:18px; color:var(--gold); z-index:10; pointer-events:none;
-  animation:dmgFloat 0.7s ease-out forwards; text-shadow:0 0 4px rgba(0,0,0,0.8); }
-@keyframes dmgFloat { 0%{opacity:1;transform:translateY(0) scale(1)} 100%{opacity:0;transform:translateY(-40px) scale(0.7)} }
-.dmg-text.crit { font-size:26px; color:#ff4444; }
-
-/* EXP bar */
-.exp-section { position:absolute; bottom:0; left:0; width:100%; padding:4px 12px 6px; background:rgba(15,14,23,0.8); z-index:5; }
-.exp-bar { width:100%; height:10px; background:#1a1a3e; border-radius:5px; overflow:hidden; }
-.exp-fill { height:100%; background:linear-gradient(90deg,var(--blue),var(--green)); transition:width 0.3s; border-radius:5px; }
-.exp-label { display:flex; justify-content:space-between; font-size:10px; color:var(--dim); margin-top:2px; }
-
-/* ===== BOTTOM TABS ===== */
-.tab-content { flex:1; overflow-y:auto; background:var(--bg); }
-.tab-bar { display:flex; background:var(--card); border-top:1px solid #2a2850; padding-bottom:env(safe-area-inset-bottom); }
-.tab-btn { flex:1; padding:8px 0 6px; text-align:center; cursor:pointer; border:none; background:none; color:var(--dim); font-size:10px; font-family:inherit; transition:all 0.2s; }
-.tab-btn .tab-icon { font-size:20px; display:block; }
-.tab-btn.active { color:var(--accent); }
-.tab-btn.active .tab-icon { transform:scale(1.1); }
-
-/* ===== TAB: LAMP (뽑기) ===== */
-.lamp-section { padding:16px 12px; }
-.lamp-title { text-align:center; font-size:16px; font-weight:900; color:var(--gold); margin-bottom:12px; }
-.lamp-visual { text-align:center; margin:10px 0 16px; }
-.lamp-emoji { font-size:72px; cursor:pointer; transition:transform 0.15s; display:inline-block; }
-.lamp-emoji:active { transform:scale(0.9) rotate(-5deg); }
-.lamp-level { font-size:12px; color:var(--dim); margin-top:4px; }
-.lamp-buttons { display:flex; gap:8px; }
-.lamp-btn { flex:1; padding:12px; border-radius:12px; border:none; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; transition:all 0.2s; }
-.lamp-btn:active { transform:scale(0.95); }
-.lamp-btn.single { background:linear-gradient(135deg,var(--accent),#e67e22); color:#fff; }
-.lamp-btn.multi { background:linear-gradient(135deg,var(--purple),#6c3ec1); color:#fff; }
-.lamp-btn .cost { font-size:11px; font-weight:400; opacity:0.9; display:block; margin-top:2px; }
-.lamp-btn:disabled { opacity:0.4; }
-.lamp-upgrade { margin-top:12px; text-align:center; }
-.lamp-upgrade button { background:var(--card2); border:1px solid var(--accent); color:var(--accent); padding:8px 20px; border-radius:8px; font-family:inherit; font-weight:700; font-size:12px; cursor:pointer; }
-.lamp-upgrade button:disabled { opacity:0.4; }
-
-/* Pull result */
-.pull-result { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.92); z-index:1000; display:none; flex-direction:column; align-items:center; justify-content:center; padding:16px; }
-.pull-result.show { display:flex; }
-.pull-result-title { font-size:22px; font-weight:900; color:var(--gold); letter-spacing:2px; text-shadow:0 0 16px rgba(255,200,0,0.6); margin-bottom:14px; }
-.pull-items { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; justify-content:center; width:100%; max-width:360px; margin:0 0 16px; max-height:60vh; overflow-y:auto; padding:8px 4px; }
-.pull-item { text-align:center; padding:6px 4px 5px; border-radius:10px; border:2px solid #444; animation:pullPop 0.35s cubic-bezier(0.34,1.56,0.64,1) backwards; position:relative; }
-.pull-item img.pull-icon { width:56px; height:56px; object-fit:contain; border-radius:6px; display:block; margin:0 auto 4px; }
-.pull-item .item-name { font-size:8px; line-height:1.2; margin-top:2px; word-break:keep-all; color:#ddd; }
-.pull-item .item-rarity { font-size:7px; font-weight:700; margin-top:1px; }
-.pull-items.compact .pull-item { padding:3px 2px 2px; border-width:1px; }
-.pull-items.compact .pull-item img.pull-icon { width:28px; height:28px; margin:0 auto 1px; }
-.pull-items.compact .pull-item .item-name { font-size:6px; }
-.pull-items.compact .pull-item .item-rarity { font-size:5px; }
-.pull-item.new-item::after { content:'NEW'; position:absolute; top:-5px; right:-5px; background:#f55; color:#fff; font-size:7px; font-weight:900; padding:1px 4px; border-radius:4px; }
-@keyframes pullPop { 0%{transform:scale(0);opacity:0} 100%{transform:scale(1);opacity:1} }
-.pull-result .close-btn { background:var(--accent); color:#fff; border:none; padding:12px 40px; border-radius:12px; font-weight:700; font-size:15px; cursor:pointer; font-family:inherit; letter-spacing:1px; }
-.pull-summary { font-size:11px; color:#aaa; margin-bottom:10px; }
-
-/* Rarity colors */
-.rarity-common { border-color:#888; background:#2a2a3a; color:#ccc; }
-.rarity-uncommon { border-color:var(--green); background:#1a3a2a; color:var(--green); }
-.rarity-rare { border-color:var(--blue); background:#1a2a3a; color:var(--blue); }
-.rarity-epic { border-color:var(--purple); background:#2a1a3a; color:var(--purple); }
-.rarity-legendary { border-color:var(--gold); background:#3a2a1a; color:var(--gold); }
-.rarity-mythic { border-color:#ff4444; background:#3a1a1a; color:#ff4444; }
-.rarity-mythic_s { border-color:#ff2222; background:#3a1010; color:#ff2222; }
-.rarity-mythic_sp { border-color:#ff0000; background:#3a0808; color:#ff0000; }
-.rarity-mythic_ss { border-color:#cc0000; background:#350505; color:#cc0000; }
-.rarity-mythic_ssp { border-color:#aa0000; background:#300303; color:#aa0000; }
-.rarity-mythic_sss { border-color:#880000; background:#2a0101; color:#880000; }
-
-/* ===== TAB: EQUIP ===== */
-.equip-section { padding:12px; }
-.equip-title { font-size:14px; font-weight:700; margin-bottom:10px; }
-.equip-slots { display:grid; grid-template-columns:repeat(2,1fr); gap:6px; margin-bottom:16px; }
-.equip-slot { background:var(--card2); border:2px solid #333; border-radius:10px; padding:10px; display:flex; align-items:center; gap:8px; cursor:pointer; min-height:56px; transition:border-color 0.2s; }
-.equip-slot:hover { border-color:var(--accent); }
-.equip-slot .slot-icon { font-size:28px; width:36px; text-align:center; }
-.equip-slot .slot-info { flex:1; min-width:0; }
-.equip-slot .slot-label { font-size:10px; color:var(--dim); }
-.equip-slot .slot-name { font-size:11px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.equip-slot .slot-stat { font-size:10px; color:var(--green); }
-.equip-slot.empty .slot-name { color:#555; }
-
-/* Inventory */
-.inv-title { font-size:14px; font-weight:700; margin:12px 0 8px; display:flex; justify-content:space-between; align-items:center; }
-.inv-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; padding-bottom:20px; }
-.inv-item { background:var(--card2); border:2px solid #333; border-radius:8px; padding:8px 4px; text-align:center; cursor:pointer; transition:all 0.15s; position:relative; }
-.inv-item:active { transform:scale(0.93); }
-.inv-item .item-icon { font-size:24px; }
-.inv-item .item-name { font-size:9px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.inv-item .item-stat { font-size:9px; color:var(--green); }
-.inv-item.equipped::after { content:'E'; position:absolute; top:2px; right:4px; font-size:8px; background:var(--accent); color:#fff; border-radius:3px; padding:0 3px; }
-.sell-btn { width:100%; padding:10px; border-radius:10px; border:none; background:var(--red); color:#fff; font-weight:700; font-size:13px; cursor:pointer; margin-top:8px; font-family:inherit; }
-
-/* Sub tabs inside pull */
-.sub-tabs { display:flex; gap:0; margin-bottom:14px; background:var(--card); border-radius:10px; overflow:hidden; border:1px solid #2a2850; }
-.sub-tab { flex:1; padding:10px 0; text-align:center; font-size:13px; font-weight:700; cursor:pointer; border:none; background:none; color:var(--dim); font-family:inherit; transition:all 0.2s; }
-.sub-tab.active { background:var(--card2); color:var(--accent); box-shadow:inset 0 -2px 0 var(--accent); }
-
-/* ===== TAB: SKILLS ===== */
-.skills-section { padding:12px; }
-.skill-slot { background:var(--card2); border-radius:10px; padding:12px; margin-bottom:8px; display:flex; align-items:center; gap:10px; }
-.skill-slot .sk-icon { font-size:32px; width:40px; text-align:center; }
-.skill-slot .sk-info { flex:1; }
-.skill-slot .sk-name { font-weight:700; font-size:13px; }
-.skill-slot .sk-desc { font-size:11px; color:var(--dim); margin-top:2px; }
-.skill-slot .sk-lv { font-size:10px; color:var(--blue); }
-.skill-slot button { background:var(--green); color:#fff; border:none; padding:6px 14px; border-radius:8px; font-weight:700; font-size:11px; cursor:pointer; font-family:inherit; white-space:nowrap; }
-.skill-slot button:disabled { opacity:0.4; }
-
-/* ===== TAB: MORE ===== */
-.more-section { padding:12px; }
-.stat-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #1a1a3e; font-size:13px; }
-.stat-row .label { color:var(--dim); }
-.stat-row .val { font-weight:700; }
-.more-btn { width:100%; padding:12px; border-radius:10px; border:none; font-weight:700; font-size:14px; cursor:pointer; margin-top:8px; font-family:inherit; }
-.more-btn.prestige { background:linear-gradient(135deg,var(--gold),var(--accent)); color:#1a1a2e; }
-.more-btn.ad { background:linear-gradient(135deg,#ff79c6,#ff6b6b); color:#fff; }
-.more-btn:disabled { opacity:0.4; }
-
-/* ===== ITEM POPUP ===== */
-.item-popup { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:500; display:none; flex-direction:column; align-items:center; justify-content:center; }
-.item-popup.show { display:flex; }
-.item-popup-card { background:var(--card); border-radius:16px; padding:20px; width:280px; text-align:center; }
-.item-popup-card .ip-icon { font-size:48px; }
-.item-popup-card .ip-name { font-size:18px; font-weight:900; margin:6px 0; }
-.item-popup-card .ip-rarity { font-size:12px; margin-bottom:8px; }
-.item-popup-card .ip-stat { font-size:14px; color:var(--green); margin:4px 0; }
-.item-popup-card .ip-buttons { display:flex; gap:8px; margin-top:14px; }
-.item-popup-card .ip-btn { flex:1; padding:10px; border:none; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer; font-family:inherit; }
-.ip-btn.equip { background:var(--green); color:#fff; }
-.ip-btn.sell { background:var(--red); color:#fff; }
-.ip-btn.close { background:#444; color:#fff; }
-
-/* Class preview canvas in hero tab */
-.class-preview-canvas { image-rendering:auto; display:block; margin:0 auto; }
-
-/* ===== TAB: FUSION (합성) ===== */
-.fusion-section { padding:12px; }
-.fusion-title { font-size:14px; font-weight:700; margin-bottom:10px; text-align:center; color:var(--gold); }
-.fusion-slots { display:flex; gap:12px; justify-content:center; align-items:center; margin:16px 0; }
-.fusion-slot { width:100px; height:120px; background:var(--card2); border:2px dashed #555; border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; }
-.fusion-slot:hover { border-color:var(--accent); }
-.fusion-slot.filled { border-style:solid; }
-.fusion-slot .fs-icon { font-size:32px; }
-.fusion-slot .fs-name { font-size:10px; margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:90px; text-align:center; }
-.fusion-slot .fs-rarity { font-size:9px; margin-top:2px; }
-.fusion-slot .fs-empty { font-size:12px; color:var(--dim); }
-.fusion-plus { font-size:28px; font-weight:900; color:var(--dim); }
-.fusion-result { text-align:center; margin:16px 0; }
-.fusion-btn { display:block; width:80%; margin:0 auto; padding:14px; border-radius:12px; border:none; background:linear-gradient(135deg,var(--gold),var(--accent)); color:#1a1a2e; font-weight:900; font-size:16px; cursor:pointer; font-family:inherit; transition:all 0.2s; }
-.fusion-btn:disabled { opacity:0.4; }
-.fusion-btn:active { transform:scale(0.95); }
-.fusion-pick-list { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:12px; padding-bottom:20px; }
-.fusion-pick-item { background:var(--card2); border:2px solid #333; border-radius:8px; padding:8px 4px; text-align:center; cursor:pointer; transition:all 0.15s; }
-.fusion-pick-item:active { transform:scale(0.93); }
-.fusion-pick-item.selected { border-color:var(--gold); box-shadow:0 0 8px rgba(241,196,15,0.4); }
-.fusion-pick-item .item-icon { font-size:24px; }
-.fusion-pick-item .item-name { font-size:9px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.fusion-pick-item .item-stat { font-size:9px; color:var(--green); }
-
-/* Enhance button in item popup */
-.ip-btn.enhance { background:linear-gradient(135deg,var(--gold),var(--accent)); color:#1a1a2e; }
-/* Login screen */
-.login-overlay { position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px; }
-.login-overlay h1 { font-size:28px;color:var(--gold);text-shadow:0 0 20px rgba(255,200,0,0.5); }
-.login-overlay p { color:var(--dim);font-size:13px; }
-.login-btn { background:#fff;color:#333;border:none;padding:14px 36px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:10px;font-family:inherit;box-shadow:0 4px 16px rgba(0,0,0,0.3); }
-.login-btn:hover { background:#f0f0f0; }
-.login-btn img { width:22px;height:22px; }
-/* User bar */
-.user-bar { display:flex;align-items:center;gap:8px;padding:4px 12px;background:var(--card);border-bottom:1px solid #2a2850;font-size:11px; }
-.user-bar img { width:24px;height:24px;border-radius:50%; }
-.user-bar .uname { color:var(--text);font-weight:700;flex:1; }
-.user-bar .cp { color:var(--gold);font-weight:700;font-size:12px; }
-.user-bar button { background:none;border:1px solid #555;color:#aaa;padding:2px 8px;border-radius:4px;font-size:10px;cursor:pointer;font-family:inherit; }
-/* Ranking tab */
-.rank-list { padding:8px; }
-.rank-item { display:flex;align-items:center;gap:8px;padding:8px;background:var(--card2);border-radius:8px;margin-bottom:4px; }
-.rank-item.me { border:2px solid var(--gold); }
-.rank-pos { width:28px;text-align:center;font-weight:900;font-size:16px; }
-.rank-pos.gold { color:#ffd700; } .rank-pos.silver { color:#c0c0c0; } .rank-pos.bronze { color:#cd7f32; }
-.rank-info { flex:1; }
-.rank-name { font-size:12px;font-weight:700; }
-.rank-cp { font-size:11px;color:var(--gold); }
-.rank-img { width:28px;height:28px;border-radius:50%; }
-/* Admin tab */
-.admin-section { padding:12px; }
-.admin-row { display:flex;align-items:center;gap:8px;margin-bottom:8px; }
-.admin-row label { font-size:12px;color:var(--dim);width:100px; }
-.admin-row input { flex:1;background:var(--card2);border:1px solid #444;color:var(--text);padding:6px 10px;border-radius:6px;font-size:13px;font-family:inherit; }
-.admin-row button { background:var(--accent);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:700;font-family:inherit; }
-</style>
-
+<style>*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}:root{--bg:#0f0e17;--card:#1a1930;--card2:#232145;--accent:#ff8906;--green:#2cb67d;--red:#e74c3c;--purple:#7f5af0;--blue:#2ec4b6;--gold:#f1c40f;--text:#fffffe;--dim:#94a1b2}body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-serif;overflow:hidden;height:100vh}#app{display:flex;flex-direction:column;height:100vh;max-width:480px;margin:0 auto;position:relative}.top-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--card);border-bottom:1px solid #2a2850}.top-bar .res{display:flex;align-items:center;gap:4px;font-size:13px;font-weight:700}.top-bar .res.gold{color:var(--gold)}.top-bar .res.dia{color:var(--purple)}.top-bar .res.ruby{color:var(--red)}.battle-area{flex:0 0 280px;position:relative;background:linear-gradient(180deg,#1a1840 0%,#0f1528 100%);overflow:hidden;border-bottom:2px solid #2a2850}.stage-info{position:absolute;top:8px;left:0;width:100%;text-align:center;font-size:13px;color:var(--dim);z-index:5}.stage-info span{color:var(--accent);font-weight:700}.char-container{position:absolute;bottom:50px;left:20px;text-align:center;z-index:3}.char-sprite{font-size:56px;animation:charBob 1s ease-in-out infinite;filter:drop-shadow(0 0 10px rgba(127,90,240,0.4))}#charCanvas{animation:charBob 1s ease-in-out infinite;filter:drop-shadow(0 0 10px rgba(127,90,240,0.4));transform-origin:bottom center}@keyframes charBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}@keyframes floatUp{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}30%{opacity:1;transform:translate(-50%,-70%) scale(1.1)}100%{opacity:0;transform:translate(-50%,-120%) scale(0.9)}}#charCanvas.atk-slash{animation:atkSlash 0.25s ease-out forwards !important}@keyframes atkSlash{0%{transform:translateX(0) translateY(0) rotate(0deg) scale(1)}25%{transform:translateX(8px) translateY(-8px) rotate(-8deg) scale(1.05)}50%{transform:translateX(35px) translateY(-4px) rotate(12deg) scale(1.1);filter:drop-shadow(0 0 18px rgba(255,200,50,0.6)) brightness(1.15)}75%{transform:translateX(20px) translateY(2px) rotate(5deg) scale(1.02)}100%{transform:translateX(0) translateY(0) rotate(0deg) scale(1)}}#charCanvas.atk-shoot{animation:atkShoot 0.3s ease-out forwards !important}@keyframes atkShoot{0%{transform:translateX(0) translateY(0) scale(1)}20%{transform:translateX(-8px) translateY(-3px) scale(1.04);filter:drop-shadow(0 0 12px rgba(100,220,100,0.5))}40%{transform:translateX(5px) translateY(-2px) scale(0.98)}60%{transform:translateX(15px) translateY(0) scale(1.02);filter:drop-shadow(0 0 16px rgba(100,255,100,0.6)) brightness(1.1)}100%{transform:translateX(0) translateY(0) scale(1)}}#charCanvas.atk-stab{animation:atkStab 0.2s ease-out forwards !important}@keyframes atkStab{0%{transform:translateX(0) translateY(0) scale(1) rotate(0deg)}15%{transform:translateX(-5px) translateY(-10px) scale(0.95) rotate(-5deg)}40%{transform:translateX(40px) translateY(-6px) scale(1.08) rotate(3deg);filter:drop-shadow(0 0 14px rgba(180,100,255,0.6)) brightness(1.15)}60%{transform:translateX(30px) translateY(0) scale(1.02) rotate(1deg)}100%{transform:translateX(0) translateY(0) scale(1) rotate(0deg)}}#charCanvas.atk-crit{filter:drop-shadow(0 0 24px rgba(255,255,100,0.8)) brightness(1.3) !important}@keyframes screenShake{0%{transform:translate(0,0)}20%{transform:translate(-3px,2px)}40%{transform:translate(3px,-2px)}60%{transform:translate(-2px,1px)}80%{transform:translate(2px,-1px)}100%{transform:translate(0,0)}}.shake{animation:screenShake 0.15s ease-out !important}.char-name{font-size:11px;color:var(--blue);margin-top:2px}.char-level{font-size:10px;color:var(--dim)}.monster-container{position:absolute;bottom:50px;right:30px;text-align:center;z-index:3}.monster-sprite{transition:transform 0.1s,filter 0.1s;filter:drop-shadow(0 0 8px rgba(231,76,60,0.3));object-fit:contain}.monster-sprite.hit{transform:scale(0.88) translateX(-8px);filter:drop-shadow(0 0 16px rgba(255,30,30,0.7)) brightness(1.6) saturate(1.3);transition:transform 0.08s ease-out,filter 0.08s}.monster-name{font-size:11px;color:var(--red);margin-top:2px}.monster-hp-bar{width:100px;height:8px;background:#333;border-radius:4px;overflow:hidden;margin:4px auto 0}.monster-hp-fill{height:100%;background:linear-gradient(90deg,var(--red),#ff6b6b);transition:width 0.15s;border-radius:4px}.dmg-text{position:absolute;font-weight:900;font-size:18px;color:var(--gold);z-index:10;pointer-events:none;animation:dmgFloat 0.7s ease-out forwards;text-shadow:0 0 4px rgba(0,0,0,0.8)}@keyframes dmgFloat{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-40px) scale(0.7)}}.dmg-text.crit{font-size:26px;color:#ff4444}.exp-section{position:absolute;bottom:0;left:0;width:100%;padding:4px 12px 6px;background:rgba(15,14,23,0.8);z-index:5}.exp-bar{width:100%;height:10px;background:#1a1a3e;border-radius:5px;overflow:hidden}.exp-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--green));transition:width 0.3s;border-radius:5px}.exp-label{display:flex;justify-content:space-between;font-size:10px;color:var(--dim);margin-top:2px}.tab-content{flex:1;overflow-y:auto;background:var(--bg)}.tab-bar{display:flex;background:var(--card);border-top:1px solid #2a2850;padding-bottom:env(safe-area-inset-bottom)}.tab-btn{flex:1;padding:8px 0 6px;text-align:center;cursor:pointer;border:none;background:none;color:var(--dim);font-size:10px;font-family:inherit;transition:all 0.2s}.tab-btn .tab-icon{font-size:20px;display:block}.tab-btn.active{color:var(--accent)}.tab-btn.active .tab-icon{transform:scale(1.1)}.lamp-section{padding:16px 12px}.lamp-title{text-align:center;font-size:16px;font-weight:900;color:var(--gold);margin-bottom:12px}.lamp-visual{text-align:center;margin:10px 0 16px}.lamp-emoji{font-size:72px;cursor:pointer;transition:transform 0.15s;display:inline-block}.lamp-emoji:active{transform:scale(0.9) rotate(-5deg)}.lamp-level{font-size:12px;color:var(--dim);margin-top:4px}.lamp-buttons{display:flex;gap:8px}.lamp-btn{flex:1;padding:12px;border-radius:12px;border:none;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;transition:all 0.2s}.lamp-btn:active{transform:scale(0.95)}.lamp-btn.single{background:linear-gradient(135deg,var(--accent),#e67e22);color:#fff}.lamp-btn.multi{background:linear-gradient(135deg,var(--purple),#6c3ec1);color:#fff}.lamp-btn .cost{font-size:11px;font-weight:400;opacity:0.9;display:block;margin-top:2px}.lamp-btn:disabled{opacity:0.4}.lamp-upgrade{margin-top:12px;text-align:center}.lamp-upgrade button{background:var(--card2);border:1px solid var(--accent);color:var(--accent);padding:8px 20px;border-radius:8px;font-family:inherit;font-weight:700;font-size:12px;cursor:pointer}.lamp-upgrade button:disabled{opacity:0.4}.pull-result{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:1000;display:none;flex-direction:column;align-items:center;justify-content:center;padding:16px}.pull-result.show{display:flex}.pull-result-title{font-size:22px;font-weight:900;color:var(--gold);letter-spacing:2px;text-shadow:0 0 16px rgba(255,200,0,0.6);margin-bottom:14px}.pull-items{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;justify-content:center;width:100%;max-width:360px;margin:0 0 16px;max-height:60vh;overflow-y:auto;padding:8px 4px}.pull-item{text-align:center;padding:6px 4px 5px;border-radius:10px;border:2px solid #444;animation:pullPop 0.35s cubic-bezier(0.34,1.56,0.64,1) backwards;position:relative}.pull-item img.pull-icon{width:56px;height:56px;object-fit:contain;border-radius:6px;display:block;margin:0 auto 4px}.pull-item .item-name{font-size:8px;line-height:1.2;margin-top:2px;word-break:keep-all;color:#ddd}.pull-item .item-rarity{font-size:7px;font-weight:700;margin-top:1px}.pull-items.compact .pull-item{padding:3px 2px 2px;border-width:1px}.pull-items.compact .pull-item img.pull-icon{width:28px;height:28px;margin:0 auto 1px}.pull-items.compact .pull-item .item-name{font-size:6px}.pull-items.compact .pull-item .item-rarity{font-size:5px}.pull-item.new-item::after{content:'NEW';position:absolute;top:-5px;right:-5px;background:#f55;color:#fff;font-size:7px;font-weight:900;padding:1px 4px;border-radius:4px}@keyframes pullPop{0%{transform:scale(0);opacity:0}100%{transform:scale(1);opacity:1}}.pull-result .close-btn{background:var(--accent);color:#fff;border:none;padding:12px 40px;border-radius:12px;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit;letter-spacing:1px}.pull-summary{font-size:11px;color:#aaa;margin-bottom:10px}.rarity-common{border-color:#888;background:#2a2a3a;color:#ccc}.rarity-uncommon{border-color:var(--green);background:#1a3a2a;color:var(--green)}.rarity-rare{border-color:var(--blue);background:#1a2a3a;color:var(--blue)}.rarity-epic{border-color:var(--purple);background:#2a1a3a;color:var(--purple)}.rarity-legendary{border-color:var(--gold);background:#3a2a1a;color:var(--gold)}.rarity-mythic{border-color:#ff4444;background:#3a1a1a;color:#ff4444}.rarity-mythic_s{border-color:#ff2222;background:#3a1010;color:#ff2222}.rarity-mythic_sp{border-color:#ff0000;background:#3a0808;color:#ff0000}.rarity-mythic_ss{border-color:#cc0000;background:#350505;color:#cc0000}.rarity-mythic_ssp{border-color:#aa0000;background:#300303;color:#aa0000}.rarity-mythic_sss{border-color:#880000;background:#2a0101;color:#880000}.equip-section{padding:12px}.equip-title{font-size:14px;font-weight:700;margin-bottom:10px}.equip-slots{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:16px}.equip-slot{background:var(--card2);border:2px solid #333;border-radius:10px;padding:10px;display:flex;align-items:center;gap:8px;cursor:pointer;min-height:56px;transition:border-color 0.2s}.equip-slot:hover{border-color:var(--accent)}.equip-slot .slot-icon{font-size:28px;width:36px;text-align:center}.equip-slot .slot-info{flex:1;min-width:0}.equip-slot .slot-label{font-size:10px;color:var(--dim)}.equip-slot .slot-name{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.equip-slot .slot-stat{font-size:10px;color:var(--green)}.equip-slot.empty .slot-name{color:#555}.inv-title{font-size:14px;font-weight:700;margin:12px 0 8px;display:flex;justify-content:space-between;align-items:center}.inv-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding-bottom:20px}.inv-item{background:var(--card2);border:2px solid #333;border-radius:8px;padding:8px 4px;text-align:center;cursor:pointer;transition:all 0.15s;position:relative}.inv-item:active{transform:scale(0.93)}.inv-item .item-icon{font-size:24px}.inv-item .item-name{font-size:9px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.inv-item .item-stat{font-size:9px;color:var(--green)}.inv-item.equipped::after{content:'E';position:absolute;top:2px;right:4px;font-size:8px;background:var(--accent);color:#fff;border-radius:3px;padding:0 3px}.sell-btn{width:100%;padding:10px;border-radius:10px;border:none;background:var(--red);color:#fff;font-weight:700;font-size:13px;cursor:pointer;margin-top:8px;font-family:inherit}.sub-tabs{display:flex;gap:0;margin-bottom:14px;background:var(--card);border-radius:10px;overflow:hidden;border:1px solid #2a2850}.sub-tab{flex:1;padding:10px 0;text-align:center;font-size:13px;font-weight:700;cursor:pointer;border:none;background:none;color:var(--dim);font-family:inherit;transition:all 0.2s}.sub-tab.active{background:var(--card2);color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent)}.skills-section{padding:12px}.skill-slot{background:var(--card2);border-radius:10px;padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:10px}.skill-slot .sk-icon{font-size:32px;width:40px;text-align:center}.skill-slot .sk-info{flex:1}.skill-slot .sk-name{font-weight:700;font-size:13px}.skill-slot .sk-desc{font-size:11px;color:var(--dim);margin-top:2px}.skill-slot .sk-lv{font-size:10px;color:var(--blue)}.skill-slot button{background:var(--green);color:#fff;border:none;padding:6px 14px;border-radius:8px;font-weight:700;font-size:11px;cursor:pointer;font-family:inherit;white-space:nowrap}.skill-slot button:disabled{opacity:0.4}.more-section{padding:12px}.stat-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #1a1a3e;font-size:13px}.stat-row .label{color:var(--dim)}.stat-row .val{font-weight:700}.more-btn{width:100%;padding:12px;border-radius:10px;border:none;font-weight:700;font-size:14px;cursor:pointer;margin-top:8px;font-family:inherit}.more-btn.prestige{background:linear-gradient(135deg,var(--gold),var(--accent));color:#1a1a2e}.more-btn.ad{background:linear-gradient(135deg,#ff79c6,#ff6b6b);color:#fff}.more-btn:disabled{opacity:0.4}.item-popup{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center}.item-popup.show{display:flex}.item-popup-card{background:var(--card);border-radius:16px;padding:20px;width:280px;text-align:center}.item-popup-card .ip-icon{font-size:48px}.item-popup-card .ip-name{font-size:18px;font-weight:900;margin:6px 0}.item-popup-card .ip-rarity{font-size:12px;margin-bottom:8px}.item-popup-card .ip-stat{font-size:14px;color:var(--green);margin:4px 0}.item-popup-card .ip-buttons{display:flex;gap:8px;margin-top:14px}.item-popup-card .ip-btn{flex:1;padding:10px;border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit}.ip-btn.equip{background:var(--green);color:#fff}.ip-btn.sell{background:var(--red);color:#fff}.ip-btn.close{background:#444;color:#fff}.class-preview-canvas{image-rendering:auto;display:block;margin:0 auto}.fusion-section{padding:12px}.fusion-title{font-size:14px;font-weight:700;margin-bottom:10px;text-align:center;color:var(--gold)}.fusion-slots{display:flex;gap:12px;justify-content:center;align-items:center;margin:16px 0}.fusion-slot{width:100px;height:120px;background:var(--card2);border:2px dashed #555;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s}.fusion-slot:hover{border-color:var(--accent)}.fusion-slot.filled{border-style:solid}.fusion-slot .fs-icon{font-size:32px}.fusion-slot .fs-name{font-size:10px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90px;text-align:center}.fusion-slot .fs-rarity{font-size:9px;margin-top:2px}.fusion-slot .fs-empty{font-size:12px;color:var(--dim)}.fusion-plus{font-size:28px;font-weight:900;color:var(--dim)}.fusion-result{text-align:center;margin:16px 0}.fusion-btn{display:block;width:80%;margin:0 auto;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--gold),var(--accent));color:#1a1a2e;font-weight:900;font-size:16px;cursor:pointer;font-family:inherit;transition:all 0.2s}.fusion-btn:disabled{opacity:0.4}.fusion-btn:active{transform:scale(0.95)}.fusion-pick-list{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:12px;padding-bottom:20px}.fusion-pick-item{background:var(--card2);border:2px solid #333;border-radius:8px;padding:8px 4px;text-align:center;cursor:pointer;transition:all 0.15s}.fusion-pick-item:active{transform:scale(0.93)}.fusion-pick-item.selected{border-color:var(--gold);box-shadow:0 0 8px rgba(241,196,15,0.4)}.fusion-pick-item .item-icon{font-size:24px}.fusion-pick-item .item-name{font-size:9px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fusion-pick-item .item-stat{font-size:9px;color:var(--green)}.ip-btn.enhance{background:linear-gradient(135deg,var(--gold),var(--accent));color:#1a1a2e}.login-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px}.login-overlay h1{font-size:28px;color:var(--gold);text-shadow:0 0 20px rgba(255,200,0,0.5)}.login-overlay p{color:var(--dim);font-size:13px}.login-btn{background:#fff;color:#333;border:none;padding:14px 36px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:10px;font-family:inherit;box-shadow:0 4px 16px rgba(0,0,0,0.3)}.login-btn:hover{background:#f0f0f0}.login-btn img{width:22px;height:22px}.user-bar{display:flex;align-items:center;gap:8px;padding:4px 12px;background:var(--card);border-bottom:1px solid #2a2850;font-size:11px}.user-bar img{width:24px;height:24px;border-radius:50%}.user-bar .uname{color:var(--text);font-weight:700;flex:1}.user-bar .cp{color:var(--gold);font-weight:700;font-size:12px}.user-bar button{background:none;border:1px solid #555;color:#aaa;padding:2px 8px;border-radius:4px;font-size:10px;cursor:pointer;font-family:inherit}.rank-list{padding:8px}.rank-item{display:flex;align-items:center;gap:8px;padding:8px;background:var(--card2);border-radius:8px;margin-bottom:4px}.rank-item.me{border:2px solid var(--gold)}.rank-pos{width:28px;text-align:center;font-weight:900;font-size:16px}.rank-pos.gold{color:#ffd700}.rank-pos.silver{color:#c0c0c0}.rank-pos.bronze{color:#cd7f32}.rank-info{flex:1}.rank-name{font-size:12px;font-weight:700}.rank-cp{font-size:11px;color:var(--gold)}.rank-img{width:28px;height:28px;border-radius:50%}.admin-section{padding:12px}.admin-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}.admin-row label{font-size:12px;color:var(--dim);width:100px}.admin-row input{flex:1;background:var(--card2);border:1px solid #444;color:var(--text);padding:6px 10px;border-radius:6px;font-size:13px;font-family:inherit}.admin-row button{background:var(--accent);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:700;font-family:inherit}</style>
 <!-- Auth via Flask server -->
 <script>
   let currentUser = null;
@@ -314,7 +39,6 @@ body { background:var(--bg); color:var(--text); font-family:'Noto Sans KR',sans-
     <div id="nickError" style="color:#ff4444;font-size:12px;display:none;margin-top:10px;"></div>
   </div>
 </div>
-
 <div id="app" style="display:none;">
   <!-- USER BAR -->
   <div class="user-bar" id="userBar">
@@ -327,7 +51,6 @@ body { background:var(--bg); color:var(--text); font-family:'Noto Sans KR',sans-
     <div class="res dia">💎 <span id="diaDisplay">0</span></div>
     <div class="res ruby">❤️ Lv.<span id="levelDisplay">1</span></div>
   </div>
-
   <!-- BATTLE AREA -->
   <div class="battle-area" id="battleArea">
     <div class="stage-info">🏰 스테이지 <span id="stageDisplay">1-1</span></div>
@@ -347,10 +70,8 @@ body { background:var(--bg); color:var(--text); font-family:'Noto Sans KR',sans-
       <div class="exp-label"><span id="expLabel">EXP 0/10</span><span id="dpsLabel">DPS: 0</span></div>
     </div>
   </div>
-
   <!-- TAB CONTENT -->
   <div class="tab-content" id="tabContent"></div>
-
   <!-- TAB BAR -->
   <div class="tab-bar">
     <button class="tab-btn active" data-tab="lamp"><span class="tab-icon">🌸</span>뽑기</button>
@@ -361,7 +82,6 @@ body { background:var(--bg); color:var(--text); font-family:'Noto Sans KR',sans-
     <button class="tab-btn" data-tab="more"><span class="tab-icon">📋</span>더보기</button>
   </div>
 </div>
-
 <!-- PULL RESULT -->
 <div class="pull-result" id="pullResult" onclick="closePullResult()">
   <div class="pull-result-title" id="pullResultTitle">✨ 획득!</div>
@@ -369,12 +89,10 @@ body { background:var(--bg); color:var(--text); font-family:'Noto Sans KR',sans-
   <div class="pull-items" id="pullItems" onclick="event.stopPropagation()"></div>
   <div style="margin-top:12px;font-size:12px;color:var(--dim);">아무 곳이나 터치하여 닫기</div>
 </div>
-
 <!-- ITEM POPUP -->
 <div class="item-popup" id="itemPopup">
   <div class="item-popup-card" id="itemPopupCard"></div>
 </div>
-
 <script>
 const RARITIES = [
   { id:'common', name:'일반', color:'#888', weight:55, statMul:1 },
@@ -389,7 +107,6 @@ const RARITIES = [
   { id:'mythic_ssp', name:'신화 SS+', color:'#aa0000', weight:0, statMul:130 },
   { id:'mythic_sss', name:'신화 SSS', color:'#880000', weight:0, statMul:200 },
 ];
-
 const EQUIP_SLOTS = [
   { id:'weapon', name:'무기', icon:'⚔️', statType:'atk' },
   { id:'helmet', name:'투구', icon:'🪖', statType:'critDmg' },
@@ -398,7 +115,6 @@ const EQUIP_SLOTS = [
   { id:'ring', name:'반지', icon:'💍', statType:'crit' },
   { id:'necklace', name:'목걸이', icon:'📿', statType:'atk' },
 ];
-
 function getEquipSprite(slotId, rarityId, nameIdx) {
   const rarityBase = rarityId === 'mythic_sss' ? 'mythic_sss' : (rarityId.startsWith('mythic') ? 'mythic' : rarityId);
   const variant = (nameIdx != null ? nameIdx % 3 : Math.floor(Math.random()*3)) + 1;
@@ -421,7 +137,6 @@ function getEquipIcon(item, size) {
   if (item.sprite) return '<img src="'+item.sprite+'" style="width:'+s+'px;height:'+s+'px;object-fit:contain;border-radius:4px;">';
   return '<span style="font-size:'+(s-8)+'px;">'+item.icon+'</span>';
 }
-
 const WEAPON_NAMES = {
   common:['나무검','돌칼','녹슨검'], uncommon:['철검','강철검','장검'],
   rare:['미스릴검','룬검','마법검'], epic:['불꽃검','번개검','암흑검'],
@@ -453,7 +168,6 @@ const NECK_NAMES = {
   legendary:['다이아목걸이','용의목걸이','전설목걸이'], mythic:['신성목걸이','천상목걸이','창세목걸이']
 };
 const SLOT_NAMES = { weapon:WEAPON_NAMES, helmet:HELMET_NAMES, armor:ARMOR_NAMES, boots:BOOTS_NAMES, ring:RING_NAMES, necklace:NECK_NAMES };
-
 const MONSTERS = [
   { name:'아기 슬라임', sprite:'assets/monsters/slime_1.png', hpMul:1, atkMul:1, goldMul:1 },
   { name:'슬라임', sprite:'assets/monsters/slime_2.png', hpMul:1.1, atkMul:1, goldMul:1.1 },
@@ -470,14 +184,12 @@ const MONSTERS = [
   { name:'오크 대장', sprite:'assets/monsters/orc_5.png', hpMul:2.5, atkMul:2, goldMul:1.8 },
   { name:'데스 나이트', sprite:'assets/monsters/skeleton_6.png', hpMul:2.8, atkMul:2, goldMul:2 },
 ];
-
 const BOSSES = [
   { name:'👑 골든 킹 슬라임', sprite:'assets/monsters/slime_5.png', hpMul:8, atkMul:2.5, goldMul:8 },
   { name:'🐉 골든 드래곤', sprite:'assets/monsters/slime_6.png', hpMul:15, atkMul:4, goldMul:12 },
   { name:'💀 리치', sprite:'assets/monsters/skeleton_7.png', hpMul:12, atkMul:5, goldMul:10 },
   { name:'☠️ 죽음의 용', sprite:'assets/monsters/skeleton_8.png', hpMul:18, atkMul:5, goldMul:15 },
 ];
-
 const CLASSES = {
   knight: {
     id: 'knight', name: '기사', baseAtk: 10, baseHp: 100,
@@ -516,9 +228,7 @@ const CLASSES = {
     ]
   }
 };
-
 const STAGE_LABELS = ['견습', '정규', '정예', '전설', '신화'];
-
 function getClassStage(classId, level) {
   const cls = CLASSES[classId];
   let stageIdx = 0;
@@ -527,7 +237,6 @@ function getClassStage(classId, level) {
   }
   return stageIdx; // 0-indexed (stage 1-5 => 0-4)
 }
-
 function getClassInfo(classId, level) {
   const cls = CLASSES[classId];
   const stageIdx = getClassStage(classId, level);
@@ -540,7 +249,6 @@ function getClassInfo(classId, level) {
     cls: cls
   };
 }
-
 const charSprites = {};
 const effectSprites = {};
 let spritesLoaded = 0;
@@ -567,7 +275,6 @@ function onSpriteLoad() {
     effectSprites[key] = ei;
   }
 });
-
 const _imgCache = {};
 function preloadImg(src) {
   if (_imgCache[src]) return;
@@ -577,17 +284,14 @@ function preloadImg(src) {
 }
 MONSTERS.forEach(m => preloadImg(m.sprite));
 BOSSES.forEach(m => preloadImg(m.sprite));
-
 function drawCharacter(canvas, classId, stageNum) {
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-
   const img = charSprites[classId + '_' + stageNum];
   if (!img || !img.complete || !img.naturalWidth) {
     setTimeout(() => drawCharacter(canvas, classId, stageNum), 200);
     return;
   }
-
   const scale = Math.min(canvas.width / img.naturalWidth, canvas.height / img.naturalHeight) * 0.9;
   const w = img.naturalWidth * scale;
   const h = img.naturalHeight * scale;
@@ -596,32 +300,25 @@ function drawCharacter(canvas, classId, stageNum) {
   ctx.drawImage(img, x, y, w, h);
   ctx.clearRect(0, 0, canvas.width, 20);
 }
-
 let effectAnimId = null;
 function drawEffectSprite(classId, stage) {
   const canvas = document.getElementById('effectCanvas');
   if (!canvas) { console.warn('EFFECT: no canvas'); return; }
   const ctx = canvas.getContext('2d');
-
   const stageMap = {1:1, 2:2, 3:3, 4:4, 5:6};
   const effIdx = stageMap[stage] || stage;
   const img = effectSprites[classId + '_' + effIdx] || effectSprites[classId + '_' + stage] || effectSprites[classId + '_1'];
   if (!img || !img.complete || !img.naturalWidth) { console.warn('EFFECT: img not loaded', classId, stage, effIdx, img?.src); return; }
-
   if (effectAnimId) cancelAnimationFrame(effectAnimId);
-
   const startX = canvas.width * 0.18;
   const startY = classId === 'archer' ? canvas.height * 0.55 : classId === 'rogue' ? canvas.height * 0.48 : canvas.height * 0.4;
   const endX = canvas.width * 0.72;
   const endY = classId === 'archer' ? canvas.height * 0.5 : classId === 'rogue' ? canvas.height * 0.43 : canvas.height * 0.35;
   const size = classId === 'archer' ? 14 : classId === 'rogue' ? 50 : 80;
-
   const totalMs = 300;
   const totalFrames = Math.round(totalMs / 16);
-
   let t = 0;
   const effectSeed = Math.random() * Math.PI * 2;
-
   function drawFrame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     t += 1 / totalFrames;
@@ -630,14 +327,11 @@ function drawEffectSprite(classId, stage) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       return;
     }
-
     const travel = Math.min(t, 1);
     const eased = 1 - Math.pow(1 - travel, 3);
-
     const x = startX + (endX - startX) * eased;
     const yOffset = classId === 'archer' ? (Math.sin(t * 8 + effectSeed) * 12) : 0;
     const y = startY + (endY - startY) * eased + yOffset;
-
     let scale, alpha;
     if (t <= 1) {
       scale = 0.5 + eased * 0.5;
@@ -647,7 +341,6 @@ function drawEffectSprite(classId, stage) {
       scale = 1 + fade * 0.3;
       alpha = 1 - fade;
     }
-
     const s = size * scale;
     const iw = img.naturalWidth || 1;
     const ih = img.naturalHeight || 1;
@@ -657,12 +350,10 @@ function drawEffectSprite(classId, stage) {
     ctx.globalAlpha = Math.max(0, alpha);
     ctx.drawImage(img, x - dw/2, y - dh/2, dw, dh);
     ctx.globalAlpha = 1;
-
     effectAnimId = requestAnimationFrame(drawFrame);
   }
   effectAnimId = requestAnimationFrame(drawFrame);
 }
-
 const SKILLS = [
   { id:'power_strike', name:'파워 스트라이크', icon:'💥', desc:'공격력 +10%', maxLv:9999, costBase:50, costScale:1.08,
     effect:(lv) => ({ atkPct: lv * 0.10 }) },
@@ -675,7 +366,6 @@ const SKILLS = [
   { id:'speed_atk', name:'속공', icon:'⚡', desc:'공격 속도 +5%', maxLv:9999, costBase:120, costScale:1.08,
     effect:(lv) => ({ spdPct: lv * 0.05 }) },
 ];
-
 let G = {
   gold: 0, dia: 100,
   classLevels: { knight: 1, archer: 1, rogue: 1 },
@@ -699,7 +389,6 @@ let G = {
 let nextItemId = 1;
 let activeTab = 'lamp';
 let pullSubTab = 'equip'; // 'equip' or 'class'
-
 function getXpToNext(lv) { return Math.ceil(10 * Math.pow(1.25, lv - 1)); }
 function getLevel() { return G.classLevels[G.selectedClass] || 1; }
 function getXp() { return G.classXp[G.selectedClass] || 0; }
@@ -717,19 +406,16 @@ function getSellValue(item) {
   const ri = RARITIES.findIndex(r => r.id === item.rarityId);
   return Math.ceil((ri + 1) * 3 * item.statValue * 0.3);
 }
-
 function getPlayerStats() {
   const cls = CLASSES[G.selectedClass];
   const lv = getLevel();
   const info = getClassInfo(G.selectedClass, lv);
-
   let atk = (cls.baseAtk + (lv - 1) * cls.atkPerLv) * info.statMul;
   let hp = (cls.baseHp + (lv - 1) * cls.hpPerLv) * info.statMul;
   let crit = 0.05;
   let critDmg = 2.0;
   let goldBonus = 1;
   let spdBonus = 1;
-
   Object.values(G.equipment).forEach(item => {
     if (!item) return;
     const enhMul = 1 + (item.enhanceLevel || 0) * 0.1;
@@ -740,7 +426,6 @@ function getPlayerStats() {
     if (item.statType === 'critDmg') critDmg += val / 100;
     if (item.statType === 'spd') spdBonus += val / 100;
   });
-
   const stageBonus = [1, 1.5, 2, 3, 5][info.stage - 1] || 1;
   SKILLS.forEach(sk => {
     const lv = G.skillLevels[sk.id] || 0;
@@ -754,23 +439,18 @@ function getPlayerStats() {
       if (eff.spdPct) spdBonus += eff.spdPct * stageBonus;
     }
   });
-
   const lvDmgBonus = 1 + (lv - 1) * (ss('lvDmgPct',3) / 100);
   atk *= lvDmgBonus;
-
   const classCount = G.unlockedClasses.length;
   const classMulBonus = Math.pow(1.8, classCount - 1);
   atk *= classMulBonus;
-
   atk = Math.ceil(atk * ss('atkMul',1));
   return { atk, hp: Math.ceil(hp), crit: Math.min(crit, 0.80), critDmg: Math.max(critDmg, 1.5), goldBonus, spdBonus, classMulBonus };
 }
-
 function getEvolution() {
   const info = getClassInfo(G.selectedClass, getLevel());
   return { name: info.name, stage: info.stage };
 }
-
 function generateItem(lampLv) {
   const weights = RARITIES.map((r, i) => {
     if (r.weight === 0) return 0; // fusion-only rarities cannot appear in gacha
@@ -787,7 +467,6 @@ function generateItem(lampLv) {
     roll -= weights[i];
     if (roll <= 0) { rarity = RARITIES[i]; break; }
   }
-
   const slot = EQUIP_SLOTS[Math.floor(Math.random() * EQUIP_SLOTS.length)];
   const nameMap = SLOT_NAMES[slot.id];
   const rarityBase = rarity.id.startsWith('mythic') ? 'mythic' : rarity.id;
@@ -805,11 +484,9 @@ function generateItem(lampLv) {
   } else {
     baseStat = (5 + G.stage * 2) * rarity.statMul * (0.9 + Math.random() * 0.2);
   }
-
   const STAT_LABELS = { atk:'공격력', hp:'HP', crit:'치명타%', critDmg:'치명타피해%', spd:'공격속도%' };
   const MYTHIC_SUFFIX = { mythic_s:' S', mythic_sp:' S+', mythic_ss:' SS', mythic_ssp:' SS+', mythic_sss:' SSS' };
   const displayName = rarityNames[nameIdx] + (MYTHIC_SUFFIX[rarity.id] || '');
-
   return {
     id: nextItemId++,
     slot: slot.id,
@@ -825,24 +502,20 @@ function generateItem(lampLv) {
     enhanceLevel: 0,
   };
 }
-
 function spawnMonster() {
   const isBoss = G.subStage === 10;
   const stageIdx = ((G.stage - 1) % MONSTERS.length);
-
   let m;
   if (isBoss) {
     m = BOSSES[Math.floor(Math.random() * BOSSES.length)];
   } else {
     m = MONSTERS[stageIdx];
   }
-
   const baseHp = getMonsterHp(G.stage);
   const hp = Math.ceil(baseHp * m.hpMul);
   G.monster = { ...m, isBoss };
   G.monsterHp = hp;
   G.monsterMaxHp = hp;
-
   const monsterEl = document.getElementById('monsterSprite');
   monsterEl.src = m.sprite;
   monsterEl.style.width = isBoss ? '140px' : '80px';
@@ -850,12 +523,10 @@ function spawnMonster() {
   document.getElementById('monsterName').textContent = m.name;
   updateMonsterHp();
 }
-
 function updateMonsterHp() {
   const pct = Math.max(0, G.monsterHp / G.monsterMaxHp * 100);
   document.getElementById('monsterHpFill').style.width = pct + '%';
 }
-
 let _charEl, _msEl, _battleEl;
 function initDomRefs() {
   _charEl = document.getElementById('charCanvas');
@@ -867,7 +538,6 @@ if (document.readyState === 'loading') {
 } else {
   initDomRefs();
 }
-
 let _cachedStats = null;
 let _statsDirty = true;
 function markStatsDirty() { _statsDirty = true; _cachedStats = null; }
@@ -875,7 +545,6 @@ function getCachedStats() {
   if (_statsDirty || !_cachedStats) { _cachedStats = getPlayerStats(); _statsDirty = false; }
   return _cachedStats;
 }
-
 function attack() {
   if (!G.monster) return;
   if (!_battleEl) initDomRefs();
@@ -883,29 +552,23 @@ function attack() {
   let dmg = stats.atk;
   let isCrit = Math.random() < stats.crit;
   if (isCrit) dmg = Math.ceil(dmg * stats.critDmg);
-
   G.monsterHp -= dmg;
   showDamage(dmg, isCrit);
-
   if (!attack._lastFx || Date.now() - attack._lastFx > 200) {
     attack._lastFx = Date.now();
     drawEffectSprite(G.selectedClass, getEvolution().stage);
   }
-
   if (_msEl) { _msEl.classList.remove('hit'); requestAnimationFrame(() => _msEl.classList.add('hit')); }
-
   if (isCrit && _battleEl) {
     _battleEl.classList.remove('shake');
     requestAnimationFrame(() => _battleEl.classList.add('shake'));
   }
-
   if (G.monsterHp <= 0) {
     onMonsterKill();
   } else {
     updateMonsterHp();
   }
 }
-
 function onMonsterKill() {
   const stats = getPlayerStats();
   const baseGold = getMonsterGold(G.stage) * G.monster.goldMul;
@@ -915,10 +578,8 @@ function onMonsterKill() {
   const lvExpBonus = 1 + (getLevel() - 1) * (ss('lvExpPct',5) / 100);
   const gold = Math.ceil(baseGold * stats.goldBonus * classMul * lvGoldBonus * ss('goldMul',1));
   const xp = Math.ceil((5 + G.stage * 2) * classMul * lvExpBonus * ss('expMul',1));
-
   G.gold += gold;
   G.totalGold += gold;
-
   if (G.monster.isBoss) {
     let bonusDia = 5;
     const roll = Math.random() * 100;
@@ -930,16 +591,13 @@ function onMonsterKill() {
     G.dia += bonusDia;
     saveCloudGame();
   }
-
   G.classXp[G.selectedClass] = (G.classXp[G.selectedClass] || 0) + xp;
   G.kills++;
-
   while (G.classXp[G.selectedClass] >= getXpToNextForClass()) {
     G.classXp[G.selectedClass] -= getXpToNextForClass();
     G.classLevels[G.selectedClass] = (G.classLevels[G.selectedClass] || 1) + 1;
     showFloatText('⬆️ LEVEL UP!', '#2ec4b6');
   }
-
   G.subStage++;
   if (G.subStage > 10) {
     G.subStage = 1;
@@ -950,12 +608,10 @@ function onMonsterKill() {
   }
   G.classStages[G.selectedClass] = G.stage;
   G.classSubStages[G.selectedClass] = G.subStage;
-
   updateTopBar();
   spawnMonster();
   saveCloudGame();
 }
-
 let _dmgAccum = 0, _dmgCrit = false, _dmgTimer = null;
 function showDamage(dmg, crit) {
   if (!_battleEl) _battleEl = document.getElementById('battleArea');
@@ -976,7 +632,6 @@ function showDamage(dmg, crit) {
     _dmgTimer = null;
   }, 150);
 }
-
 function showFloatText(text, color) {
   const el = document.createElement('div');
   el.textContent = text;
@@ -992,24 +647,20 @@ function showFloatText(text, color) {
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 1200);
 }
-
 function doPullEquip(count) {
   const cost = getPullCost() * count;
   if (G.dia < cost) { showFloatText('💎 보석이 부족합니다!', '#e74c3c'); return; }
   G.dia -= cost;
-
   const items = [];
   for (let i = 0; i < count; i++) {
     const item = generateItem(G.lampLevel);
     items.push(item);
     G.inventory.push(item);
   }
-
   showPullResult(items, 'equip');
   updateAllUI();
   saveCloudGame();
 }
-
 function unlockClass(classId) {
   const cls = CLASSES[classId];
   if (!cls || G.unlockedClasses.includes(classId)) return;
@@ -1024,7 +675,6 @@ function unlockClass(classId) {
   updateAllUI();
   saveCloudGame();
 }
-
 function selectClass(classId) {
   if (!G.unlockedClasses.includes(classId)) return;
   G.classStages[G.selectedClass] = G.stage;
@@ -1038,11 +688,9 @@ function selectClass(classId) {
   updateAllUI();
   saveCloudGame();
 }
-
 function showPullResult(items, type) {
   const container = document.getElementById('pullItems');
   container.innerHTML = '';
-
   const rarityOrder = ['mythic_sss','mythic_ssp','mythic_ss','mythic_sp','mythic_s','mythic','legendary','epic','rare','uncommon','common'];
   let bestRarity = null;
   const countMap = {};
@@ -1058,21 +706,17 @@ function showPullResult(items, type) {
     summaryParts.unshift(`<span style="color:#ff4444;font-weight:900">${mc}×신화</span>`);
   }
   document.getElementById('pullSummary').innerHTML = summaryParts.length ? summaryParts.join(' · ') : '&nbsp;';
-
   const titleEl = document.getElementById('pullResultTitle');
   if(bestRarity && bestRarity.startsWith('mythic')) titleEl.style.color='#ff4444';
   else if(bestRarity==='legendary') titleEl.style.color='#ffaa00';
   else titleEl.style.color='var(--gold)';
-
   const isBig = items.length > 10;
   const cols = items.length===1?1:items.length<=3?3:isBig?10:5;
   container.style.gridTemplateColumns = `repeat(${cols},1fr)`;
   container.style.maxWidth = isBig?'100%':cols===1?'120px':cols===3?'220px':'360px';
   container.style.gap = isBig?'3px':'6px';
   container.classList.toggle('compact', isBig);
-
   const existingNames = new Set(G.inventory.map(i=>i.name).concat(Object.values(G.equipment).filter(Boolean).map(i=>i.name)));
-
   items.forEach((item, i) => {
     const el = document.createElement('div');
     el.className = `pull-item rarity-${item.rarityId}`;
@@ -1087,11 +731,9 @@ function showPullResult(items, type) {
   });
   document.getElementById('pullResult').classList.add('show');
 }
-
 function closePullResult() {
   document.getElementById('pullResult').classList.remove('show');
 }
-
 function equipItem(item) {
   if (G.equipment[item.slot]) {
     G.inventory.push(G.equipment[item.slot]);
@@ -1101,7 +743,6 @@ function equipItem(item) {
   updateAllUI();
   closeItemPopup();
 }
-
 function sellItem(item) {
   const value = getSellValue(item);
   G.gold += value;
@@ -1110,7 +751,6 @@ function sellItem(item) {
   updateAllUI();
   closeItemPopup();
 }
-
 function sellAllCommon() {
   const commons = G.inventory.filter(i => i.rarityId === 'common');
   let total = 0;
@@ -1120,7 +760,6 @@ function sellAllCommon() {
   G.inventory = G.inventory.filter(i => i.rarityId !== 'common');
   updateAllUI();
 }
-
 function getEffectiveStatValue(item) {
   const enhLv = item.enhanceLevel || 0;
   return item.statValue + Math.ceil(item.statValue * enhLv * 0.1);
@@ -1145,7 +784,6 @@ function equipBestAll() {
   renderTab('equip');
   saveCloudGame();
 }
-
 function showItemPopup(item) {
   if (!item) { renderTab(activeTab); return; }
   const card = document.getElementById('itemPopupCard');
@@ -1171,7 +809,6 @@ function showItemPopup(item) {
   `;
   document.getElementById('itemPopup').classList.add('show');
 }
-
 function closeItemPopup() { document.getElementById('itemPopup').classList.remove('show'); }
 function findItem(id) { return G.inventory.find(i => i.id === id) || Object.values(G.equipment).find(i => i && i.id === id); }
 function unequipItem(slot) {
@@ -1182,7 +819,6 @@ function unequipItem(slot) {
     closeItemPopup();
   }
 }
-
 function formatNum(n) {
   if (n < 1000) return Math.floor(n).toString();
   const units = ['K','M','B','T','Qa','Qi','Sx','Sp','Oc','No','Dc'];
@@ -1191,7 +827,6 @@ function formatNum(n) {
   while (v >= 1000 && tier < units.length) { v /= 1000; tier++; }
   return v.toFixed(1) + units[tier - 1];
 }
-
 function updateTopBar() {
   const stats = getPlayerStats();
   const evo = getEvolution();
@@ -1205,7 +840,6 @@ function updateTopBar() {
   document.getElementById('dpsLabel').textContent = `ATK ${formatNum(stats.atk)} | DPS ${formatNum(Math.ceil(stats.atk * stats.spdBonus * (1 + stats.crit)))}`;
   G.attackSpeed = Math.max(50, Math.ceil(1000 / stats.spdBonus));
 }
-
 function updateAllUI() {
   markStatsDirty();
   updateTopBar();
@@ -1215,13 +849,11 @@ function updateAllUI() {
   const charNameEl = document.getElementById('charName');
   charNameEl.textContent = evo.name;
   charNameEl.style.color = 'var(--blue)';
-
   if (activeTab !== 'admin' && activeTab !== 'ranking') {
     renderTab(activeTab);
   }
   updateCombatPower();
 }
-
 function renderTab(tab) {
   const el = document.getElementById('tabContent');
   if (tab === 'lamp') renderLamp(el);
@@ -1232,15 +864,12 @@ function renderTab(tab) {
   else if (tab === 'admin') renderAdmin(el);
   else if (tab === 'more') renderMore(el);
 }
-
 function switchPullTab(tab) {
   pullSubTab = tab;
   renderTab('lamp');
 }
-
 function renderLamp(el) {
   const isEquip = pullSubTab === 'equip';
-
   let content = '';
   if (isEquip) {
     const cost1 = getPullCost();
@@ -1249,113 +878,106 @@ function renderLamp(el) {
     content = `
       <div class="lamp-title">🌸 꽃도훈 장비 뽑기</div>
       <div class="lamp-visual">
-        <div class="lamp-emoji" onclick="doPullEquip(1)">🌸</div>
-        <div class="lamp-level">꽃도훈 Lv.${G.lampLevel} | 고급 장비 확률 UP!</div>
+      <div class="lamp-emoji" onclick="doPullEquip(1)">🌸</div>
+      <div class="lamp-level">꽃도훈 Lv.${G.lampLevel} | 고급 장비 확률 UP!</div>
       </div>
       <div class="lamp-buttons">
-        <button class="lamp-btn single" onclick="doPullEquip(1)" ${G.dia < cost1 ? 'disabled' : ''}>
-          1회 뽑기<span class="cost">💎 ${cost1}</span>
-        </button>
-        <button class="lamp-btn multi" onclick="doPullEquip(10)" ${G.dia < cost10 ? 'disabled' : ''}>
-          10회 뽑기<span class="cost">💎 ${cost10}</span>
-        </button>
-        <button class="lamp-btn multi" onclick="doPullEquip(100)" ${G.dia < cost1 * 100 ? 'disabled' : ''} style="background:linear-gradient(135deg,#ff6b35,#ff4444);margin-top:6px;">
-          💥 100회 뽑기<span class="cost">💎 ${cost1 * 100}</span>
-        </button>
+      <button class="lamp-btn single" onclick="doPullEquip(1)" ${G.dia < cost1 ? 'disabled' : ''}>
+      1회 뽑기<span class="cost">💎 ${cost1}</span>
+      </button>
+      <button class="lamp-btn multi" onclick="doPullEquip(10)" ${G.dia < cost10 ? 'disabled' : ''}>
+      10회 뽑기<span class="cost">💎 ${cost10}</span>
+      </button>
+      <button class="lamp-btn multi" onclick="doPullEquip(100)" ${G.dia < cost1 * 100 ? 'disabled' : ''} style="background:linear-gradient(135deg,#ff6b35,#ff4444);margin-top:6px;">
+      💥 100회 뽑기<span class="cost">💎 ${cost1 * 100}</span>
+      </button>
       </div>
       <div class="lamp-upgrade">
-        <button onclick="upgradeLamp()" ${G.gold < upgCost ? 'disabled' : ''}>
-          🔧 꽃도훈 강화 (💰 ${formatNum(upgCost)})
-        </button>
+      <button onclick="upgradeLamp()" ${G.gold < upgCost ? 'disabled' : ''}>
+      🔧 꽃도훈 강화 (💰 ${formatNum(upgCost)})
+      </button>
       </div>
       <div style="margin-top:16px; font-size:11px; color:var(--dim); text-align:center;">
-        ${RARITIES.filter(r => r.weight > 0).map(r => `<span style="color:${r.color}">${r.name}</span>`).join(' · ')}
-        <div style="margin-top:4px;font-size:10px;color:#666;">※ 신화 S 이상은 합성에서만 획득 가능</div>
+      ${RARITIES.filter(r => r.weight > 0).map(r => `<span style="color:${r.color}">${r.name}</span>`).join(' · ')}
+      <div style="margin-top:4px;font-size:10px;color:#666;">※ 신화 S 이상은 합성에서만 획득 가능</div>
       </div>
     `;
   } else {
     const classIds = ['knight', 'archer', 'rogue'];
     let classListHtml = '';
-
     classIds.forEach(cid => {
       const cls = CLASSES[cid];
       const isUnlocked = G.unlockedClasses.includes(cid);
       const isSelected = G.selectedClass === cid;
       const info = getClassInfo(cid, G.classLevels[cid] || 1);
-
       const canvasId = `classPreview_${cid}`;
-
       if (isUnlocked) {
-        classListHtml += `
-          <div style="display:flex;align-items:center;gap:10px;background:${isSelected ? 'rgba(255,137,6,0.15)' : 'var(--card2)'};border:2px solid ${isSelected ? 'var(--accent)' : '#444'};border-radius:10px;padding:10px;margin-bottom:8px;cursor:pointer;transition:all 0.15s;" onclick="selectClass('${cid}')">
-            <canvas id="${canvasId}" width="240" height="210" style="width:60px;height:52px;image-rendering:auto;" class="class-preview-canvas"></canvas>
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:14px;font-weight:700;color:var(--text);">${cls.name} <span style="font-size:11px;color:var(--blue);">[${info.stageLabel}]</span></div>
-              <div style="font-size:11px;color:var(--dim);margin-top:2px;">단계 ${info.stage}/5 — ${info.name}</div>
-              <div style="font-size:11px;color:var(--green);margin-top:2px;">ATK ${cls.baseAtk} | HP ${cls.baseHp} | 성장 ATK+${cls.atkPerLv}/Lv</div>
-            </div>
-            ${isSelected ? '<div style="font-size:11px;font-weight:700;color:var(--accent);white-space:nowrap;">사용 중</div>' : '<div style="font-size:11px;color:var(--dim);white-space:nowrap;">선택</div>'}
-          </div>
-        `;
+      classListHtml += `
+      <div style="display:flex;align-items:center;gap:10px;background:${isSelected ? 'rgba(255,137,6,0.15)' : 'var(--card2)'};border:2px solid ${isSelected ? 'var(--accent)' : '#444'};border-radius:10px;padding:10px;margin-bottom:8px;cursor:pointer;transition:all 0.15s;" onclick="selectClass('${cid}')">
+      <canvas id="${canvasId}" width="240" height="210" style="width:60px;height:52px;image-rendering:auto;" class="class-preview-canvas"></canvas>
+      <div style="flex:1;min-width:0;">
+      <div style="font-size:14px;font-weight:700;color:var(--text);">${cls.name} <span style="font-size:11px;color:var(--blue);">[${info.stageLabel}]</span></div>
+      <div style="font-size:11px;color:var(--dim);margin-top:2px;">단계 ${info.stage}/5 — ${info.name}</div>
+      <div style="font-size:11px;color:var(--green);margin-top:2px;">ATK ${cls.baseAtk} | HP ${cls.baseHp} | 성장 ATK+${cls.atkPerLv}/Lv</div>
+      </div>
+      ${isSelected ? '<div style="font-size:11px;font-weight:700;color:var(--accent);white-space:nowrap;">사용 중</div>' : '<div style="font-size:11px;color:var(--dim);white-space:nowrap;">선택</div>'}
+      </div>
+      `;
       } else {
-        classListHtml += `
-          <div style="display:flex;align-items:center;gap:10px;background:var(--card2);border:2px solid #333;border-radius:10px;padding:10px;margin-bottom:8px;opacity:0.7;">
-            <canvas id="${canvasId}" width="240" height="210" style="width:60px;height:52px;image-rendering:auto;" class="class-preview-canvas"></canvas>
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:14px;font-weight:700;color:#666;">🔒 ${cls.name}</div>
-              <div style="font-size:11px;color:var(--dim);margin-top:2px;">ATK ${cls.baseAtk} | HP ${cls.baseHp} | 성장 ATK+${cls.atkPerLv}/Lv</div>
-              ${cls.requires && !G.unlockedClasses.includes(cls.requires) ? `<div style="font-size:10px;color:#e74c3c;margin-top:2px;">⚠️ ${CLASSES[cls.requires].name} 해금 필요</div>` : ''}
-            </div>
-            <button onclick="event.stopPropagation();unlockClass('${cid}')" style="background:linear-gradient(135deg,var(--purple),#6c3ec1);color:#fff;border:none;padding:8px 14px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap;" ${(G.dia < cls.unlockCost || (cls.requires && !G.unlockedClasses.includes(cls.requires))) ? 'disabled' : ''}>
-              해금<br><span style="font-size:10px;">💎 ${cls.unlockCost}</span>
-            </button>
-          </div>
-        `;
+      classListHtml += `
+      <div style="display:flex;align-items:center;gap:10px;background:var(--card2);border:2px solid #333;border-radius:10px;padding:10px;margin-bottom:8px;opacity:0.7;">
+      <canvas id="${canvasId}" width="240" height="210" style="width:60px;height:52px;image-rendering:auto;" class="class-preview-canvas"></canvas>
+      <div style="flex:1;min-width:0;">
+      <div style="font-size:14px;font-weight:700;color:#666;">🔒 ${cls.name}</div>
+      <div style="font-size:11px;color:var(--dim);margin-top:2px;">ATK ${cls.baseAtk} | HP ${cls.baseHp} | 성장 ATK+${cls.atkPerLv}/Lv</div>
+      ${cls.requires && !G.unlockedClasses.includes(cls.requires) ? `<div style="font-size:10px;color:#e74c3c;margin-top:2px;">⚠️ ${CLASSES[cls.requires].name} 해금 필요</div>` : ''}
+      </div>
+      <button onclick="event.stopPropagation();unlockClass('${cid}')" style="background:linear-gradient(135deg,var(--purple),#6c3ec1);color:#fff;border:none;padding:8px 14px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap;" ${(G.dia < cls.unlockCost || (cls.requires && !G.unlockedClasses.includes(cls.requires))) ? 'disabled' : ''}>
+      해금<br><span style="font-size:10px;">💎 ${cls.unlockCost}</span>
+      </button>
+      </div>
+      `;
       }
     });
-
     content = `
       <div class="lamp-title">⚔️ 영웅 클래스</div>
       <div style="text-align:center;margin-bottom:14px;">
-        <canvas id="classMainPreview" width="240" height="210" style="width:100px;height:88px;image-rendering:auto;" class="class-preview-canvas"></canvas>
-        <div style="font-size:12px;color:var(--dim);margin-top:4px;">${getClassInfo(G.selectedClass, getLevel()).name} (${STAGE_LABELS[getClassStage(G.selectedClass, getLevel())]})</div>
+      <canvas id="classMainPreview" width="240" height="210" style="width:100px;height:88px;image-rendering:auto;" class="class-preview-canvas"></canvas>
+      <div style="font-size:12px;color:var(--dim);margin-top:4px;">${getClassInfo(G.selectedClass, getLevel()).name} (${STAGE_LABELS[getClassStage(G.selectedClass, getLevel())]})</div>
       </div>
       <div style="font-size:13px;font-weight:700;margin-bottom:8px;">🛡️ 클래스 선택 — 터치하여 선택</div>
       ${classListHtml}
       <div style="margin-top:10px;font-size:11px;color:var(--dim);text-align:center;">
-        레벨업으로 자동 진화: 견습(1) → 정규(20) → 정예(50) → 전설(100) → 신화(200)
+      레벨업으로 자동 진화: 견습(1) → 정규(20) → 정예(50) → 전설(100) → 신화(200)
       </div>
     `;
   }
-
   el.innerHTML = `
     <div class="lamp-section">
       <div class="sub-tabs">
-        <button class="sub-tab ${isEquip ? 'active' : ''}" onclick="switchPullTab('equip')">🪔 장비 뽑기</button>
-        <button class="sub-tab ${!isEquip ? 'active' : ''}" onclick="switchPullTab('class')">⚔️ 영웅 클래스</button>
+      <button class="sub-tab ${isEquip ? 'active' : ''}" onclick="switchPullTab('equip')">🪔 장비 뽑기</button>
+      <button class="sub-tab ${!isEquip ? 'active' : ''}" onclick="switchPullTab('class')">⚔️ 영웅 클래스</button>
       </div>
       ${content}
     </div>
   `;
-
   if (!isEquip) {
     requestAnimationFrame(() => {
       ['knight', 'archer', 'rogue'].forEach(cid => {
-        const cvs = document.getElementById(`classPreview_${cid}`);
-        if (cvs) {
-          const stg = getClassStage(cid, G.classLevels[cid] || 1) + 1;
-          drawCharacter(cvs, cid, stg);
-        }
+      const cvs = document.getElementById(`classPreview_${cid}`);
+      if (cvs) {
+      const stg = getClassStage(cid, G.classLevels[cid] || 1) + 1;
+      drawCharacter(cvs, cid, stg);
+      }
       });
       const mainCvs = document.getElementById('classMainPreview');
       if (mainCvs) {
-        const stg = getClassStage(G.selectedClass, getLevel()) + 1;
-        drawCharacter(mainCvs, G.selectedClass, stg);
+      const stg = getClassStage(G.selectedClass, getLevel()) + 1;
+      drawCharacter(mainCvs, G.selectedClass, stg);
       }
     });
   }
 }
-
 let equipSubTab = 'equip';
 function renderEquip(el) {
   const subTabs = `<div style="display:flex;gap:0;margin-bottom:12px;border-bottom:1px solid #333;">
@@ -1373,29 +995,27 @@ function renderEquip(el) {
       const eStr = eLv > 0 ? ` +${eLv}` : '';
       const eVal = Math.ceil(item.statValue * (1 + eLv * 0.1));
       return `<div class="equip-slot rarity-${item.rarityId}" onclick="showItemPopup(findItem(${item.id}))">
-        <div class="slot-icon">${getEquipIcon(item)}</div>
-        <div class="slot-info">
-          <div class="slot-label">${slot.name}</div>
-          <div class="slot-name" style="color:${item.color}">${itemName(item)}${eStr}</div>
-          <div class="slot-stat">${item.statLabel} +${eVal}</div>
-        </div>
+      <div class="slot-icon">${getEquipIcon(item)}</div>
+      <div class="slot-info">
+      <div class="slot-label">${slot.name}</div>
+      <div class="slot-name" style="color:${item.color}">${itemName(item)}${eStr}</div>
+      <div class="slot-stat">${item.statLabel} +${eVal}</div>
+      </div>
       </div>`;
     }
     return `<div class="equip-slot empty">
       <div class="slot-icon">${slot.icon}</div>
       <div class="slot-info">
-        <div class="slot-label">${slot.name}</div>
-        <div class="slot-name">비어있음</div>
+      <div class="slot-label">${slot.name}</div>
+      <div class="slot-name">비어있음</div>
       </div>
     </div>`;
   }).join('');
-
   const sorted = [...G.inventory].sort((a, b) => {
     const ai = RARITIES.findIndex(r => r.id === a.rarityId);
     const bi = RARITIES.findIndex(r => r.id === b.rarityId);
     return bi - ai;
   });
-
   let invHtml = sorted.map(item => {
     const eLv = item.enhanceLevel || 0;
     const eStr = eLv > 0 ? ` +${eLv}` : '';
@@ -1406,25 +1026,22 @@ function renderEquip(el) {
       <div class="item-stat">${item.statLabel} +${item.statValue}</div>
     </div>
   `;}).join('');
-
   const commonCount = G.inventory.filter(i => i.rarityId === 'common').length;
-
   el.innerHTML = subTabs + `
     <div class="equip-section">
       <div class="equip-title" style="display:flex;justify-content:space-between;align-items:center;">
-        ⚔️ 장착 장비
-        <button style="font-size:11px;background:var(--green);color:#fff;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700;" onclick="equipBestAll()">⚡ 최강 일괄장착</button>
+      ⚔️ 장착 장비
+      <button style="font-size:11px;background:var(--green);color:#fff;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700;" onclick="equipBestAll()">⚡ 최강 일괄장착</button>
       </div>
       <div class="equip-slots">${slotsHtml}</div>
       <div class="inv-title">
-        🎒 인벤토리 (${G.inventory.length})
-        ${commonCount > 0 ? `<button style="font-size:11px;background:var(--red);color:#fff;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:inherit;" onclick="sellAllCommon()">일반 전부 판매 (${commonCount}개)</button>` : ''}
+      🎒 인벤토리 (${G.inventory.length})
+      ${commonCount > 0 ? `<button style="font-size:11px;background:var(--red);color:#fff;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:inherit;" onclick="sellAllCommon()">일반 전부 판매 (${commonCount}개)</button>` : ''}
       </div>
       <div class="inv-grid">${invHtml || '<div style="grid-column:span 4;text-align:center;color:var(--dim);padding:20px;">인벤토리가 비어있습니다</div>'}</div>
     </div>
   `;
 }
-
 function renderSkills(el) {
   let html = '<div class="skills-section"><div style="font-size:14px;font-weight:700;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">⚡ 스킬 강화 <button style="font-size:11px;background:var(--purple);color:#fff;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:700;" onclick="upgradeAllSkills()">⚡ 일괄강화</button></div>';
   SKILLS.forEach(sk => {
@@ -1434,22 +1051,21 @@ function renderSkills(el) {
     const maxed = lv >= sk.maxLv || lv >= lvCap;
     html += `
       <div class="skill-slot">
-        <div class="sk-icon">${sk.icon}</div>
-        <div class="sk-info">
-          <div class="sk-name">${sk.name}</div>
-          <div class="sk-desc">${sk.desc}</div>
-          <div class="sk-lv">Lv.${lv}/${Math.min(sk.maxLv, lvCap)}</div>
-        </div>
-        <button onclick="upgradeSkill('${sk.id}')" ${maxed || G.gold < cost ? 'disabled' : ''}>
-          ${maxed ? 'MAX' : `강화\n💰${formatNum(cost)}`}
-        </button>
+      <div class="sk-icon">${sk.icon}</div>
+      <div class="sk-info">
+      <div class="sk-name">${sk.name}</div>
+      <div class="sk-desc">${sk.desc}</div>
+      <div class="sk-lv">Lv.${lv}/${Math.min(sk.maxLv, lvCap)}</div>
+      </div>
+      <button onclick="upgradeSkill('${sk.id}')" ${maxed || G.gold < cost ? 'disabled' : ''}>
+      ${maxed ? 'MAX' : `강화\n💰${formatNum(cost)}`}
+      </button>
       </div>
     `;
   });
   html += '</div>';
   el.innerHTML = html;
 }
-
 function renderMore(el) {
   const stats = getPlayerStats();
   const info = getClassInfo(G.selectedClass, getLevel());
@@ -1467,20 +1083,17 @@ function renderMore(el) {
       <div class="stat-row"><span class="label">누적 처치</span><span class="val">${G.kills}</span></div>
       <div class="stat-row"><span class="label">누적 골드</span><span class="val">${formatNum(G.totalGold)}</span></div>
       <div class="stat-row"><span class="label">최고 스테이지</span><span class="val">${G.maxStage}</span></div>
-
       <div style="font-size:16px;font-weight:700;margin:20px 0 12px;">⚙️ 설정</div>
       <button class="more-btn" onclick="changeNickname()" style="background:var(--card2);color:var(--text);border:1px solid var(--accent);padding:10px;border-radius:8px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px;">✏️ 닉네임 변경</button>
       <button class="more-btn" onclick="doLogout()" style="background:#555;color:#fff;border:none;padding:10px;border-radius:8px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px;">🚪 로그아웃</button>
       <button class="more-btn" onclick="doResetAccount()" style="background:#e74c3c;color:#fff;border:none;padding:10px;border-radius:8px;font-weight:700;cursor:pointer;width:100%;">🗑️ 계정 초기화 (처음부터 시작)</button>
-
       <div style="text-align:center;margin-top:24px;font-size:11px;color:var(--dim);">
-        ⚔️ 던전 클리커 v2.0<br>
-        자동 저장 활성화됨
+      ⚔️ 던전 클리커 v2.0<br>
+      자동 저장 활성화됨
       </div>
     </div>
   `;
 }
-
 function upgradeLamp() {
   const cost = getLampCost(G.lampLevel);
   if (G.gold < cost) return;
@@ -1490,7 +1103,6 @@ function upgradeLamp() {
   updateAllUI();
   saveCloudGame();
 }
-
 function upgradeSkill(id) {
   const sk = SKILLS.find(s => s.id === id);
   const lv = G.skillLevels[id] || 0;
@@ -1502,7 +1114,6 @@ function upgradeSkill(id) {
   updateAllUI();
   saveCloudGame();
 }
-
 function upgradeAllSkills() {
   let upgraded = 0;
   const lvCap = getLevel() + 50;
@@ -1512,10 +1123,10 @@ function upgradeAllSkills() {
       const lv = G.skillLevels[sk.id] || 0;
       const cost = Math.ceil(sk.costBase * Math.pow(sk.costScale, lv) * ss('skillCostMul',1));
       if (G.gold >= cost && lv < sk.maxLv && lv < lvCap) {
-        G.gold -= cost;
-        G.skillLevels[sk.id] = lv + 1;
-        upgraded++;
-        any = true;
+      G.gold -= cost;
+      G.skillLevels[sk.id] = lv + 1;
+      upgraded++;
+      any = true;
       }
     }
     if (!any) break;
@@ -1523,8 +1134,6 @@ function upgradeAllSkills() {
   if (upgraded > 0) showFloatText(`⚡ 스킬 ${upgraded}회 강화!`, '#7f5af0');
   updateAllUI();
 }
-
-
 async function doResetAccount() {
   if (!confirm('정말 계정을 초기화하시겠습니까?\n모든 진행 데이터가 삭제됩니다!')) return;
   if (!confirm('⚠️ 마지막 확인! 되돌릴 수 없습니다.\n정말 초기화?')) return;
@@ -1535,14 +1144,12 @@ async function doResetAccount() {
   updateAllUI();
   showFloatText('🗑️ 계정 초기화 완료!', '#e74c3c');
 }
-
 function getEnhanceCost(item) {
   const enhLv = item.enhanceLevel || 0;
   const ri = RARITIES.findIndex(r => r.id === item.rarityId);
   const rarityMul = [1, 3, 8, 20, 50, 150, 300, 500, 800, 1200, 2000][ri] || 1;
   return Math.ceil(100 * Math.pow(2, enhLv) * rarityMul);
 }
-
 function enhanceItem(itemId) {
   const item = findItem(itemId);
   if (!item) return;
@@ -1557,11 +1164,9 @@ function enhanceItem(itemId) {
   showItemPopup(item);
   saveCloudGame();
 }
-
 let fusionSlot1 = null; // item id
 let fusionSlot2 = null;
 let fusionPickingSlot = 0; // 0=none, 1=slot1, 2=slot2
-
 function fuseItems(item1Id, item2Id) {
   const item1 = G.inventory.find(i => i.id === item1Id);
   const item2 = G.inventory.find(i => i.id === item2Id);
@@ -1570,22 +1175,18 @@ function fuseItems(item1Id, item2Id) {
   const n1 = (item1.name||'').replace(/ S\+?$| SS\+?$| SSS$/,'');
   const n2 = (item2.name||'').replace(/ S\+?$| SS\+?$| SSS$/,'');
   if (n1 !== n2) { showFloatText('같은 이름의 장비만 합성 가능!', '#e74c3c'); return null; }
-
   const currentIdx = RARITIES.findIndex(r => r.id === item1.rarityId);
   if (currentIdx >= RARITIES.length - 1) return null;
-
   const nextRarity = RARITIES[currentIdx + 1];
   const fusionCost = Math.ceil(100 * Math.pow(currentIdx + 1, 2));
   if (G.gold < fusionCost) { showFloatText('💰 골드가 부족합니다!', '#e74c3c'); return null; }
   G.gold -= fusionCost;
-
   Object.keys(G.equipment).forEach(slot => {
     if (G.equipment[slot] && (G.equipment[slot].id === item1Id || G.equipment[slot].id === item2Id)) {
       G.equipment[slot] = null;
     }
   });
   G.inventory = G.inventory.filter(i => i.id !== item1Id && i.id !== item2Id);
-
   const slot = EQUIP_SLOTS.find(s => s.id === item1.slot);
   const nameMap = SLOT_NAMES[slot.id];
   const fusionRarityBase = nextRarity.id.startsWith('mythic') ? 'mythic' : nextRarity.id;
@@ -1603,11 +1204,9 @@ function fuseItems(item1Id, item2Id) {
   } else {
     baseStat = (5 + G.stage * 2) * nextRarity.statMul * (0.9 + Math.random() * 0.2);
   }
-
   const STAT_LABELS = { atk:'공격력', hp:'HP', crit:'치명타%', critDmg:'치명타피해%', spd:'공격속도%' };
   const MYTHIC_SUFFIX = { mythic_s:' S', mythic_sp:' S+', mythic_ss:' SS', mythic_ssp:' SS+', mythic_sss:' SSS' };
   const fusionDisplayName = fusionNames[nameIdx] + (MYTHIC_SUFFIX[nextRarity.id] || '');
-
   const newItem = {
     id: nextItemId++,
     slot: item1.slot,
@@ -1625,7 +1224,6 @@ function fuseItems(item1Id, item2Id) {
   G.inventory.push(newItem);
   return newItem;
 }
-
 function doFusion() {
   if (!fusionSlot1 || !fusionSlot2) return;
   const result = fuseItems(fusionSlot1, fusionSlot2);
@@ -1640,11 +1238,9 @@ function doFusion() {
     updateAllUI();
   }
 }
-
 function autoFuseAll() {
   let totalFused = 0;
   let keepGoing = true;
-
   while (keepGoing) {
     keepGoing = false;
     const groups = {};
@@ -1654,25 +1250,22 @@ function autoFuseAll() {
       if (!groups[key]) groups[key] = [];
       groups[key].push(item);
     });
-
     for (const key of Object.keys(groups)) {
       const items = groups[key];
       if (items.length >= 2) {
-        const ridx = RARITIES.findIndex(r => r.id === items[0].rarityId);
-        if (ridx >= RARITIES.length - 1) continue;
-        const cost = Math.ceil(100 * Math.pow(ridx + 1, 2));
-        if (G.gold < cost) continue;
-
-        const result = fuseItems(items[0].id, items[1].id);
-        if (result) {
-          totalFused++;
-          keepGoing = true; // Check again, new item might pair with another
-          break; // Restart loop since inventory changed
-        }
+      const ridx = RARITIES.findIndex(r => r.id === items[0].rarityId);
+      if (ridx >= RARITIES.length - 1) continue;
+      const cost = Math.ceil(100 * Math.pow(ridx + 1, 2));
+      if (G.gold < cost) continue;
+      const result = fuseItems(items[0].id, items[1].id);
+      if (result) {
+      totalFused++;
+      keepGoing = true; // Check again, new item might pair with another
+      break; // Restart loop since inventory changed
+      }
       }
     }
   }
-
   if (totalFused > 0) {
     showFloatText(`🔮 일괄 합성 ${totalFused}회 완료!`, '#7f5af0');
   } else {
@@ -1682,12 +1275,10 @@ function autoFuseAll() {
   fusionSlot2 = null;
   updateAllUI();
 }
-
 function selectFusionSlot(slotNum) {
   fusionPickingSlot = slotNum;
   renderTab('fusion');
 }
-
 function pickFusionItem(itemId) {
   if (fusionPickingSlot === 1) {
     fusionSlot1 = itemId;
@@ -1699,55 +1290,49 @@ function pickFusionItem(itemId) {
   fusionPickingSlot = 0;
   renderTab('fusion');
 }
-
 function clearFusionSlots() {
   fusionSlot1 = null;
   fusionSlot2 = null;
   fusionPickingSlot = 0;
   renderTab('fusion');
 }
-
 function renderShop(el) {
   el.innerHTML = `
     <div style="padding:12px;">
       <div style="font-size:16px;font-weight:900;margin-bottom:16px;text-align:center;">🏪 상점</div>
-
       <div style="background:linear-gradient(135deg,#1a1a3e,#2a1a4e);border:2px solid #cc0000;border-radius:12px;padding:16px;margin-bottom:12px;">
-        <div style="font-size:14px;font-weight:900;color:#ff4444;margin-bottom:4px;">🔥 신화 SS 풀세트 패키지</div>
-        <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">모든 부위(무기/투구/갑옷/신발/반지/목걸이) 신화 SS 장비 1개씩!</div>
-        <div style="display:flex;gap:4px;justify-content:center;margin-bottom:10px;">
-          ${EQUIP_SLOTS.map(s => '<span style="font-size:20px;">'+s.icon+'</span>').join('')}
-        </div>
-        <div style="text-align:center;">
-          <button onclick="buySSPackage()" style="background:linear-gradient(135deg,#cc0000,#ff4444);color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;font-family:inherit;" ${G.gold < 999000000 ? 'disabled' : ''}>
-            구매 💰 999M
-          </button>
-        </div>
+      <div style="font-size:14px;font-weight:900;color:#ff4444;margin-bottom:4px;">🔥 신화 SS 풀세트 패키지</div>
+      <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">모든 부위(무기/투구/갑옷/신발/반지/목걸이) 신화 SS 장비 1개씩!</div>
+      <div style="display:flex;gap:4px;justify-content:center;margin-bottom:10px;">
+      ${EQUIP_SLOTS.map(s => '<span style="font-size:20px;">'+s.icon+'</span>').join('')}
       </div>
-
+      <div style="text-align:center;">
+      <button onclick="buySSPackage()" style="background:linear-gradient(135deg,#cc0000,#ff4444);color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;font-family:inherit;" ${G.gold < 999000000 ? 'disabled' : ''}>
+      구매 💰 999M
+      </button>
+      </div>
+      </div>
       <div style="background:var(--card2);border:2px solid var(--gold);border-radius:12px;padding:16px;margin-bottom:12px;">
-        <div style="font-size:14px;font-weight:900;color:var(--gold);margin-bottom:4px;">💎 보석 패키지</div>
-        <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">보석 500개 즉시 지급</div>
-        <div style="text-align:center;">
-          <button onclick="buyGemPackage()" style="background:linear-gradient(135deg,#7f5af0,#6c3ec1);color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;font-family:inherit;" ${G.gold < 500000000 ? 'disabled' : ''}>
-            구매 💰 500M
-          </button>
-        </div>
+      <div style="font-size:14px;font-weight:900;color:var(--gold);margin-bottom:4px;">💎 보석 패키지</div>
+      <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">보석 500개 즉시 지급</div>
+      <div style="text-align:center;">
+      <button onclick="buyGemPackage()" style="background:linear-gradient(135deg,#7f5af0,#6c3ec1);color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;font-family:inherit;" ${G.gold < 500000000 ? 'disabled' : ''}>
+      구매 💰 500M
+      </button>
       </div>
-
+      </div>
       <div style="background:var(--card2);border:2px solid #2ec4b6;border-radius:12px;padding:16px;">
-        <div style="font-size:14px;font-weight:900;color:#2ec4b6;margin-bottom:4px;">⚡ 스킬 포인트 패키지</div>
-        <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">모든 스킬 +10 레벨</div>
-        <div style="text-align:center;">
-          <button onclick="buySkillPackage()" style="background:linear-gradient(135deg,#2ec4b6,#1a9e92);color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;font-family:inherit;" ${G.gold < 200000000 ? 'disabled' : ''}>
-            구매 💰 200M
-          </button>
-        </div>
+      <div style="font-size:14px;font-weight:900;color:#2ec4b6;margin-bottom:4px;">⚡ 스킬 포인트 패키지</div>
+      <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">모든 스킬 +10 레벨</div>
+      <div style="text-align:center;">
+      <button onclick="buySkillPackage()" style="background:linear-gradient(135deg,#2ec4b6,#1a9e92);color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;font-family:inherit;" ${G.gold < 200000000 ? 'disabled' : ''}>
+      구매 💰 200M
+      </button>
+      </div>
       </div>
     </div>
   `;
 }
-
 function buySSPackage() {
   if (G.gold < 999000000) { showFloatText('💰 골드가 부족합니다!', '#e74c3c'); return; }
   if (!confirm('999M 골드로 신화 SS 풀세트를 구매하시겠습니까?')) return;
@@ -1776,7 +1361,6 @@ function buySSPackage() {
   updateAllUI();
   saveCloudGame();
 }
-
 function buyGemPackage() {
   if (G.gold < 500000000) { showFloatText('💰 골드가 부족합니다!', '#e74c3c'); return; }
   if (!confirm('500M 골드로 보석 500개를 구매하시겠습니까?')) return;
@@ -1786,7 +1370,6 @@ function buyGemPackage() {
   updateAllUI();
   saveCloudGame();
 }
-
 function buySkillPackage() {
   if (G.gold < 200000000) { showFloatText('💰 골드가 부족합니다!', '#e74c3c'); return; }
   if (!confirm('200M 골드로 스킬 +10을 구매하시겠습니까?')) return;
@@ -1796,20 +1379,16 @@ function buySkillPackage() {
   updateAllUI();
   saveCloudGame();
 }
-
 function renderFusion(el, headerHtml) {
   const item1 = fusionSlot1 ? G.inventory.find(i => i.id === fusionSlot1) : null;
   const item2 = fusionSlot2 ? G.inventory.find(i => i.id === fusionSlot2) : null;
-
   if (fusionSlot1 && !item1) fusionSlot1 = null;
   if (fusionSlot2 && !item2) fusionSlot2 = null;
-
   const canFuse = item1 && item2 && item1.rarityId === item2.rarityId && item1.slot === item2.slot;
   const currentIdx = item1 ? RARITIES.findIndex(r => r.id === item1.rarityId) : -1;
   const isMaxRarity = currentIdx >= RARITIES.length - 1;
   const fusionCost = canFuse ? Math.ceil(100 * Math.pow(currentIdx + 1, 2)) : 0;
   const nextRarity = canFuse && !isMaxRarity ? RARITIES[currentIdx + 1] : null;
-
   let slot1Html = item1 ?
     `<div class="fusion-slot filled rarity-${item1.rarityId}" onclick="selectFusionSlot(1)">
       <div class="fs-icon">${item1.icon}</div>
@@ -1817,7 +1396,6 @@ function renderFusion(el, headerHtml) {
       <div class="fs-rarity" style="color:${item1.color}">${item1.rarity}</div>
     </div>` :
     `<div class="fusion-slot" onclick="selectFusionSlot(1)"><div class="fs-empty">선택</div></div>`;
-
   let slot2Html = item2 ?
     `<div class="fusion-slot filled rarity-${item2.rarityId}" onclick="selectFusionSlot(2)">
       <div class="fs-icon">${item2.icon}</div>
@@ -1825,7 +1403,6 @@ function renderFusion(el, headerHtml) {
       <div class="fs-rarity" style="color:${item2.color}">${item2.rarity}</div>
     </div>` :
     `<div class="fusion-slot" onclick="selectFusionSlot(2)"><div class="fs-empty">선택</div></div>`;
-
   let resultHtml = '';
   if (canFuse && nextRarity) {
     resultHtml = `<div class="fusion-result">
@@ -1839,74 +1416,65 @@ function renderFusion(el, headerHtml) {
   } else if (item1 && item2) {
     resultHtml = `<div class="fusion-result"><div style="color:var(--red);font-size:13px;">같은 등급, 같은 부위의 장비 2개가 필요합니다</div></div>`;
   }
-
   let pickListHtml = '';
   if (fusionPickingSlot > 0) {
     const otherItem = fusionPickingSlot === 1 ? item2 : item1;
     let candidates = [...G.inventory];
-
     if (otherItem) {
       candidates = candidates.filter(i => i.rarityId === otherItem.rarityId && i.slot === otherItem.slot && i.id !== otherItem.id);
     }
-
     candidates.sort((a, b) => {
       const ai = RARITIES.findIndex(r => r.id === a.rarityId);
       const bi = RARITIES.findIndex(r => r.id === b.rarityId);
       return bi - ai;
     });
-
     candidates = candidates.filter(i => {
       const ri = RARITIES.findIndex(r => r.id === i.rarityId);
       return ri < RARITIES.length - 1;
     });
-
     if (candidates.length > 0) {
       pickListHtml = `<div style="font-size:13px;font-weight:700;margin:12px 0 8px;">🎒 장비 선택 (슬롯 ${fusionPickingSlot})</div>
       <div class="fusion-pick-list">
-        ${candidates.map(item => `
-          <div class="fusion-pick-item rarity-${item.rarityId}" onclick="pickFusionItem(${item.id})">
-            <div class="item-icon">${getEquipIcon(item)}</div>
-            <div class="item-name" style="color:${item.color}">${itemName(item)}</div>
-            <div class="item-stat" style="color:${item.color}">${item.rarity}</div>
-          </div>
-        `).join('')}
+      ${candidates.map(item => `
+      <div class="fusion-pick-item rarity-${item.rarityId}" onclick="pickFusionItem(${item.id})">
+      <div class="item-icon">${getEquipIcon(item)}</div>
+      <div class="item-name" style="color:${item.color}">${itemName(item)}</div>
+      <div class="item-stat" style="color:${item.color}">${item.rarity}</div>
+      </div>
+      `).join('')}
       </div>`;
     } else {
       pickListHtml = `<div style="text-align:center;color:var(--dim);padding:20px;font-size:13px;">합성 가능한 장비가 없습니다</div>`;
     }
   }
-
   el.innerHTML = (headerHtml || '') + `
     <div class="fusion-section">
       <div class="fusion-title">🔮 장비 합성</div>
       <div style="text-align:center;font-size:11px;color:var(--dim);margin-bottom:8px;">같은 등급 + 같은 부위 = 상위 등급 장비!</div>
       <div style="text-align:center;margin-bottom:12px;">
-        <button onclick="autoFuseAll()" style="background:linear-gradient(135deg,#7f5af0,#6c3ec1);color:#fff;border:none;padding:10px 24px;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">🔮 일괄 합성</button>
+      <button onclick="autoFuseAll()" style="background:linear-gradient(135deg,#7f5af0,#6c3ec1);color:#fff;border:none;padding:10px 24px;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">🔮 일괄 합성</button>
       </div>
       <div class="fusion-slots">
-        ${slot1Html}
-        <div class="fusion-plus">+</div>
-        ${slot2Html}
+      ${slot1Html}
+      <div class="fusion-plus">+</div>
+      ${slot2Html}
       </div>
       ${resultHtml}
       ${(fusionSlot1 || fusionSlot2) ? `<div style="text-align:center;margin-top:8px;"><button style="background:none;border:1px solid var(--dim);color:var(--dim);padding:6px 16px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:11px;" onclick="clearFusionSlots()">초기화</button></div>` : ''}
       ${pickListHtml}
       <div style="margin-top:16px;font-size:11px;color:var(--dim);text-align:center;">
-        등급: ${RARITIES.map(r => `<span style="color:${r.color}">${r.name}</span>`).join(' → ')}
+      등급: ${RARITIES.map(r => `<span style="color:${r.color}">${r.name}</span>`).join(' → ')}
       </div>
     </div>
   `;
 }
-
 function getSaveKey() {
   return currentUser ? 'idle_save_' + currentUser.uid : 'idle_save_guest';
 }
-
 function saveGame() {
   const data = { ...G, monster: null, lastSave: Date.now() };
   localStorage.setItem(getSaveKey(), JSON.stringify(data));
 }
-
 function loadGame() {
   try {
     if (!localStorage.getItem('_reset_done_v3')) {
@@ -1917,22 +1485,16 @@ function loadGame() {
     const raw = localStorage.getItem(getSaveKey());
     if (!raw) return;
     const data = JSON.parse(raw);
-
     delete data.ownedHeroes; delete data.selectedHeroId; delete data.companions; delete data.charLampLevel;
-
     Object.assign(G, data);
     G.monster = null;
-
     if (!G.unlockedClasses) G.unlockedClasses = ['knight'];
     if (!G.selectedClass || !CLASSES[G.selectedClass]) G.selectedClass = 'knight';
-
     if (!G.classLevels) G.classLevels = { knight: 1, archer: 1, rogue: 1 };
     if (!G.classXp) G.classXp = { knight: 0, archer: 0, rogue: 0 };
     if (!G.classStages) { G.classStages = { knight: G.stage||1, archer: 1, rogue: 1 }; G.classSubStages = { knight: G.subStage||1, archer: 1, rogue: 1 }; G.classMaxStages = { knight: G.maxStage||1, archer: 1, rogue: 1 }; }
-
     const allItems = [...G.inventory, ...Object.values(G.equipment).filter(Boolean)];
     if (allItems.length > 0) nextItemId = Math.max(...allItems.map(i => i.id)) + 1;
-
     const offlineMs = Date.now() - (data.lastSave || Date.now());
     const offlineSec = Math.min(offlineMs / 1000, 8 * 3600);
     if (offlineSec > 60) {
@@ -1940,15 +1502,14 @@ function loadGame() {
       const dps = stats.atk * stats.spdBonus;
       const offlineGold = Math.ceil(dps * offlineSec * 0.3 * getMonsterGold(G.stage) / getMonsterHp(G.stage));
       if (offlineGold > 0) {
-        G.gold += offlineGold;
-        G.totalGold += offlineGold;
-        const min = Math.floor(offlineSec / 60);
-        setTimeout(() => alert(`⏰ ${min}분 동안 방치 보상!\n💰 ${formatNum(offlineGold)} 골드 획득!`), 500);
+      G.gold += offlineGold;
+      G.totalGold += offlineGold;
+      const min = Math.floor(offlineSec / 60);
+      setTimeout(() => alert(`⏰ ${min}분 동안 방치 보상!\n💰 ${formatNum(offlineGold)} 골드 획득!`), 500);
       }
     }
   } catch(e) { console.warn('Load failed', e); }
 }
-
 document.querySelector('.tab-bar').addEventListener('click', (e) => {
   const btn = e.target.closest('.tab-btn');
   if (!btn) return;
@@ -1957,28 +1518,22 @@ document.querySelector('.tab-bar').addEventListener('click', (e) => {
   activeTab = btn.dataset.tab;
   renderTab(activeTab);
 });
-
 let lastTick = Date.now();
 function gameLoop() {
   const now = Date.now();
   const dt = now - lastTick;
-
   G.attackTimer += dt;
   if (G.attackTimer >= G.attackSpeed) {
     G.attackTimer -= G.attackSpeed;
     attack();
   }
-
   lastTick = now;
   requestAnimationFrame(gameLoop);
 }
-
 let userUid = localStorage.getItem('userUid') || '';
-
 function authHeaders() {
   return { 'X-User-Id': userUid || localStorage.getItem('userUid') || '' };
 }
-
 async function onGoogleLogin(response) {
   const errEl = document.getElementById('nickError');
   errEl.textContent = '로그인 중...'; errEl.style.display = ''; errEl.style.color = '#4fc3f7';
@@ -2007,7 +1562,6 @@ function authFetch(url, opts = {}, timeout = 10000) {
   opts.signal = ctrl.signal;
   return fetch(url, opts);
 }
-
 async function doRegister() {
   const nick = document.getElementById('nickInput').value.trim();
   const errEl = document.getElementById('nickError');
@@ -2035,12 +1589,10 @@ async function doRegister() {
     errEl.style.color = '#ff4444';
   }
 }
-
 document.addEventListener('DOMContentLoaded', () => {
   const inp = document.getElementById('nickInput');
   if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') doRegister(); });
 });
-
 async function changeNickname() {
   const newNick = prompt('새 닉네임 입력 (2~12자):');
   if (!newNick || newNick.trim().length < 2) return;
@@ -2070,7 +1622,6 @@ async function changeNickname() {
     showFloatText('✅ 닉네임 변경: ' + data.nickname, '#4CAF50');
   } catch(e) { alert('변경 실패: ' + e.message); }
 }
-
 async function checkAuth() {
   // uid가 있으면 로컬 데이터로 즉시 시작 (서버 기다리지 않음!)
   if (userUid) {
@@ -2078,7 +1629,6 @@ async function checkAuth() {
     const savedAdmin = localStorage.getItem('isAdmin') === 'true';
     currentUser = { uid: userUid, name: savedNick, is_admin: savedAdmin };
     isAdmin = savedAdmin;
-
     document.getElementById('loginOverlay').style.display = 'none';
     document.getElementById('app').style.display = '';
     document.getElementById('userName').textContent = savedNick;
@@ -2089,23 +1639,19 @@ async function checkAuth() {
       btn.innerHTML = '<span class="tab-icon">🔧</span>관리자';
       document.querySelector('.tab-bar').appendChild(btn);
     }
-
     loadGame();
     initDomRefs();
     spawnMonster();
     updateAllUI();
     if (!window._gameLoopStarted) { window._gameLoopStarted = true; gameLoop(); }
-
     syncWithServer();
     return;
   }
-
   document.getElementById('loginOverlay').style.display = '';
   document.getElementById('loginStatus').style.display = 'none';
   document.getElementById('registerForm').style.display = '';
 }
 checkAuth();
-
 async function syncWithServer() {
   try {
     const res = await fetch('/api/auto-login', {
@@ -2116,10 +1662,10 @@ async function syncWithServer() {
     if (!data.ok) {
       const nick = localStorage.getItem('userNick') || '모험가';
       try {
-        await fetch('/api/register', {
-          method: 'POST', headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ nickname: nick })
-        });
+      await fetch('/api/register', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ nickname: nick })
+      });
       } catch(e) {}
       return;
     }
@@ -2130,35 +1676,32 @@ async function syncWithServer() {
       isAdmin = data.is_admin;
       document.getElementById('userName').textContent = data.nickname;
       if (isAdmin && !document.querySelector('[data-tab="admin"]')) {
-        const btn = document.createElement('button');
-        btn.className = 'tab-btn';
-        btn.dataset.tab = 'admin';
-        btn.innerHTML = '<span class="tab-icon">🔧</span>관리자';
-        document.querySelector('.tab-bar').appendChild(btn);
+      const btn = document.createElement('button');
+      btn.className = 'tab-btn';
+      btn.dataset.tab = 'admin';
+      btn.innerHTML = '<span class="tab-icon">🔧</span>관리자';
+      document.querySelector('.tab-bar').appendChild(btn);
       }
-
       const loadRes = await authFetch('/api/load');
       const loadData = await loadRes.json();
       if (loadData && loadData.gameState) {
-        const saved = typeof loadData.gameState === 'string' ? JSON.parse(loadData.gameState) : loadData.gameState;
-        if (saved && Object.keys(saved).length > 2) {
-          const cloudStage = Math.max(...Object.values(saved.classMaxStages || {knight:1}));
-          const localStage = Math.max(...Object.values(G.classMaxStages || {knight:1}));
-          if (cloudStage > localStage || (cloudStage === localStage && (saved.gold||0) > G.gold)) {
-            for (const key of Object.keys(saved)) G[key] = saved[key];
-            G.monster = null;
-            spawnMonster();
-            updateAllUI();
-          }
-        }
+      const saved = typeof loadData.gameState === 'string' ? JSON.parse(loadData.gameState) : loadData.gameState;
+      if (saved && Object.keys(saved).length > 2) {
+      const cloudStage = Math.max(...Object.values(saved.classMaxStages || {knight:1}));
+      const localStage = Math.max(...Object.values(G.classMaxStages || {knight:1}));
+      if (cloudStage > localStage || (cloudStage === localStage && (saved.gold||0) > G.gold)) {
+      for (const key of Object.keys(saved)) G[key] = saved[key];
+      G.monster = null;
+      spawnMonster();
+      updateAllUI();
       }
-
+      }
+      }
       await loadServerSettings();
     }
   } catch(e) {
   }
 }
-
 function resetGameState() {
   G.gold = 0; G.dia = 100;
   G.classLevels = { knight: 1, archer: 1, rogue: 1 };
@@ -2178,7 +1721,6 @@ function resetGameState() {
   G.lastSave = Date.now();
   nextItemId = 1;
 }
-
 function showAnnouncement(msg) {
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
@@ -2193,8 +1735,6 @@ function showAnnouncement(msg) {
   overlay.onclick = () => overlay.remove();
   document.body.appendChild(overlay);
 }
-
-
 let _lastSaveTime = 0;
 let _savePending = false;
 function saveCloudGame() {
@@ -2220,18 +1760,17 @@ async function _doCloudSave() {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
-        gameState: G,
-        combatPower: cp, level: getLevel(), stage: Math.max(...Object.values(G.classMaxStages || {1:1})),
-        knightStage: (G.classMaxStages||{}).knight || 0,
-        archerStage: (G.classMaxStages||{}).archer || 0,
-        rogueStage: (G.classMaxStages||{}).rogue || 0,
-        className: info.name, classStage: info.stageLabel
+      gameState: G,
+      combatPower: cp, level: getLevel(), stage: Math.max(...Object.values(G.classMaxStages || {1:1})),
+      knightStage: (G.classMaxStages||{}).knight || 0,
+      archerStage: (G.classMaxStages||{}).archer || 0,
+      rogueStage: (G.classMaxStages||{}).rogue || 0,
+      className: info.name, classStage: info.stageLabel
       })
     });
   } catch(e) {
   }
 }
-
 function getCombatPower() {
   let equipAtk = 0, equipCrit = 0, equipCritDmg = 0, equipSpd = 0;
   Object.values(G.equipment).forEach(item => {
@@ -2252,17 +1791,14 @@ function getCombatPower() {
   );
   return cp;
 }
-
 function updateCombatPower() {
   const cp = getCombatPower();
   const el = document.getElementById('combatPower');
   if (el) el.textContent = formatNum(cp);
 }
-
 let rankTab = 'power';
 let _rankCache = JSON.parse(localStorage.getItem('rankCache') || 'null');
 let _rankLoading = false;
-
 async function renderRanking(el, forceRefresh = false) {
   if (_rankCache && !forceRefresh) {
     _renderRankHTML(el, _rankCache);
@@ -2273,7 +1809,6 @@ async function renderRanking(el, forceRefresh = false) {
   }
   _fetchRankings(el);
 }
-
 async function _fetchRankings(el) {
   if (_rankLoading) return;
   _rankLoading = true;
@@ -2289,17 +1824,14 @@ async function _fetchRankings(el) {
   }
   _rankLoading = false;
 }
-
 setInterval(() => {
   _fetchRankings(activeTab === 'ranking' ? document.getElementById('tabContent') : null);
 }, 10000);
-
 function _renderRankHTML(el, allRanks) {
     if (!allRanks.length) {
       el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--dim);">아직 랭킹 데이터가 없습니다</div>';
       return;
     }
-
     const rankTabs = [
       { id:'power', label:'⚔️ 전투력', color:'var(--gold)' },
       { id:'knight', label:'🗡️ 기사', color:'#7f8c8d' },
@@ -2309,7 +1841,6 @@ function _renderRankHTML(el, allRanks) {
     const tabs = `<div style="display:flex;gap:0;margin-bottom:12px;border-bottom:1px solid #333;flex-wrap:wrap;">
       ${rankTabs.map(t => `<button onclick="rankTab='${t.id}';renderRanking(document.getElementById('tabContent'))" style="flex:1;padding:6px 4px;border:none;border-bottom:2px solid ${rankTab===t.id?t.color:'transparent'};background:none;color:${rankTab===t.id?t.color:'var(--dim)'};font-weight:700;font-size:10px;cursor:pointer;font-family:inherit;min-width:0;">${t.label}</button>`).join('')}
     </div>`;
-
     let ranks, sortKey, titleText, valueLabel;
     if (rankTab === 'knight') {
       sortKey = 'knight_stage'; titleText = '🗡️ 기사 스테이지 랭킹'; valueLabel = '🗡️';
@@ -2323,7 +1854,6 @@ function _renderRankHTML(el, allRanks) {
       sortKey = 'combat_power'; titleText = '⚔️ 전투력 랭킹'; valueLabel = '⚔️';
     }
     ranks = [...allRanks].sort((a, b) => (b[sortKey]||0) - (a[sortKey]||0));
-
     let html = tabs + `<div class="rank-list"><div style="font-size:16px;font-weight:900;margin-bottom:12px;text-align:center;">${titleText} TOP 50</div>`;
     ranks.slice(0, 50).forEach((r, i) => {
       const isMe = currentUser && r.uid === currentUser.uid;
@@ -2331,20 +1861,19 @@ function _renderRankHTML(el, allRanks) {
       const val = r[sortKey] || 0;
       const valueText = sortKey === 'combat_power' ? `${valueLabel} ${formatNum(val)}` : `${valueLabel} ${val}`;
       html += `
-        <div class="rank-item ${isMe ? 'me' : ''}">
-          <div class="rank-pos ${i<3?['gold','silver','bronze'][i]:''}">${medal}</div>
-          <div class="rank-info">
-            <div class="rank-name">${r.name||'?'} ${isMe ? '(나)' : ''}</div>
-            <div style="font-size:10px;color:var(--dim);">Lv.${r.level||1} ${r.class_name||''} ${r.class_stage||''}</div>
-          </div>
-          <div class="rank-cp">${valueText}</div>
-        </div>`;
+      <div class="rank-item ${isMe ? 'me' : ''}">
+      <div class="rank-pos ${i<3?['gold','silver','bronze'][i]:''}">${medal}</div>
+      <div class="rank-info">
+      <div class="rank-name">${r.name||'?'} ${isMe ? '(나)' : ''}</div>
+      <div style="font-size:10px;color:var(--dim);">Lv.${r.level||1} ${r.class_name||''} ${r.class_stage||''}</div>
+      </div>
+      <div class="rank-cp">${valueText}</div>
+      </div>`;
     });
     html += '</div>';
     html += `<button onclick="this.textContent='갱신 중...';_fetchRankings(document.getElementById('tabContent'))" style="display:block;margin:12px auto;padding:8px 24px;background:var(--card2);color:var(--accent);border:1px solid var(--accent);border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">🔄 랭킹 새로고침</button>`;
     el.innerHTML = html;
 }
-
 async function applyServerSetting(key, val) {
   if (!isAdmin) return;
   serverSettings[key] = val;
@@ -2355,7 +1884,6 @@ async function applyServerSetting(key, val) {
   });
   showFloatText('✅ 서버 전체 적용: ' + key + ' = ' + val, '#4CAF50');
 }
-
 async function loadServerSettings() {
   try { serverSettings = JSON.parse(localStorage.getItem('serverSettings') || '{}'); } catch(e) {}
   try { userSettings = JSON.parse(localStorage.getItem('userSettings') || '{}'); } catch(e) {}
@@ -2372,28 +1900,22 @@ function ss(key, def) {
   if (userSettings[key] !== undefined && userSettings[key] !== 1) return userSettings[key] * (serverSettings[key] !== undefined ? serverSettings[key] : def);
   return serverSettings[key] !== undefined ? serverSettings[key] : def;
 }
-
 let adminSubTab = 'personal';
 function switchAdminTab(tab) {
   adminSubTab = tab;
   renderAdmin(document.getElementById('tabContent'));
 }
-
 async function renderAdmin(el) {
   if (!isAdmin) { el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--dim);">접근 권한 없음</div>'; return; }
-
   const tabs = [
     { id:'personal', label:'🎮 내 설정', color:'#4fc3f7' },
     { id:'server', label:'🌐 서버 전체', color:'#ff6b6b' },
     { id:'users', label:'👥 유저 관리', color:'#81c784' },
   ];
-
   const tabHtml = tabs.map(t =>
     `<button onclick="switchAdminTab('${t.id}')" style="flex:1;padding:8px 0;border:none;border-bottom:2px solid ${adminSubTab===t.id ? t.color : 'transparent'};background:none;color:${adminSubTab===t.id ? t.color : 'var(--dim)'};font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;">${t.label}</button>`
   ).join('');
-
   let content = '';
-
   if (adminSubTab === 'personal') {
     content = `
       <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--gold);">💰 재화 조절</div>
@@ -2401,39 +1923,33 @@ async function renderAdmin(el) {
       <div class="admin-row"><label>💎 보석 추가</label><input type="text" id="adminDia" value="100"><button onclick="G.dia+=Number(document.getElementById('adminDia').value);updateAllUI();saveCloudGame()">추가</button></div>
       <div class="admin-row"><label>스테이지 이동</label><input type="text" id="adminStage" value="${G.stage}"><button onclick="G.stage=Number(document.getElementById('adminStage').value);G.subStage=1;spawnMonster();updateAllUI();saveCloudGame()">이동</button></div>
       <div class="admin-row"><label>레벨 설정</label><input type="text" id="adminLevel" value="${getLevel()}"><button onclick="G.classLevels[G.selectedClass]=Number(document.getElementById('adminLevel').value);G.classXp[G.selectedClass]=0;updateAllUI();saveCloudGame()">적용</button></div>
-
       <div style="font-size:13px;font-weight:700;margin:16px 0 8px;color:#4fc3f7;">📊 내 개인 배율</div>
       <div style="font-size:10px;color:var(--dim);margin-bottom:8px;">※ 서버 배율에 추가로 곱해집니다 (1 = 기본)</div>
       <div class="admin-row"><label>EXP 배율</label><input type="text" id="myExpMul" value="${userSettings.expMul||1}"><button onclick="saveMyUserSetting('expMul',Number(document.getElementById('myExpMul').value))">적용</button></div>
       <div class="admin-row"><label>골드 배율</label><input type="text" id="myGoldMul" value="${userSettings.goldMul||1}"><button onclick="saveMyUserSetting('goldMul',Number(document.getElementById('myGoldMul').value))">적용</button></div>
       <div class="admin-row"><label>공격력 배율</label><input type="text" id="myAtkMul" value="${userSettings.atkMul||1}"><button onclick="saveMyUserSetting('atkMul',Number(document.getElementById('myAtkMul').value))">적용</button></div>
-
       <div style="margin-top:16px;padding-top:12px;border-top:1px solid #333;">
-        <button style="background:#ff4444;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit;width:100%;" onclick="resetGame()">🗑️ 게임 완전 초기화 (로컬+클라우드)</button>
+      <button style="background:#ff4444;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit;width:100%;" onclick="resetGame()">🗑️ 게임 완전 초기화 (로컬+클라우드)</button>
       </div>
     `;
   } else if (adminSubTab === 'server') {
     content = `
       <div style="font-size:11px;color:#ff6b6b;margin-bottom:12px;">⚠️ 아래 설정은 모든 유저에게 실시간 적용됩니다</div>
-
       <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:#4CAF50;">🎁 서버 전체 지급</div>
       <div style="font-size:10px;color:var(--dim);margin-bottom:8px;">※ 모든 유저에게 보류 보상으로 지급됩니다</div>
       <div class="admin-row"><label>📢 공지 문구</label><input type="text" id="serverGiveMsg" placeholder="지급 사유 입력..." value="" style="flex:2"></div>
       <div class="admin-row"><label>💰 골드</label><input type="text" id="serverGiveGold" value="10000"><button onclick="giveToAllUsers('gold',Number(document.getElementById('serverGiveGold').value))">전체 지급</button></div>
       <div class="admin-row"><label>💎 보석</label><input type="text" id="serverGiveDia" value="100"><button onclick="giveToAllUsers('dia',Number(document.getElementById('serverGiveDia').value))">전체 지급</button></div>
-
       <div style="font-size:13px;font-weight:700;margin:16px 0 8px;color:var(--gold);">📊 배율 설정</div>
       <div class="admin-row"><label>EXP 배율</label><input type="text" id="adminExpMul" value="${serverSettings.expMul||1}"><button onclick="applyServerSetting('expMul',Number(document.getElementById('adminExpMul').value))">서버 적용</button></div>
       <div class="admin-row"><label>골드 배율</label><input type="text" id="adminGoldMul" value="${serverSettings.goldMul||1}"><button onclick="applyServerSetting('goldMul',Number(document.getElementById('adminGoldMul').value))">서버 적용</button></div>
       <div class="admin-row"><label>공격력 배율</label><input type="text" id="adminAtkMul" value="${serverSettings.atkMul||1}"><button onclick="applyServerSetting('atkMul',Number(document.getElementById('adminAtkMul').value))">서버 적용</button></div>
       <div class="admin-row"><label>스킬 비용 배율</label><input type="text" id="adminSkillCost" value="${serverSettings.skillCostMul||1}"><button onclick="applyServerSetting('skillCostMul',Number(document.getElementById('adminSkillCost').value))">서버 적용</button></div>
       <div class="admin-row"><label>뽑기 비용 배율</label><input type="text" id="adminPullCost" value="${serverSettings.pullCostMul||1}"><button onclick="applyServerSetting('pullCostMul',Number(document.getElementById('adminPullCost').value))">서버 적용</button></div>
-
       <div style="font-size:13px;font-weight:700;margin:16px 0 8px;color:#e57373;">👾 몬스터 설정</div>
       <div class="admin-row"><label>기본 체력</label><input type="text" id="adminMonBase" value="${serverSettings.monHpBase||15}"><button onclick="applyServerSetting('monHpBase',Number(document.getElementById('adminMonBase').value))">서버 적용</button></div>
       <div class="admin-row"><label>체력 성장률</label><input type="text" id="adminMonGrowth" value="${serverSettings.monHpGrowth||1.25}"><button onclick="applyServerSetting('monHpGrowth',Number(document.getElementById('adminMonGrowth').value))">서버 적용</button></div>
       <div class="admin-row"><label>스테이지 스케일</label><input type="text" id="adminMonScale" value="${serverSettings.monHpStageScale||0.5}"><button onclick="applyServerSetting('monHpStageScale',Number(document.getElementById('adminMonScale').value))">서버 적용</button></div>
-
       <div style="font-size:13px;font-weight:700;margin:16px 0 8px;color:#4fc3f7;">📈 레벨 비례 성장 (레벨당 %)</div>
       <div class="admin-row"><label>레벨당 데미지%</label><input type="text" id="adminLvDmg" value="${serverSettings.lvDmgPct||3}"><button onclick="applyServerSetting('lvDmgPct',Number(document.getElementById('adminLvDmg').value))">서버 적용</button></div>
       <div class="admin-row"><label>레벨당 EXP%</label><input type="text" id="adminLvExp" value="${serverSettings.lvExpPct||5}"><button onclick="applyServerSetting('lvExpPct',Number(document.getElementById('adminLvExp').value))">서버 적용</button></div>
@@ -2442,13 +1958,12 @@ async function renderAdmin(el) {
   } else if (adminSubTab === 'users') {
     content = `
       <div class="admin-row">
-        <button style="background:#4CAF50;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-weight:700;cursor:pointer;font-family:inherit;width:100%;" onclick="loadUserList()">유저 목록 새로고침</button>
+      <button style="background:#4CAF50;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-weight:700;cursor:pointer;font-family:inherit;width:100%;" onclick="loadUserList()">유저 목록 새로고침</button>
       </div>
       <div class="admin-row" style="margin-top:8px;">
-        <input type="text" id="adminUserSearch" placeholder="닉네임/이메일 검색..." style="flex:2" oninput="filterUserList()">
+      <input type="text" id="adminUserSearch" placeholder="닉네임/이메일 검색..." style="flex:2" oninput="filterUserList()">
       </div>
       <div id="adminUserList" style="max-height:250px;overflow-y:auto;margin-top:8px;"></div>
-
       <div style="font-size:13px;font-weight:700;margin:16px 0 8px;color:#ffb74d;">🎁 개별 유저 지급/설정</div>
       <div class="admin-row"><label>대상 UID</label><input type="text" id="targetUid" placeholder="위에서 선택" style="flex:2"></div>
       <div id="targetUserInfo" style="font-size:11px;color:var(--dim);margin-bottom:8px;"></div>
@@ -2459,7 +1974,6 @@ async function renderAdmin(el) {
       <div class="admin-row"><label>공격력 배율</label><input type="text" id="targetAtkMul" value="1"><button onclick="setUserSetting('atkMul',Number(document.getElementById('targetAtkMul').value))">적용</button></div>
     `;
   }
-
   el.innerHTML = `
     <div class="admin-section">
       <div style="font-size:16px;font-weight:900;margin-bottom:12px;color:#ff4444;">🔧 관리자 패널</div>
@@ -2468,7 +1982,6 @@ async function renderAdmin(el) {
     </div>
   `;
 }
-
 let allUsers = [];
 async function loadUserList() {
   const listEl = document.getElementById('adminUserList');
@@ -2482,13 +1995,11 @@ async function loadUserList() {
     renderUserList(allUsers);
   } catch(e) { if (!allUsers.length && listEl) listEl.innerHTML = '<div style="color:#ff4444;">로드 실패</div>'; }
 }
-
 setInterval(() => {
   if (isAdmin && adminSubTab === 'users' && activeTab === 'admin') {
     loadUserList();
   }
 }, 10000);
-
 function filterUserList() {
   const q = (document.getElementById('adminUserSearch').value || '').toLowerCase();
   const filtered = allUsers.filter(u =>
@@ -2496,7 +2007,6 @@ function filterUserList() {
   );
   renderUserList(filtered);
 }
-
 function renderUserList(users) {
   const el = document.getElementById('adminUserList');
   if (!users.length) { el.innerHTML = '<div style="color:var(--dim);text-align:center;padding:8px;">유저 없음</div>'; return; }
@@ -2504,21 +2014,19 @@ function renderUserList(users) {
     <div onclick="selectUser('${u.uid}','${(u.name||'').replace(/'/g,'')}','${(u.email||'').replace(/'/g,'')}')"
       style="padding:8px 10px;margin:4px 0;background:#1a1a2e;border-radius:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border:1px solid #333;font-size:12px;">
       <div>
-        <div style="font-weight:700;color:var(--text);">${u.name || '이름없음'}</div>
-        <div style="color:var(--dim);font-size:10px;">${u.email || u.uid}</div>
+      <div style="font-weight:700;color:var(--text);">${u.name || '이름없음'}</div>
+      <div style="color:var(--dim);font-size:10px;">${u.email || u.uid}</div>
       </div>
       <div style="text-align:right;">
-        <div style="color:var(--gold);font-size:11px;">⚔️ ${formatNum(u.combatPower || 0)}</div>
+      <div style="color:var(--gold);font-size:11px;">⚔️ ${formatNum(u.combatPower || 0)}</div>
       </div>
     </div>
   `).join('');
 }
-
 function selectUser(uid, name, email) {
   document.getElementById('targetUid').value = uid;
   document.getElementById('targetUserInfo').textContent = '선택: ' + name + ' (' + email + ')';
 }
-
 async function giveToAllUsers(field, amount) {
   const msg = document.getElementById('serverGiveMsg')?.value || '';
   if (!confirm(`모든 유저에게 ${field} +${formatNum(amount)} 지급하시겠습니까?`)) return;
@@ -2543,7 +2051,6 @@ async function giveToAllUsers(field, amount) {
   }
   showFloatText(`📤 ${users.length}명에게 지급 요청 전송!`, '#4CAF50');
 }
-
 async function giveToUser(field, amount) {
   const uid = document.getElementById('targetUid').value;
   if (!uid) { alert('대상 UID를 선택하세요'); return; }
@@ -2554,7 +2061,6 @@ async function giveToUser(field, amount) {
     body: JSON.stringify({ uid, field, amount })
   }, 30000).catch(() => {});
 }
-
 async function setUserSetting(key, val) {
   const uid = document.getElementById('targetUid').value;
   if (!uid) { alert('대상 UID를 선택하세요'); return; }
@@ -2566,7 +2072,6 @@ async function setUserSetting(key, val) {
     showFloatText('✅ ' + key + ' = ' + val + ' 적용!', '#4CAF50');
   } catch(e) { alert('설정 실패: ' + e.message); }
 }
-
 async function saveMyUserSetting(key, val) {
   if (!currentUser) return;
   userSettings[key] = val;
@@ -2576,7 +2081,6 @@ async function saveMyUserSetting(key, val) {
   });
   showFloatText('✅ 내 ' + key + ' = ' + val + ' 적용!', '#4fc3f7');
 }
-
 async function resetGame() {
   if (!confirm('정말 게임을 완전 초기화 하시겠습니까?\n로컬 + 클라우드 데이터 모두 삭제됩니다!')) return;
   if (!confirm('되돌릴 수 없습니다. 정말로?')) return;
@@ -2586,8 +2090,6 @@ async function resetGame() {
     location.reload();
   } catch(e) { alert('초기화 실패: ' + e.message); }
 }
-
-
 async function syncGame() {
   if (!currentUser) return;
   try {
@@ -2595,12 +2097,12 @@ async function syncGame() {
     const res = await authFetch('/api/sync', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({
-        gameState: G,
-        combatPower: getCombatPower(), level: getLevel(), stage: G.classStages ? G.classStages[G.selectedClass] || 1 : G.stage,
-        knightStage: G.classStages ? G.classStages.knight || 0 : 0,
-        archerStage: G.classStages ? G.classStages.archer || 0 : 0,
-        rogueStage: G.classStages ? G.classStages.rogue || 0 : 0,
-        className: info.name, classStage: info.stageLabel
+      gameState: G,
+      combatPower: getCombatPower(), level: getLevel(), stage: G.classStages ? G.classStages[G.selectedClass] || 1 : G.stage,
+      knightStage: G.classStages ? G.classStages.knight || 0 : 0,
+      archerStage: G.classStages ? G.classStages.archer || 0 : 0,
+      rogueStage: G.classStages ? G.classStages.rogue || 0 : 0,
+      className: info.name, classStage: info.stageLabel
       })
     });
     const data = await res.json();
@@ -2615,7 +2117,6 @@ async function syncGame() {
     saveGame(); // local backup
   } catch(e) { console.warn('Sync failed:', e); }
 }
-
 setInterval(syncGame, 5000);
 window.addEventListener('beforeunload', () => {
   saveGame();
@@ -2634,7 +2135,6 @@ window.addEventListener('beforeunload', () => {
     navigator.sendBeacon('/api/save-beacon?uid=' + userUid, new Blob([body], {type:'application/json'}));
   }
 });
-
 </script>
 </body>
 </html>
