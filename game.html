@@ -1751,6 +1751,12 @@ function initDomRefs() {
   _msEl = document.getElementById('monsterSprite');
   _battleEl = document.getElementById('battleArea');
 }
+// Auto-init when DOM ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initDomRefs);
+} else {
+  initDomRefs();
+}
 
 // Cache stats - recalc only when equipment/skills change
 let _cachedStats = null;
@@ -1763,6 +1769,7 @@ function getCachedStats() {
 
 function attack() {
   if (!G.monster) return;
+  if (!_battleEl) initDomRefs();
   const stats = getCachedStats();
   let dmg = stats.atk;
   let isCrit = Math.random() < stats.crit;
@@ -1843,6 +1850,8 @@ function onMonsterKill() {
 const _dmgPool = [];
 const _DMG_POOL_SIZE = 8;
 function showDamage(dmg, crit) {
+  if (!_battleEl) _battleEl = document.getElementById('battleArea');
+  if (!_battleEl) return;
   let el;
   if (_dmgPool.length >= _DMG_POOL_SIZE) {
     el = _dmgPool.shift();
