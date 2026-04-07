@@ -2468,6 +2468,10 @@ function fuseItems(item1Id, item2Id) {
   const item2 = G.inventory.find(i => i.id === item2Id);
   if (!item1 || !item2) return null;
   if (item1.rarityId !== item2.rarityId || item1.slot !== item2.slot) return null;
+  // 같은 이름만 합성 가능 (등급 접미사 제거 후 비교)
+  const n1 = (item1.name||'').replace(/ S\+?$| SS\+?$| SSS$/,'');
+  const n2 = (item2.name||'').replace(/ S\+?$| SS\+?$| SSS$/,'');
+  if (n1 !== n2) { showFloatText('같은 이름의 장비만 합성 가능!', '#e74c3c'); return null; }
 
   const currentIdx = RARITIES.findIndex(r => r.id === item1.rarityId);
   if (currentIdx >= RARITIES.length - 1) return null;
@@ -2546,10 +2550,11 @@ function autoFuseAll() {
 
   while (keepGoing) {
     keepGoing = false;
-    // Group inventory by slot + rarity
+    // Group inventory by slot + rarity + name (same name only)
     const groups = {};
     G.inventory.forEach(item => {
-      const key = item.slot + '_' + item.rarityId;
+      const baseName = (item.name || '').replace(/ S\+?$| SS\+?$| SSS$/,'');
+      const key = item.slot + '_' + item.rarityId + '_' + baseName;
       if (!groups[key]) groups[key] = [];
       groups[key].push(item);
     });
@@ -3092,29 +3097,33 @@ function showAnnouncement(msg) {
 }
 
 async function loadCloudSave() {
-  resetGameState();
+  // 1. 로컬 세이브 먼저 로드 (안전장치)
+  loadGame();
   try {
     const res = await authFetch('/api/load');
     const data = await res.json();
-    if (data && data.gameState && Object.keys(data.gameState).length > 0) {
+    if (data && data.gameState) {
       const saved = typeof data.gameState === 'string' ? JSON.parse(data.gameState) : data.gameState;
-      if (Object.keys(saved).length > 0) {
+      if (saved && Object.keys(saved).length > 2) {
+        // 클라우드 데이터가 충분히 있으면 덮어쓰기
         console.log('☁️ Cloud data keys:', Object.keys(saved));
+        resetGameState();
         for (const key of Object.keys(saved)) {
           G[key] = saved[key];
         }
+        G.monster = null;
+        // 클래스별 스테이지 마이그레이션
+        if (!G.classStages) {
+          G.classStages = { knight: G.stage||1, archer: 1, rogue: 1 };
+          G.classSubStages = { knight: G.subStage||1, archer: 1, rogue: 1 };
+          G.classMaxStages = { knight: G.maxStage||1, archer: 1, rogue: 1 };
+        }
+        console.log('☁️ Cloud save loaded! stage:', G.stage, 'gold:', G.gold);
+      } else {
+        console.log('☁️ Cloud data too small, using local save');
       }
-      G.monster = null;
-      // 클래스별 스테이지 마이그레이션
-      if (!G.classStages) {
-        G.classStages = { knight: G.stage||1, archer: 1, rogue: 1 };
-        G.classSubStages = { knight: G.subStage||1, archer: 1, rogue: 1 };
-        G.classMaxStages = { knight: G.maxStage||1, archer: 1, rogue: 1 };
-      }
-      console.log('☁️ Cloud save loaded! stage:', G.stage, 'gold:', G.gold);
     } else {
-      loadGame();
-      console.log('☁️ No cloud save, fresh start');
+      console.log('☁️ No cloud save, using local save');
     }
   } catch(e) {
     console.warn('☁️ Cloud load failed:', e);
