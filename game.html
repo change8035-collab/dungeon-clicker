@@ -2808,16 +2808,25 @@ function selectUser(uid, name, email) {
 
 async function giveToAllUsers(field, amount) {
   const msg = document.getElementById('serverGiveMsg')?.value || '';
-  if (!confirm(`모든 유저에게 ${field} +${formatNum(amount)} 지급하시겠습니까?${msg ? '\n공지: '+msg : ''}`)) return;
-  // 자기 자신은 즉시 반영
+  if (!confirm(`모든 유저에게 ${field} +${formatNum(amount)} 지급하시겠습니까?`)) return;
+  // 자기 자신 즉시 반영
   G[field] = (G[field] || 0) + amount;
   updateTopBar();
-  showFloatText(`✅ ${field} +${formatNum(amount)} 전체 지급 요청!`, '#4CAF50');
-  // 서버에 비동기 요청 (실패해도 무시)
-  authFetch('/api/admin/give-all', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ field, amount, message: msg })
-  }, 60000).catch(() => {});
+  showFloatText(`⏳ 전체 지급 중...`, '#f1c40f');
+  // 유저 목록 가져와서 하나씩 지급
+  try {
+    const res = await authFetch('/api/admin/users', {}, 15000);
+    const data = await res.json();
+    const users = data.users || [];
+    let ok = 0;
+    for (const u of users) {
+      authFetch('/api/admin/give-one', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ uid: u.uid, field, amount })
+      }, 15000).then(() => { ok++; if(ok===users.length) showFloatText(`✅ ${ok}명 지급 완료!`, '#4CAF50'); }).catch(() => {});
+    }
+    showFloatText(`✅ ${users.length}명에게 지급 요청!`, '#4CAF50');
+  } catch(e) { showFloatText('⚠️ 유저 목록 로드 실패', '#ff4444'); }
 }
 
 async function giveToUser(field, amount) {
