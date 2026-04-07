@@ -590,14 +590,7 @@ function preloadImg(src) {
 MONSTERS.forEach(m => preloadImg(m.sprite));
 BOSSES.forEach(m => preloadImg(m.sprite));
 
-// Preload ALL equipment images
-const EQUIP_SLOTS_IDS = ['weapon','helmet','armor','boots','ring','necklace'];
-const EQUIP_RARITIES = ['common','uncommon','rare','epic','legendary','mythic','mythic_sss'];
-EQUIP_SLOTS_IDS.forEach(slot => {
-  EQUIP_RARITIES.forEach(r => {
-    for (let v = 1; v <= 3; v++) preloadImg('assets/equip/' + slot + '_' + r + '_' + v + '.png');
-  });
-});
+// Equipment images: lazy load (only when needed, not 126 at startup)
 
 function drawCharacter(canvas, classId, stageNum) {
   const ctx = canvas.getContext('2d');
@@ -899,100 +892,7 @@ function updateMonsterHp() {
 }
 
 // ==================== SKILL EFFECTS ====================
-let effectParticles = [];
-let effectAnimFrame = null;
-
-// Knight: slash effects
-
-function startEffectAnim(ctx, particles) {
-  effectParticles = particles;
-  if (effectAnimFrame) cancelAnimationFrame(effectAnimFrame);
-  animateEffect(ctx);
-}
-
-function animateEffect(ctx) {
-  const canvas = ctx.canvas;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  let alive = false;
-  effectParticles.forEach(p => {
-    if (p.life <= 0) return;
-    alive = true;
-    p.life--;
-    p.x += (p.vx || 0);
-    p.y += (p.vy || 0);
-    if (p.gravity) p.vy += p.gravity;
-    if (p.rotSpeed) p.rot += p.rotSpeed;
-
-    const alpha = Math.min(1, p.life / (p.maxLife * 0.3));
-    ctx.globalAlpha = alpha;
-
-    if (p.type === 'flash') {
-      const scale = 1 - (p.life / p.maxLife) * 0.5;
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size * scale, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (p.type === 'arrow') {
-      ctx.save();
-      ctx.translate(p.x, p.y);
-      ctx.rotate(p.angle || 0);
-      ctx.fillStyle = p.color;
-      // Arrow shaft
-      ctx.fillRect(-8, -1, 16, 2);
-      // Arrow head
-      ctx.beginPath();
-      ctx.moveTo(8, -3); ctx.lineTo(12, 0); ctx.lineTo(8, 3);
-      ctx.fill();
-      ctx.restore();
-    } else if (p.type === 'crystal') {
-      ctx.save();
-      ctx.translate(p.x, p.y);
-      ctx.rotate(p.rot || 0);
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.moveTo(0, -p.size);
-      ctx.lineTo(p.size * 0.6, 0);
-      ctx.lineTo(0, p.size);
-      ctx.lineTo(-p.size * 0.6, 0);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-    } else if (p.type === 'sparkle') {
-      ctx.fillStyle = p.color;
-      const s = p.size * (0.5 + Math.sin(p.life * 0.5) * 0.5);
-      ctx.fillRect(p.x - s/2, p.y - 0.5, s, 1);
-      ctx.fillRect(p.x - 0.5, p.y - s/2, 1, s);
-    } else if (p.type === 'core') {
-      const scale = 0.8 + Math.sin(p.life * 0.3) * 0.2;
-      ctx.fillStyle = p.color;
-      ctx.globalAlpha = alpha * 0.7;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size * scale, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = alpha;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size * scale * 0.5, 0, Math.PI * 2);
-      ctx.fillStyle = '#FFF';
-      ctx.fill();
-    } else {
-      // Default: circle particle
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size * (p.life / p.maxLife), 0, Math.PI * 2);
-      ctx.fill();
-    }
-  });
-
-  ctx.globalAlpha = 1;
-
-  if (alive) {
-    effectAnimFrame = requestAnimationFrame(() => animateEffect(ctx));
-  } else {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    effectAnimFrame = null;
-  }
-}
+// (removed unused particle system - using sprite effects instead)
 
 // ==================== COMBAT ====================
 // Cache DOM refs once
