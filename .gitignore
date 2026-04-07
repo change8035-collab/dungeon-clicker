@@ -43,3 +43,5 @@ yarn-error.*
 # Python
 __pycache__/
 *.pyc
+node_modules/
+package-lock.json
