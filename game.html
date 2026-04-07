@@ -902,7 +902,6 @@ function updateMonsterHp() {
 let effectParticles = [];
 let effectAnimFrame = null;
 
-
 // Knight: slash effects
 
 function startEffectAnim(ctx, particles) {
@@ -1631,7 +1630,6 @@ function renderMore(el) {
       <div class="stat-row"><span class="label">누적 골드</span><span class="val">${formatNum(G.totalGold)}</span></div>
       <div class="stat-row"><span class="label">최고 스테이지</span><span class="val">${G.maxStage}</span></div>
 
-
       <div style="font-size:16px;font-weight:700;margin:20px 0 12px;">⚙️ 설정</div>
       <button class="more-btn" onclick="changeNickname()" style="background:var(--card2);color:var(--text);border:1px solid var(--accent);padding:10px;border-radius:8px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px;">✏️ 닉네임 변경</button>
       <button class="more-btn" onclick="doLogout()" style="background:#555;color:#fff;border:none;padding:10px;border-radius:8px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px;">🚪 로그아웃</button>
@@ -1706,7 +1704,6 @@ async function doResetAccount() {
   updateAllUI();
   showFloatText('🗑️ 계정 초기화 완료!', '#e74c3c');
 }
-
 
 // ==================== ENHANCEMENT (강화) ====================
 function getEnhanceCost(item) {
@@ -2291,7 +2288,6 @@ async function changeNickname() {
   } catch(e) { alert('변경 실패: ' + e.message); }
 }
 
-
 async function checkAuth() {
   // uid가 있으면 로컬 데이터로 즉시 시작 (서버 기다리지 않음!)
   if (userUid) {
@@ -2415,7 +2411,6 @@ function resetGameState() {
   nextItemId = 1;
   console.log('🆕 새 게임 시작!');
 }
-
 
 function showAnnouncement(msg) {
   const overlay = document.createElement('div');
@@ -2875,7 +2870,6 @@ async function resetGame() {
     location.reload();
   } catch(e) { alert('초기화 실패: ' + e.message); }
 }
-
 
 // ==================== APPLY ADMIN MULTIPLIERS ====================
 // Patch getPlayerStats to apply admin atk multiplier

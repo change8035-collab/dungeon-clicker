@@ -327,5 +327,18 @@ def add_cache_headers(response):
         response.headers['Cache-Control'] = 'public, max-age=604800'  # 7일 캐시
     return response
 
+# ── Self keep-alive (prevents Render free tier sleep) ──
+def keep_alive():
+    import time
+    while True:
+        time.sleep(240)  # 4분
+        try:
+            http_requests.get('https://dungeon-clicker-wne7.onrender.com/api/me', timeout=10)
+        except:
+            pass
+
+ping_thread = threading.Thread(target=keep_alive, daemon=True)
+ping_thread.start()
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8090, debug=True)
