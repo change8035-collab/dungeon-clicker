@@ -331,10 +331,16 @@ def api_save_beacon():
     }, on_conflict='uid').execute()
     return '', 204
 
-# ── Static ──
+# ── Static with cache ──
 @app.route('/')
 def index():
     return send_from_directory('.', 'game.html')
+
+@app.after_request
+def add_cache_headers(response):
+    if request.path.startswith('/assets/'):
+        response.headers['Cache-Control'] = 'public, max-age=604800'  # 7일 캐시
+    return response
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8090, debug=True)
