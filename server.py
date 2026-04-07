@@ -1,8 +1,10 @@
 import os, json, secrets, threading, requests as http_requests
 from flask import Flask, request, jsonify, send_from_directory
+from flask_compress import Compress
 from supabase import create_client
 
 app = Flask(__name__, static_folder='.', static_url_path='')
+Compress(app)  # gzip 압축 (140KB → ~30KB)
 
 from werkzeug.middleware.proxy_fix import ProxyFix
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
@@ -325,6 +327,10 @@ def index():
 def add_cache_headers(response):
     if request.path.startswith('/assets/'):
         response.headers['Cache-Control'] = 'public, max-age=604800'  # 7일 캐시
+    elif request.path == '/':
+        response.headers['Cache-Control'] = 'public, max-age=60'  # 1분 캐시
+    elif request.path.startswith('/api/'):
+        response.headers['Cache-Control'] = 'no-cache'
     return response
 
 # ── Self keep-alive (prevents Render free tier sleep) ──
