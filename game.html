@@ -2027,36 +2027,43 @@ function selectUser(uid, name, email) {
   document.getElementById('targetUid').value = uid;
   document.getElementById('targetUserInfo').textContent = '선택: ' + name + ' (' + email + ')';
 }
+const SB_URL = 'https://pvwcpowcsstdcvcghjff.supabase.co/rest/v1';
+const SB_KEY = 'sb_publishable_ebJU9uhgII5x2kNrcQxcFg_Xu4Gg0rl';
+const SB_HDR = { 'apikey': SB_KEY, 'Authorization': 'Bearer sb_secret_NvQiIbELqA7FGe9W6wq8YA_yAxTiQf0', 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' };
+async function sbGet(path) { const r = await fetch(SB_URL+path, {headers:SB_HDR}); return r.json(); }
+async function sbPost(path, body) { const r = await fetch(SB_URL+path, {method:'POST',headers:SB_HDR,body:JSON.stringify(body)}); return r; }
+async function sbPatch(path, body) { const r = await fetch(SB_URL+path, {method:'PATCH',headers:{...SB_HDR,'Prefer':'return=minimal'},body:JSON.stringify(body)}); return r; }
+async function addPending(uid, field, amount) {
+  const res = await sbGet('/user_settings?select=uid,settings&uid=eq.'+uid);
+  const settings = (res[0] && res[0].settings) || {};
+  const pending = settings.pending_give || {};
+  pending[field] = (pending[field] || 0) + amount;
+  settings.pending_give = pending;
+  await sbPost('/user_settings', {uid, settings});
+}
 async function giveToAllUsers(field, amount) {
   if (!confirm(`모든 유저에게 ${field === 'gold' ? '💰골드' : '💎보석'} +${formatNum(amount)} 지급?`)) return;
-  G[field] = (G[field] || 0) + amount;
-  updateTopBar();
-  showFloatText(`⏳ 전체 지급 처리 중...`, '#f1c40f');
+  showFloatText(`⏳ 전체 지급 중...`, '#f1c40f');
   try {
-    const res = await authFetch('/api/admin/give-all', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ field, amount })
-    }, 60000);
-    const data = await res.json();
-    showFloatText(`✅ ${data.count || 0}명에게 ${field === 'gold' ? '💰' : '💎'}+${formatNum(amount)} 지급 완료!`, '#4CAF50');
-  } catch(e) {
-    showFloatText('⚠️ 지급 요청 전송됨 (서버 처리 중)', '#f1c40f');
-  }
+    const users = await sbGet('/saves?select=uid');
+    let ok = 0;
+    for (const u of users) {
+      await addPending(u.uid, field, amount);
+      ok++;
+    }
+    G[field] = (G[field] || 0) + amount;
+    updateTopBar();
+    showFloatText(`✅ ${ok}명에게 ${field === 'gold' ? '💰' : '💎'}+${formatNum(amount)} 지급 완료!`, '#4CAF50');
+  } catch(e) { showFloatText('❌ 지급 실패: ' + e.message, '#ff4444'); }
 }
 async function giveToUser(field, amount) {
   const uid = document.getElementById('targetUid').value;
   if (!uid) { alert('대상 UID를 선택하세요'); return; }
   try {
-    const res = await authFetch('/api/admin/give', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ uid, field, amount })
-    }, 30000);
-    const data = await res.json();
-    if (data.ok) {
-      if (uid === currentUser.uid) { G[field] = (G[field] || 0) + amount; updateTopBar(); }
-      showFloatText(`✅ ${field === 'gold' ? '💰' : '💎'}+${formatNum(amount)} 지급 완료!`, '#4CAF50');
-    } else { showFloatText('❌ 지급 실패: ' + (data.error || ''), '#ff4444'); }
-  } catch(e) { showFloatText('⚠️ 지급 요청 전송됨', '#f1c40f'); }
+    await addPending(uid, field, amount);
+    if (uid === currentUser.uid) { G[field] = (G[field] || 0) + amount; updateTopBar(); }
+    showFloatText(`✅ ${field === 'gold' ? '💰' : '💎'}+${formatNum(amount)} 지급 완료!`, '#4CAF50');
+  } catch(e) { showFloatText('❌ 지급 실패: ' + e.message, '#ff4444'); }
 }
 async function setUserSetting(key, val) {
   const uid = document.getElementById('targetUid').value;
