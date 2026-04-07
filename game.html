@@ -2306,13 +2306,15 @@ async function syncWithServer() {
     });
     let data = await res.json();
     if (!data.ok) {
-      // 서버에 계정 없음 (DB 초기화됨) → 닉네임 입력으로
-      localStorage.clear();
-      userUid = '';
-      document.getElementById('loginOverlay').style.display = '';
-      document.getElementById('app').style.display = 'none';
-      document.getElementById('loginStatus').style.display = 'none';
-      document.getElementById('registerForm').style.display = '';
+      // 서버에 없으면 조용히 재등록 (게임 중단 없음)
+      const nick = localStorage.getItem('userNick') || '모험가';
+      try {
+        await fetch('/api/register', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ nickname: nick })
+        });
+      } catch(e) {}
+      console.warn('서버에 계정 없음 → 자동 재등록 시도');
       return;
     }
     if (data.ok) {
