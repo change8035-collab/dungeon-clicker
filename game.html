@@ -1846,27 +1846,16 @@ function onMonsterKill() {
   saveCloudGame();
 }
 
-// Damage text pool - reuse DOM elements instead of creating new ones
-const _dmgPool = [];
-const _DMG_POOL_SIZE = 8;
 function showDamage(dmg, crit) {
   if (!_battleEl) _battleEl = document.getElementById('battleArea');
   if (!_battleEl) return;
-  let el;
-  if (_dmgPool.length >= _DMG_POOL_SIZE) {
-    el = _dmgPool.shift();
-    el.className = 'dmg-text' + (crit ? ' crit' : '');
-  } else {
-    el = document.createElement('div');
-    el.className = 'dmg-text' + (crit ? ' crit' : '');
-    _battleEl.appendChild(el);
-  }
+  const el = document.createElement('div');
+  el.className = 'dmg-text' + (crit ? ' crit' : '');
   el.textContent = (crit ? '💥 ' : '') + formatNum(dmg);
   el.style.right = (50 + Math.random() * 40) + 'px';
   el.style.bottom = (80 + Math.random() * 60) + 'px';
-  el.style.opacity = '1';
-  _dmgPool.push(el);
-  setTimeout(() => { el.style.opacity = '0'; }, 500);
+  _battleEl.appendChild(el);
+  setTimeout(() => el.remove(), 700);
 }
 
 function showFloatText(text, color) {
