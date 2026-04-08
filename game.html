@@ -1327,6 +1327,7 @@ function renderShop(el) {
           </div>
           <div style="font-size:10px;color:var(--dim);margin-top:4px;" id="mineGoldLabel">${G.mineGold}/100</div>
           <div style="font-size:11px;color:var(--gold);margin-top:6px;">보상: 💰 50M</div>
+          <div style="margin-top:6px;font-size:10px;color:${G.autoMineGold?'#4CAF50':'var(--dim)'};">${G.autoMineGold?'🤖 자동 채굴 중':'수동'}</div>
         </div>
         <div style="flex:1;background:linear-gradient(135deg,#1a1a3e,#2a1a4e);border:2px solid var(--purple);border-radius:12px;padding:16px;text-align:center;">
           <div style="font-size:36px;cursor:pointer;user-select:none;" onclick="mineClick('dia')" id="mineDiaBtn">💎</div>
@@ -1336,6 +1337,15 @@ function renderShop(el) {
           </div>
           <div style="font-size:10px;color:var(--dim);margin-top:4px;" id="mineDiaLabel">${G.mineDia}/100</div>
           <div style="font-size:11px;color:var(--purple);margin-top:6px;">보상: 💎 50개</div>
+          <div style="margin-top:6px;font-size:10px;color:${G.autoMineDia?'#4CAF50':'var(--dim)'};">${G.autoMineDia?'🤖 자동 채굴 중':'수동'}</div>
+        </div>
+      </div>
+      <div style="margin-top:16px;background:var(--card2);border:2px solid #4CAF50;border-radius:12px;padding:16px;text-align:center;">
+        <div style="font-size:14px;font-weight:900;color:#4CAF50;margin-bottom:4px;">🤖 자동 채굴</div>
+        <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">💎 5,000 보석으로 영구 자동 채굴 해금 (1초마다 자동 클릭)</div>
+        <div style="display:flex;gap:8px;justify-content:center;">
+          <button onclick="buyAutoMine('gold')" style="background:${G.autoMineGold?'#333':'linear-gradient(135deg,var(--gold),#e67e22)'};color:#fff;border:none;padding:10px 16px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;" ${G.autoMineGold?'disabled':''}>${G.autoMineGold?'✅ 금광산 해금됨':'💰 금광산 💎5,000'}</button>
+          <button onclick="buyAutoMine('dia')" style="background:${G.autoMineDia?'#333':'linear-gradient(135deg,var(--purple),#6c3ec1)'};color:#fff;border:none;padding:10px 16px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;" ${G.autoMineDia?'disabled':''}>${G.autoMineDia?'✅ 보석광산 해금됨':'💎 보석광산 💎5,000'}</button>
         </div>
       </div>
     </div>`;
@@ -1369,6 +1379,22 @@ function mineClick(type) {
   if (bar) bar.style.width = G[key] + '%';
   if (label) label.textContent = G[key] + '/100';
 }
+function buyAutoMine(type) {
+  if (G.dia < 5000) { showFloatText('💎 보석이 부족합니다!', '#e74c3c'); return; }
+  const key = type === 'gold' ? 'autoMineGold' : 'autoMineDia';
+  if (G[key]) return;
+  if (!confirm(`💎 5,000 보석으로 ${type === 'gold' ? '금' : '보석'}광산 자동 채굴을 해금하시겠습니까?`)) return;
+  G.dia -= 5000;
+  G[key] = true;
+  showFloatText(`🤖 ${type === 'gold' ? '금' : '보석'}광산 자동 채굴 해금!`, '#4CAF50');
+  updateTopBar();
+  saveCloudGame();
+  if (shopSubTab === 'mine') renderShop(document.getElementById('tabContent'));
+}
+setInterval(() => {
+  if (G.autoMineGold) mineClick('gold');
+  if (G.autoMineDia) mineClick('dia');
+}, 1000);
 function buySSPackage() {
   if (G.gold < 999000000) { showFloatText('💰 골드가 부족합니다!', '#e74c3c'); return; }
   if (!confirm('999M 골드로 신화 SS 풀세트를 구매하시겠습니까?')) return;
