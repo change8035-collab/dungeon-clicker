@@ -474,7 +474,7 @@ function generateItem(lampLv) {
   const rarityNames = nameMap[rarityBase] || nameMap['common'];
   const nameIdx = Math.floor(Math.random() * rarityNames.length);
   const ridx = RARITIES.indexOf(rarity);
-  const BASE = { crit:[5,15,35,80,180,400,600,900,1300,1800,2500], critDmg:[10,30,70,160,350,750,1100,1700,2500,3500,5000], atkPct:[8,20,50,120,270,580,870,1300,1900,2700,4000], spd:[5,15,35,80,180,400,600,900,1300,1800,2500], hp:[50,150,400,1000,2500,6000,9000,14000,20000,30000,45000], atk:[20,60,150,350,800,1800,2700,4000,6000,9000,13000] };
+  const BASE = { crit:[20,50,120,300,700,2000,8000,25000,80000,250000,1000000], critDmg:[30,80,200,500,1200,3500,15000,50000,150000,500000,2000000], atkPct:[25,65,160,400,1000,3000,12000,40000,120000,400000,1500000], spd:[15,40,100,250,600,1800,7000,22000,70000,220000,800000], hp:[100,300,800,2000,5000,15000,60000,200000,600000,2000000,8000000], atk:[50,150,400,1000,2500,8000,30000,100000,300000,1000000,4000000] };
   const stageBonus = 1 + G.stage * 0.02;
   const typeKey = BASE[slot.statType] ? slot.statType : 'atk';
   const minVal = (BASE[typeKey][ridx] || BASE[typeKey][0]) * stageBonus;
