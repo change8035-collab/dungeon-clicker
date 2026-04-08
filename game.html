@@ -108,9 +108,9 @@ const RARITIES = [
   { id:'mythic_sss', name:'신화 SSS', color:'#880000', weight:0, statMul:200 },
 ];
 const EQUIP_SLOTS = [
-  { id:'weapon', name:'무기', icon:'⚔️', statType:'critDmg' },
-  { id:'helmet', name:'투구', icon:'🪖', statType:'critDmg' },
-  { id:'armor', name:'갑옷', icon:'🛡️', statType:'atkPct' },
+  { id:'weapon', name:'무기', icon:'⚔️', statType:'atk' },
+  { id:'helmet', name:'투구', icon:'🪖', statType:'atkPct' },
+  { id:'armor', name:'갑옷', icon:'🛡️', statType:'critDmg' },
   { id:'boots', name:'신발', icon:'👢', statType:'spd' },
   { id:'ring', name:'반지', icon:'💍', statType:'critDmg' },
   { id:'necklace', name:'목걸이', icon:'📿', statType:'atkPct' },
@@ -474,7 +474,7 @@ function generateItem(lampLv) {
   const rarityNames = nameMap[rarityBase] || nameMap['common'];
   const nameIdx = Math.floor(Math.random() * rarityNames.length);
   const ridx = RARITIES.indexOf(rarity);
-  const BASE = { crit:[20,50,120,300,700,2000,8000,25000,80000,250000,1000000], critDmg:[30,80,200,500,1200,3500,15000,50000,150000,500000,2000000], atkPct:[25,65,160,400,1000,3000,12000,40000,120000,400000,1500000], spd:[15,40,100,250,600,1800,7000,22000,70000,220000,800000], hp:[100,300,800,2000,5000,15000,60000,200000,600000,2000000,8000000], atk:[50,150,400,1000,2500,8000,30000,100000,300000,1000000,4000000] };
+  const BASE = { atk:[200,600,2000,6000,20000,80000,400000,2000000,10000000,80000000,999999999], atkPct:[100,300,800,2500,8000,30000,150000,800000,4000000,30000000,500000000], critDmg:[100,300,800,2500,8000,30000,150000,800000,4000000,30000000,500000000], spd:[50,150,400,1200,4000,15000,75000,400000,2000000,15000000,250000000], crit:[50,150,400,1200,4000,15000,75000,400000,2000000,15000000,250000000], hp:[500,1500,5000,15000,50000,200000,1000000,5000000,25000000,200000000,3000000000] };
   const stageBonus = 1 + G.stage * 0.02;
   const typeKey = BASE[slot.statType] ? slot.statType : 'atk';
   const minVal = (BASE[typeKey][ridx] || BASE[typeKey][0]) * stageBonus;
