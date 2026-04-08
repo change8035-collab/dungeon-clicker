@@ -1301,42 +1301,73 @@ function clearFusionSlots() {
   fusionPickingSlot = 0;
   renderTab('fusion');
 }
+let shopSubTab = 'shop';
+function switchShopTab(tab) { shopSubTab = tab; renderShop(document.getElementById('tabContent')); }
 function renderShop(el) {
-  el.innerHTML = `
-    <div style="padding:12px;">
-      <div style="font-size:16px;font-weight:900;margin-bottom:16px;text-align:center;">🏪 상점</div>
-      <div style="background:linear-gradient(135deg,#1a1a3e,#2a1a4e);border:2px solid #cc0000;border-radius:12px;padding:16px;margin-bottom:12px;">
+  const tabs = `<div class="sub-tabs"><button class="sub-tab ${shopSubTab==='shop'?'active':''}" onclick="switchShopTab('shop')">🏪 상점</button><button class="sub-tab ${shopSubTab==='mine'?'active':''}" onclick="switchShopTab('mine')">⛏️ 광산</button></div>`;
+  if (shopSubTab === 'mine') {
+    if (!G.mineGold) G.mineGold = 0;
+    if (!G.mineDia) G.mineDia = 0;
+    el.innerHTML = `<div style="padding:12px;">${tabs}
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="font-size:16px;font-weight:900;color:var(--gold);margin-bottom:4px;">⛏️ 광산</div>
+        <div style="font-size:11px;color:var(--dim);">클릭 100번 = 보상 획득!</div>
+      </div>
+      <div style="display:flex;gap:12px;">
+        <div style="flex:1;background:linear-gradient(135deg,#3a2a1a,#2a1a0a);border:2px solid var(--gold);border-radius:12px;padding:16px;text-align:center;">
+          <div style="font-size:36px;cursor:pointer;user-select:none;" onclick="mineClick('gold')" id="mineGoldBtn">💰</div>
+          <div style="font-size:13px;font-weight:900;color:var(--gold);margin-top:8px;">금광산</div>
+          <div style="margin-top:8px;background:#1a1a3e;border-radius:6px;height:12px;overflow:hidden;">
+            <div id="mineGoldBar" style="width:${G.mineGold}%;height:100%;background:linear-gradient(90deg,var(--gold),#e67e22);border-radius:6px;transition:width 0.1s;"></div>
+          </div>
+          <div style="font-size:10px;color:var(--dim);margin-top:4px;" id="mineGoldLabel">${G.mineGold}/100</div>
+          <div style="font-size:11px;color:var(--gold);margin-top:6px;">보상: 💰 50M</div>
+        </div>
+        <div style="flex:1;background:linear-gradient(135deg,#1a1a3e,#2a1a4e);border:2px solid var(--purple);border-radius:12px;padding:16px;text-align:center;">
+          <div style="font-size:36px;cursor:pointer;user-select:none;" onclick="mineClick('dia')" id="mineDiaBtn">💎</div>
+          <div style="font-size:13px;font-weight:900;color:var(--purple);margin-top:8px;">보석광산</div>
+          <div style="margin-top:8px;background:#1a1a3e;border-radius:6px;height:12px;overflow:hidden;">
+            <div id="mineDiaBar" style="width:${G.mineDia}%;height:100%;background:linear-gradient(90deg,var(--purple),#6c3ec1);border-radius:6px;transition:width 0.1s;"></div>
+          </div>
+          <div style="font-size:10px;color:var(--dim);margin-top:4px;" id="mineDiaLabel">${G.mineDia}/100</div>
+          <div style="font-size:11px;color:var(--purple);margin-top:6px;">보상: 💎 50개</div>
+        </div>
+      </div>
+    </div>`;
+    return;
+  }
+  el.innerHTML = `<div style="padding:12px;">${tabs}
+    <div style="font-size:16px;font-weight:900;margin-bottom:16px;text-align:center;">🏪 상점</div>
+    <div style="background:linear-gradient(135deg,#1a1a3e,#2a1a4e);border:2px solid #cc0000;border-radius:12px;padding:16px;margin-bottom:12px;">
       <div style="font-size:14px;font-weight:900;color:#ff4444;margin-bottom:4px;">🔥 신화 SS 풀세트 패키지</div>
-      <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">모든 부위(무기/투구/갑옷/신발/반지/목걸이) 신화 SS 장비 1개씩!</div>
-      <div style="display:flex;gap:4px;justify-content:center;margin-bottom:10px;">
-      ${EQUIP_SLOTS.map(s => '<span style="font-size:20px;">'+s.icon+'</span>').join('')}
-      </div>
-      <div style="text-align:center;">
-      <button onclick="buySSPackage()" style="background:linear-gradient(135deg,#cc0000,#ff4444);color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;font-family:inherit;" ${G.gold < 999000000 ? 'disabled' : ''}>
-      구매 💰 999M
-      </button>
-      </div>
-      </div>
-      <div style="background:var(--card2);border:2px solid var(--gold);border-radius:12px;padding:16px;margin-bottom:12px;">
-      <div style="font-size:14px;font-weight:900;color:var(--gold);margin-bottom:4px;">💎 보석 패키지</div>
-      <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">보석 100개 즉시 지급</div>
-      <div style="text-align:center;">
-      <button onclick="buyGemPackage()" style="background:linear-gradient(135deg,#7f5af0,#6c3ec1);color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;font-family:inherit;" ${G.gold < 100000000 ? 'disabled' : ''}>
-      구매 💰 100M
-      </button>
-      </div>
-      </div>
-      <div style="background:var(--card2);border:2px solid #2ec4b6;border-radius:12px;padding:16px;">
+      <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">모든 부위 신화 SS 장비 1개씩!</div>
+      <div style="display:flex;gap:4px;justify-content:center;margin-bottom:10px;">${EQUIP_SLOTS.map(s=>'<span style="font-size:20px;">'+s.icon+'</span>').join('')}</div>
+      <div style="text-align:center;"><button onclick="buySSPackage()" style="background:linear-gradient(135deg,#cc0000,#ff4444);color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;font-family:inherit;" ${G.gold<999000000?'disabled':''}>구매 💰 999M</button></div>
+    </div>
+    <div style="background:var(--card2);border:2px solid #2ec4b6;border-radius:12px;padding:16px;">
       <div style="font-size:14px;font-weight:900;color:#2ec4b6;margin-bottom:4px;">⚡ 스킬 포인트 패키지</div>
       <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">모든 스킬 +10 레벨</div>
-      <div style="text-align:center;">
-      <button onclick="buySkillPackage()" style="background:linear-gradient(135deg,#2ec4b6,#1a9e92);color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;font-family:inherit;" ${G.gold < 200000000 ? 'disabled' : ''}>
-      구매 💰 200M
-      </button>
-      </div>
-      </div>
+      <div style="text-align:center;"><button onclick="buySkillPackage()" style="background:linear-gradient(135deg,#2ec4b6,#1a9e92);color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;font-family:inherit;" ${G.gold<200000000?'disabled':''}>구매 💰 200M</button></div>
     </div>
-  `;
+  </div>`;
+}
+function mineClick(type) {
+  const key = type === 'gold' ? 'mineGold' : 'mineDia';
+  if (!G[key]) G[key] = 0;
+  G[key]++;
+  const btn = document.getElementById(type === 'gold' ? 'mineGoldBtn' : 'mineDiaBtn');
+  if (btn) { btn.style.transform = 'scale(0.8)'; setTimeout(() => btn.style.transform = 'scale(1)', 80); }
+  if (G[key] >= 100) {
+    G[key] = 0;
+    if (type === 'gold') { G.gold += 50000000; showFloatText('⛏️ 금광산 완료! 💰+50M', '#f1c40f'); }
+    else { G.dia += 50; showFloatText('⛏️ 보석광산 완료! 💎+50', '#7f5af0'); }
+    updateTopBar();
+    saveCloudGame();
+  }
+  const bar = document.getElementById(type === 'gold' ? 'mineGoldBar' : 'mineDiaBar');
+  const label = document.getElementById(type === 'gold' ? 'mineGoldLabel' : 'mineDiaLabel');
+  if (bar) bar.style.width = G[key] + '%';
+  if (label) label.textContent = G[key] + '/100';
 }
 function buySSPackage() {
   if (G.gold < 999000000) { showFloatText('💰 골드가 부족합니다!', '#e74c3c'); return; }
@@ -1363,15 +1394,6 @@ function buySSPackage() {
     G.inventory.push(item);
   });
   showFloatText('🔥 신화 SS 풀세트 획득!', '#ff4444');
-  updateAllUI();
-  saveCloudGame();
-}
-function buyGemPackage() {
-  if (G.gold < 100000000) { showFloatText('💰 골드가 부족합니다!', '#e74c3c'); return; }
-  if (!confirm('100M 골드로 보석 100개를 구매하시겠습니까?')) return;
-  G.gold -= 100000000;
-  G.dia += 100;
-  showFloatText('💎 +500 보석 획득!', '#7f5af0');
   updateAllUI();
   saveCloudGame();
 }
