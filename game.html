@@ -473,20 +473,13 @@ function generateItem(lampLv) {
   const rarityBase = rarity.id.startsWith('mythic') ? 'mythic' : rarity.id;
   const rarityNames = nameMap[rarityBase] || nameMap['common'];
   const nameIdx = Math.floor(Math.random() * rarityNames.length);
-  let baseStat;
-  if (slot.statType === 'crit') {
-    baseStat = (1 + G.stage * 0.3) * rarity.statMul * (0.9 + Math.random() * 0.2);
-  } else if (slot.statType === 'critDmg') {
-    baseStat = (3 + G.stage * 0.8) * rarity.statMul * (0.9 + Math.random() * 0.2);
-  } else if (slot.statType === 'atkPct') {
-    baseStat = (2 + G.stage * 0.4) * rarity.statMul * (0.9 + Math.random() * 0.2);
-  } else if (slot.statType === 'spd') {
-    baseStat = (2 + G.stage * 0.5) * rarity.statMul * (0.9 + Math.random() * 0.2);
-  } else if (slot.statType === 'hp') {
-    baseStat = (10 + G.stage * 5) * rarity.statMul * (0.9 + Math.random() * 0.2);
-  } else {
-    baseStat = (5 + G.stage * 2) * rarity.statMul * (0.9 + Math.random() * 0.2);
-  }
+  const ridx = RARITIES.indexOf(rarity);
+  const BASE = { crit:[5,15,35,80,180,400,600,900,1300,1800,2500], critDmg:[10,30,70,160,350,750,1100,1700,2500,3500,5000], atkPct:[8,20,50,120,270,580,870,1300,1900,2700,4000], spd:[5,15,35,80,180,400,600,900,1300,1800,2500], hp:[50,150,400,1000,2500,6000,9000,14000,20000,30000,45000], atk:[20,60,150,350,800,1800,2700,4000,6000,9000,13000] };
+  const stageBonus = 1 + G.stage * 0.02;
+  const typeKey = BASE[slot.statType] ? slot.statType : 'atk';
+  const minVal = (BASE[typeKey][ridx] || BASE[typeKey][0]) * stageBonus;
+  const maxVal = minVal * 1.4;
+  let baseStat = minVal + Math.random() * (maxVal - minVal);
   const STAT_LABELS = { atk:'공격력', atkPct:'공격력%', hp:'HP', crit:'치명타%', critDmg:'치명타피해%', spd:'공격속도%' };
   const MYTHIC_SUFFIX = { mythic_s:' S', mythic_sp:' S+', mythic_ss:' SS', mythic_ssp:' SS+', mythic_sss:' SSS' };
   const displayName = rarityNames[nameIdx] + (MYTHIC_SUFFIX[rarity.id] || '');
@@ -1198,20 +1191,12 @@ function fuseItems(item1Id, item2Id) {
   const fusionRarityBase = nextRarity.id.startsWith('mythic') ? 'mythic' : nextRarity.id;
   const fusionNames = nameMap[fusionRarityBase] || nameMap['common'];
   const nameIdx = Math.floor(Math.random() * fusionNames.length);
-  let baseStat;
-  if (slot.statType === 'crit') {
-    baseStat = (1 + G.stage * 0.3) * nextRarity.statMul * (0.9 + Math.random() * 0.2);
-  } else if (slot.statType === 'critDmg') {
-    baseStat = (3 + G.stage * 0.8) * nextRarity.statMul * (0.9 + Math.random() * 0.2);
-  } else if (slot.statType === 'atkPct') {
-    baseStat = (2 + G.stage * 0.4) * nextRarity.statMul * (0.9 + Math.random() * 0.2);
-  } else if (slot.statType === 'spd') {
-    baseStat = (2 + G.stage * 0.5) * nextRarity.statMul * (0.9 + Math.random() * 0.2);
-  } else if (slot.statType === 'hp') {
-    baseStat = (10 + G.stage * 5) * nextRarity.statMul * (0.9 + Math.random() * 0.2);
-  } else {
-    baseStat = (5 + G.stage * 2) * nextRarity.statMul * (0.9 + Math.random() * 0.2);
-  }
+  const nridx = RARITIES.indexOf(nextRarity);
+  const BASE_F = { crit:[5,15,35,80,180,400,600,900,1300,1800,2500], critDmg:[10,30,70,160,350,750,1100,1700,2500,3500,5000], atkPct:[8,20,50,120,270,580,870,1300,1900,2700,4000], spd:[5,15,35,80,180,400,600,900,1300,1800,2500], hp:[50,150,400,1000,2500,6000,9000,14000,20000,30000,45000], atk:[20,60,150,350,800,1800,2700,4000,6000,9000,13000] };
+  const stgB = 1 + G.stage * 0.02;
+  const tKey = BASE_F[slot.statType] ? slot.statType : 'atk';
+  const mnV = (BASE_F[tKey][nridx] || BASE_F[tKey][0]) * stgB;
+  let baseStat = mnV + Math.random() * (mnV * 0.4);
   const STAT_LABELS = { atk:'공격력', atkPct:'공격력%', hp:'HP', crit:'치명타%', critDmg:'치명타피해%', spd:'공격속도%' };
   const MYTHIC_SUFFIX = { mythic_s:' S', mythic_sp:' S+', mythic_ss:' SS', mythic_ssp:' SS+', mythic_sss:' SSS' };
   const fusionDisplayName = fusionNames[nameIdx] + (MYTHIC_SUFFIX[nextRarity.id] || '');
