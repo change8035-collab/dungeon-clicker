@@ -1353,12 +1353,12 @@ function renderShop(el) {
   }
   el.innerHTML = `<div style="padding:12px;">${tabs}
     <div style="font-size:16px;font-weight:900;margin-bottom:16px;text-align:center;">🏪 상점</div>
-    <div style="background:linear-gradient(135deg,#1a1a3e,#2a1a4e);border:2px solid #cc0000;border-radius:12px;padding:16px;margin-bottom:12px;">
+    ${G.boughtSS ? '' : `<div style="background:linear-gradient(135deg,#1a1a3e,#2a1a4e);border:2px solid #cc0000;border-radius:12px;padding:16px;margin-bottom:12px;">
       <div style="font-size:14px;font-weight:900;color:#ff4444;margin-bottom:4px;">🔥 신화 SS 풀세트 패키지</div>
       <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">모든 부위 신화 SS 장비 1개씩!</div>
       <div style="display:flex;gap:4px;justify-content:center;margin-bottom:10px;">${EQUIP_SLOTS.map(s=>'<span style="font-size:20px;">'+s.icon+'</span>').join('')}</div>
       <div style="text-align:center;"><button onclick="buySSPackage()" style="background:linear-gradient(135deg,#cc0000,#ff4444);color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;font-family:inherit;" ${G.gold<999000000?'disabled':''}>구매 💰 999M</button></div>
-    </div>
+    </div>`}
   </div>`;
 }
 function mineClick(type) {
@@ -1399,6 +1399,7 @@ function buySSPackage() {
   if (G.gold < 999000000) { showFloatText('💰 골드가 부족합니다!', '#e74c3c'); return; }
   if (!confirm('999M 골드로 신화 SS 풀세트를 구매하시겠습니까?')) return;
   G.gold -= 999000000;
+  G.boughtSS = true;
   const ssRarity = RARITIES.find(r => r.id === 'mythic_ss');
   EQUIP_SLOTS.forEach(slot => {
     const nameMap = SLOT_NAMES[slot.id];
