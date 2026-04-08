@@ -700,12 +700,14 @@ function showPullResult(items, type) {
     if (!bestRarity || rarityOrder.indexOf(rid) < rarityOrder.indexOf(bestRarity)) bestRarity = rid;
   });
   const summaryParts = [];
-  ['legendary','epic','rare'].forEach(r => { if(countMap[r]) summaryParts.push(`<span style="color:${items.find(i=>i.rarityId===r)?.color||'#fff'}">${countMap[r]}×${RARITIES.find(x=>x.id===r)?.name||r}</span>`); });
-  if(countMap['mythic']||Object.keys(countMap).some(k=>k.startsWith('mythic'))) {
-    const mc = Object.entries(countMap).filter(([k])=>k.startsWith('mythic')).reduce((s,[,v])=>s+v,0);
-    summaryParts.unshift(`<span style="color:#ff4444;font-weight:900">${mc}×신화</span>`);
-  }
+  rarityOrder.forEach(rid => {
+    if (countMap[rid]) {
+      const r = RARITIES.find(x => x.id === rid);
+      if (r) summaryParts.push(`<span style="color:${r.color};font-weight:${rid.startsWith('mythic')?'900':'700'}">${countMap[rid]}×${r.name}</span>`);
+    }
+  });
   document.getElementById('pullSummary').innerHTML = summaryParts.length ? summaryParts.join(' · ') : '&nbsp;';
+  items.sort((a, b) => rarityOrder.indexOf(a.rarityId) - rarityOrder.indexOf(b.rarityId));
   const titleEl = document.getElementById('pullResultTitle');
   titleEl.textContent = type === 'fusion' ? '🔮 합성 결과!' : '✨ 획득!';
   if(bestRarity && bestRarity.startsWith('mythic')) titleEl.style.color='#ff4444';
