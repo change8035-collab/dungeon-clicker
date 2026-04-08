@@ -110,10 +110,10 @@ const RARITIES = [
 const EQUIP_SLOTS = [
   { id:'weapon', name:'무기', icon:'⚔️', statType:'critDmg' },
   { id:'helmet', name:'투구', icon:'🪖', statType:'critDmg' },
-  { id:'armor', name:'갑옷', icon:'🛡️', statType:'atk' },
+  { id:'armor', name:'갑옷', icon:'🛡️', statType:'atkPct' },
   { id:'boots', name:'신발', icon:'👢', statType:'spd' },
-  { id:'ring', name:'반지', icon:'💍', statType:'crit' },
-  { id:'necklace', name:'목걸이', icon:'📿', statType:'atk' },
+  { id:'ring', name:'반지', icon:'💍', statType:'critDmg' },
+  { id:'necklace', name:'목걸이', icon:'📿', statType:'atkPct' },
 ];
 function getEquipSprite(slotId, rarityId, nameIdx) {
   const rarityBase = rarityId === 'mythic_sss' ? 'mythic_sss' : (rarityId.startsWith('mythic') ? 'mythic' : rarityId);
@@ -421,6 +421,7 @@ function getPlayerStats() {
     const enhMul = 1 + (item.enhanceLevel || 0) * 0.1;
     const val = item.statValue * enhMul;
     if (item.statType === 'atk') atk += val;
+    if (item.statType === 'atkPct') atk *= (1 + val / 100);
     if (item.statType === 'hp') hp += val;
     if (item.statType === 'crit') crit += val / 100;
     if (item.statType === 'critDmg') critDmg += val / 100;
@@ -477,6 +478,8 @@ function generateItem(lampLv) {
     baseStat = (1 + G.stage * 0.3) * rarity.statMul * (0.9 + Math.random() * 0.2);
   } else if (slot.statType === 'critDmg') {
     baseStat = (3 + G.stage * 0.8) * rarity.statMul * (0.9 + Math.random() * 0.2);
+  } else if (slot.statType === 'atkPct') {
+    baseStat = (2 + G.stage * 0.4) * rarity.statMul * (0.9 + Math.random() * 0.2);
   } else if (slot.statType === 'spd') {
     baseStat = (2 + G.stage * 0.5) * rarity.statMul * (0.9 + Math.random() * 0.2);
   } else if (slot.statType === 'hp') {
@@ -484,7 +487,7 @@ function generateItem(lampLv) {
   } else {
     baseStat = (5 + G.stage * 2) * rarity.statMul * (0.9 + Math.random() * 0.2);
   }
-  const STAT_LABELS = { atk:'공격력', hp:'HP', crit:'치명타%', critDmg:'치명타피해%', spd:'공격속도%' };
+  const STAT_LABELS = { atk:'공격력', atkPct:'공격력%', hp:'HP', crit:'치명타%', critDmg:'치명타피해%', spd:'공격속도%' };
   const MYTHIC_SUFFIX = { mythic_s:' S', mythic_sp:' S+', mythic_ss:' SS', mythic_ssp:' SS+', mythic_sss:' SSS' };
   const displayName = rarityNames[nameIdx] + (MYTHIC_SUFFIX[rarity.id] || '');
   return {
@@ -1200,6 +1203,8 @@ function fuseItems(item1Id, item2Id) {
     baseStat = (1 + G.stage * 0.3) * nextRarity.statMul * (0.9 + Math.random() * 0.2);
   } else if (slot.statType === 'critDmg') {
     baseStat = (3 + G.stage * 0.8) * nextRarity.statMul * (0.9 + Math.random() * 0.2);
+  } else if (slot.statType === 'atkPct') {
+    baseStat = (2 + G.stage * 0.4) * nextRarity.statMul * (0.9 + Math.random() * 0.2);
   } else if (slot.statType === 'spd') {
     baseStat = (2 + G.stage * 0.5) * nextRarity.statMul * (0.9 + Math.random() * 0.2);
   } else if (slot.statType === 'hp') {
@@ -1207,7 +1212,7 @@ function fuseItems(item1Id, item2Id) {
   } else {
     baseStat = (5 + G.stage * 2) * nextRarity.statMul * (0.9 + Math.random() * 0.2);
   }
-  const STAT_LABELS = { atk:'공격력', hp:'HP', crit:'치명타%', critDmg:'치명타피해%', spd:'공격속도%' };
+  const STAT_LABELS = { atk:'공격력', atkPct:'공격력%', hp:'HP', crit:'치명타%', critDmg:'치명타피해%', spd:'공격속도%' };
   const MYTHIC_SUFFIX = { mythic_s:' S', mythic_sp:' S+', mythic_ss:' SS', mythic_ssp:' SS+', mythic_sss:' SSS' };
   const fusionDisplayName = fusionNames[nameIdx] + (MYTHIC_SUFFIX[nextRarity.id] || '');
   const newItem = {
@@ -1373,9 +1378,10 @@ function buySSPackage() {
     const nameMap = SLOT_NAMES[slot.id];
     const names = nameMap['mythic'] || nameMap['common'];
     const nameIdx = Math.floor(Math.random() * names.length);
-    const STAT_LABELS = { atk:'공격력', hp:'HP', crit:'치명타%', critDmg:'치명타피해%', spd:'공격속도%' };
+    const STAT_LABELS = { atk:'공격력', atkPct:'공격력%', hp:'HP', crit:'치명타%', critDmg:'치명타피해%', spd:'공격속도%' };
     let baseStat;
     if (slot.statType === 'crit') baseStat = (1 + G.stage * 0.3) * ssRarity.statMul;
+    else if (slot.statType === 'atkPct') baseStat = (2 + G.stage * 0.4) * ssRarity.statMul;
     else if (slot.statType === 'critDmg') baseStat = (3 + G.stage * 0.8) * ssRarity.statMul;
     else if (slot.statType === 'spd') baseStat = (2 + G.stage * 0.5) * ssRarity.statMul;
     else baseStat = (5 + G.stage * 2) * ssRarity.statMul;
@@ -1794,18 +1800,20 @@ async function _doCloudSave() {
   }
 }
 function getCombatPower() {
-  let equipAtk = 0, equipCrit = 0, equipCritDmg = 0, equipSpd = 0;
+  let equipAtk = 0, equipAtkPct = 0, equipCrit = 0, equipCritDmg = 0, equipSpd = 0;
   Object.values(G.equipment).forEach(item => {
     if (!item) return;
     const enhMul = 1 + (item.enhanceLevel || 0) * 0.1;
     const val = item.statValue * enhMul;
     if (item.statType === 'atk') equipAtk += val;
+    if (item.statType === 'atkPct') equipAtkPct += val;
     if (item.statType === 'crit') equipCrit += val;
     if (item.statType === 'critDmg') equipCritDmg += val;
     if (item.statType === 'spd') equipSpd += val;
   });
   const cp = Math.floor(
     equipAtk * 2.0 +
+    equipAtkPct * 40 +
     equipCrit * 50 +
     equipCritDmg * 30 +
     equipSpd * 40 +
