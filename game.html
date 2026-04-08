@@ -707,6 +707,7 @@ function showPullResult(items, type) {
   }
   document.getElementById('pullSummary').innerHTML = summaryParts.length ? summaryParts.join(' · ') : '&nbsp;';
   const titleEl = document.getElementById('pullResultTitle');
+  titleEl.textContent = type === 'fusion' ? '🔮 합성 결과!' : '✨ 획득!';
   if(bestRarity && bestRarity.startsWith('mythic')) titleEl.style.color='#ff4444';
   else if(bestRarity==='legendary') titleEl.style.color='#ffaa00';
   else titleEl.style.color='var(--gold)';
@@ -1231,15 +1232,15 @@ function doFusion() {
   fusionSlot2 = null;
   fusionPickingSlot = 0;
   if (result) {
-    showFloatText(`🔮 합성 성공! ${result.rarity} ${itemName(result)}!`, result.color);
+    showPullResult([result], 'fusion');
     updateAllUI();
-    showItemPopup(result);
   } else {
     updateAllUI();
   }
 }
 function autoFuseAll() {
   let totalFused = 0;
+  let fusedResults = [];
   let keepGoing = true;
   while (keepGoing) {
     keepGoing = false;
@@ -1260,13 +1261,15 @@ function autoFuseAll() {
       const result = fuseItems(items[0].id, items[1].id);
       if (result) {
       totalFused++;
-      keepGoing = true; // Check again, new item might pair with another
-      break; // Restart loop since inventory changed
+      fusedResults.push(result);
+      keepGoing = true;
+      break;
       }
       }
     }
   }
   if (totalFused > 0) {
+    showPullResult(fusedResults, 'fusion');
     showFloatText(`🔮 일괄 합성 ${totalFused}회 완료!`, '#7f5af0');
   } else {
     showFloatText('합성 가능한 장비가 없습니다', '#e74c3c');
