@@ -1314,10 +1314,10 @@ function renderShop(el) {
       </div>
       <div style="background:var(--card2);border:2px solid var(--gold);border-radius:12px;padding:16px;margin-bottom:12px;">
       <div style="font-size:14px;font-weight:900;color:var(--gold);margin-bottom:4px;">💎 보석 패키지</div>
-      <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">보석 500개 즉시 지급</div>
+      <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">보석 100개 즉시 지급</div>
       <div style="text-align:center;">
-      <button onclick="buyGemPackage()" style="background:linear-gradient(135deg,#7f5af0,#6c3ec1);color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;font-family:inherit;" ${G.gold < 50000000 ? 'disabled' : ''}>
-      구매 💰 50M
+      <button onclick="buyGemPackage()" style="background:linear-gradient(135deg,#7f5af0,#6c3ec1);color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;font-family:inherit;" ${G.gold < 100000000 ? 'disabled' : ''}>
+      구매 💰 100M
       </button>
       </div>
       </div>
@@ -1362,10 +1362,10 @@ function buySSPackage() {
   saveCloudGame();
 }
 function buyGemPackage() {
-  if (G.gold < 50000000) { showFloatText('💰 골드가 부족합니다!', '#e74c3c'); return; }
-  if (!confirm('50M 골드로 보석 500개를 구매하시겠습니까?')) return;
-  G.gold -= 50000000;
-  G.dia += 500;
+  if (G.gold < 100000000) { showFloatText('💰 골드가 부족합니다!', '#e74c3c'); return; }
+  if (!confirm('100M 골드로 보석 100개를 구매하시겠습니까?')) return;
+  G.gold -= 100000000;
+  G.dia += 100;
   showFloatText('💎 +500 보석 획득!', '#7f5af0');
   updateAllUI();
   saveCloudGame();
