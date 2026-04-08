@@ -705,7 +705,7 @@ function showPullResult(items, type) {
   document.getElementById('pullSummary').innerHTML = summaryParts.length ? summaryParts.join(' · ') : '&nbsp;';
   items.sort((a, b) => rarityOrder.indexOf(a.rarityId) - rarityOrder.indexOf(b.rarityId));
   const titleEl = document.getElementById('pullResultTitle');
-  titleEl.textContent = type === 'fusion' ? '🔮 합성 결과!' : '✨ 획득!';
+  titleEl.textContent = type === 'fusion' ? '🔮 합성 결과!' : type === 'shop' ? '🔥 패키지 개봉!' : '✨ 획득!';
   if(bestRarity && bestRarity.startsWith('mythic')) titleEl.style.color='#ff4444';
   else if(bestRarity==='legendary') titleEl.style.color='#ffaa00';
   else titleEl.style.color='var(--gold)';
@@ -1386,17 +1386,16 @@ function buySSPackage() {
   G.gold -= 999000000;
   G.boughtSS = true;
   const ssRarity = RARITIES.find(r => r.id === 'mythic_ss');
+  const nridx = RARITIES.indexOf(ssRarity);
+  const STAT_LABELS = { atk:'공격력', atkPct:'공격력%', hp:'HP', crit:'치명타%', critDmg:'치명타피해%', spd:'공격속도%' };
+  const ssItems = [];
   EQUIP_SLOTS.forEach(slot => {
     const nameMap = SLOT_NAMES[slot.id];
     const names = nameMap['mythic'] || nameMap['common'];
     const nameIdx = Math.floor(Math.random() * names.length);
-    const STAT_LABELS = { atk:'공격력', atkPct:'공격력%', hp:'HP', crit:'치명타%', critDmg:'치명타피해%', spd:'공격속도%' };
-    let baseStat;
-    if (slot.statType === 'crit') baseStat = (1 + G.stage * 0.3) * ssRarity.statMul;
-    else if (slot.statType === 'atkPct') baseStat = (2 + G.stage * 0.4) * ssRarity.statMul;
-    else if (slot.statType === 'critDmg') baseStat = (3 + G.stage * 0.8) * ssRarity.statMul;
-    else if (slot.statType === 'spd') baseStat = (2 + G.stage * 0.5) * ssRarity.statMul;
-    else baseStat = (5 + G.stage * 2) * ssRarity.statMul;
+    const tKey = BASE[slot.statType] ? slot.statType : 'atk';
+    const mnV = (BASE[tKey][nridx] || BASE[tKey][0]) * (1 + G.stage * 0.02);
+    const baseStat = mnV + Math.random() * (mnV * 0.4);
     const item = {
       id: nextItemId++, slot: slot.id, rarityId: 'mythic_ss', rarity: '신화 SS',
       color: ssRarity.color, name: names[nameIdx] + ' SS', icon: slot.icon,
@@ -1405,8 +1404,9 @@ function buySSPackage() {
       statLabel: STAT_LABELS[slot.statType] || slot.statType, enhanceLevel: 0,
     };
     G.inventory.push(item);
+    ssItems.push(item);
   });
-  showFloatText('🔥 신화 SS 풀세트 획득!', '#ff4444');
+  showPullResult(ssItems, 'shop');
   updateAllUI();
   saveCloudGame();
 }
