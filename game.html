@@ -110,7 +110,7 @@ const RARITIES = [
 const EQUIP_SLOTS = [
   { id:'weapon', name:'무기', icon:'⚔️', statType:'critDmg' },
   { id:'helmet', name:'투구', icon:'🪖', statType:'critDmg' },
-  { id:'armor', name:'갑옷', icon:'🛡️', statType:'crit' },
+  { id:'armor', name:'갑옷', icon:'🛡️', statType:'atk' },
   { id:'boots', name:'신발', icon:'👢', statType:'spd' },
   { id:'ring', name:'반지', icon:'💍', statType:'crit' },
   { id:'necklace', name:'목걸이', icon:'📿', statType:'atk' },
@@ -1343,11 +1343,6 @@ function renderShop(el) {
       <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">모든 부위 신화 SS 장비 1개씩!</div>
       <div style="display:flex;gap:4px;justify-content:center;margin-bottom:10px;">${EQUIP_SLOTS.map(s=>'<span style="font-size:20px;">'+s.icon+'</span>').join('')}</div>
       <div style="text-align:center;"><button onclick="buySSPackage()" style="background:linear-gradient(135deg,#cc0000,#ff4444);color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;font-family:inherit;" ${G.gold<999000000?'disabled':''}>구매 💰 999M</button></div>
-    </div>
-    <div style="background:var(--card2);border:2px solid #2ec4b6;border-radius:12px;padding:16px;">
-      <div style="font-size:14px;font-weight:900;color:#2ec4b6;margin-bottom:4px;">⚡ 스킬 포인트 패키지</div>
-      <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">모든 스킬 +10 레벨</div>
-      <div style="text-align:center;"><button onclick="buySkillPackage()" style="background:linear-gradient(135deg,#2ec4b6,#1a9e92);color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;font-family:inherit;" ${G.gold<200000000?'disabled':''}>구매 💰 200M</button></div>
     </div>
   </div>`;
 }
