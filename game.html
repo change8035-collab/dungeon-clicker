@@ -1775,7 +1775,8 @@ async function changeNickname() {
     const res = await authFetch('/api/change-nick', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ nickname: newNick.trim() })
-    });
+    }, 15000);
+    if (!res.ok) { const err = await res.json().catch(()=>({})); alert(err.error || '서버 오류 ('+res.status+')'); return; }
     const data = await res.json();
     if (data.error) { alert(data.error); return; }
     currentUser.name = data.nickname;
@@ -2145,13 +2146,11 @@ async function renderAdmin(el) {
     `;
   } else if (adminSubTab === 'users') {
     content = `
-      <div class="admin-row">
-      <button style="background:#4CAF50;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-weight:700;cursor:pointer;font-family:inherit;width:100%;" onclick="loadUserList()">유저 목록 새로고침</button>
-      </div>
-      <div class="admin-row" style="margin-top:8px;">
+      <div class="admin-row" style="gap:4px;">
       <input type="text" id="adminUserSearch" placeholder="닉네임/이메일 검색..." style="flex:2" oninput="filterUserList()">
+      <button style="background:#4CAF50;color:#fff;border:none;padding:8px 12px;border-radius:6px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;" onclick="loadUserList()">🔄</button>
       </div>
-      <div id="adminUserList" style="max-height:250px;overflow-y:auto;margin-top:8px;"></div>
+      <div id="adminUserList" style="max-height:300px;overflow-y:auto;margin-top:8px;"></div>
       <div style="font-size:13px;font-weight:700;margin:16px 0 8px;color:#ffb74d;">🎁 개별 유저 지급/설정</div>
       <div class="admin-row"><label>대상 UID</label><input type="text" id="targetUid" placeholder="위에서 선택" style="flex:2"></div>
       <div id="targetUserInfo" style="font-size:11px;color:var(--dim);margin-bottom:8px;"></div>
@@ -2170,6 +2169,7 @@ async function renderAdmin(el) {
       ${content}
     </div>
   `;
+  if (adminSubTab === 'users') setTimeout(loadUserList, 100);
 }
 let allUsers = [];
 async function loadUserList() {
