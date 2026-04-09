@@ -875,7 +875,7 @@ function updateTopBar() {
   document.getElementById('expFill').style.width = (getXp() / getXpToNextForClass() * 100) + '%';
   document.getElementById('expLabel').textContent = `EXP ${getXp()}/${getXpToNextForClass()}`;
   document.getElementById('dpsLabel').textContent = `ATK ${formatNum(stats.atk)} | DPS ${formatNum(Math.ceil(stats.atk * stats.spdBonus * (1 + stats.crit)))}`;
-  G.attackSpeed = Math.max(50, Math.ceil(1000 / stats.spdBonus));
+  G.attackSpeed = Math.max(200, Math.ceil(1000 / Math.min(stats.spdBonus, 5)));
 }
 function updateAllUI() {
   markStatsDirty();
