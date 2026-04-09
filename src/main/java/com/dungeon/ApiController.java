@@ -264,6 +264,22 @@ public class ApiController {
         return ResponseEntity.ok(Map.of("ok", true));
     }
 
+    @PostMapping("/admin/reset-all")
+    public ResponseEntity<?> resetAll(HttpServletRequest req) {
+        var user = getUser(req);
+        if (!isAdmin(user)) return ResponseEntity.status(403).body(Map.of("error", "forbidden"));
+        var saves = db.select("saves", "uid", null);
+        int count = 0;
+        for (var s : saves) {
+            String uid = (String) s.get("uid");
+            db.update("saves", Map.of("game_state", Map.of()), "uid=eq." + uid);
+            count++;
+        }
+        db.delete("rankings", "id=gt.0");
+        db.delete("user_settings", "uid=neq.none");
+        return ResponseEntity.ok(Map.of("ok", true, "count", count));
+    }
+
     // ── Rankings ──
 
     @GetMapping("/rankings")
