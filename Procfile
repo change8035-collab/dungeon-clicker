@@ -1,1 +1,1 @@
-web: gunicorn server:app --bind 0.0.0.0:$PORT --workers 1
+web: java -jar target/dungeon-clicker-1.0.0.jar --server.port=$PORT
