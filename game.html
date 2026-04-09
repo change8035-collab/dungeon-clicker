@@ -447,6 +447,10 @@ function getPlayerStats() {
   const classMulBonus = Math.pow(1.8, classCount - 1);
   atk *= classMulBonus;
   atk = Math.ceil(atk * ss('atkMul',1));
+  if (!isFinite(atk)) atk = Number.MAX_SAFE_INTEGER;
+  if (!isFinite(hp)) hp = Number.MAX_SAFE_INTEGER;
+  if (!isFinite(spdBonus)) spdBonus = 100;
+  if (!isFinite(critDmg)) critDmg = 100;
   return { atk, hp: Math.ceil(hp), crit: Math.min(crit, 0.80), critDmg: Math.max(critDmg, 1.5), goldBonus, spdBonus, classMulBonus };
 }
 function getEvolution() {
@@ -543,12 +547,14 @@ function getCachedStats() {
   return _cachedStats;
 }
 function attack() {
-  if (!G.monster) return;
+  if (!G.monster) { spawnMonster(); return; }
   if (!_battleEl) initDomRefs();
   const stats = getCachedStats();
   let dmg = stats.atk;
+  if (!isFinite(dmg) || isNaN(dmg)) dmg = 1;
   let isCrit = Math.random() < stats.crit;
   if (isCrit) dmg = Math.ceil(dmg * stats.critDmg);
+  if (!isFinite(dmg) || isNaN(dmg)) dmg = G.monsterMaxHp;
   G.monsterHp -= dmg;
   showDamage(dmg, isCrit);
   if (!attack._lastFx || Date.now() - attack._lastFx > 200) {
@@ -1644,7 +1650,8 @@ function loadGame() {
     if (offlineSec > 60) {
       const stats = getPlayerStats();
       const dps = stats.atk * stats.spdBonus;
-      const offlineGold = Math.ceil(dps * offlineSec * 0.3 * getMonsterGold(G.stage) / getMonsterHp(G.stage));
+      let offlineGold = Math.ceil(dps * offlineSec * 0.3 * getMonsterGold(G.stage) / getMonsterHp(G.stage));
+      if (!isFinite(offlineGold)) offlineGold = Math.ceil(getMonsterGold(G.stage) * offlineSec);
       if (offlineGold > 0) {
       G.gold += offlineGold;
       G.totalGold += offlineGold;
@@ -1787,7 +1794,7 @@ async function checkAuth() {
     initDomRefs();
     spawnMonster();
     updateAllUI();
-    if (!window._gameLoopStarted) { window._gameLoopStarted = true; gameLoop(); }
+    if (!window._gameLoopStarted) { window._gameLoopStarted = true; lastTick = Date.now(); G.attackTimer = 0; gameLoop(); }
     syncWithServer();
     return;
   }
