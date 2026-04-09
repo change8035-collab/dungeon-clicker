@@ -517,6 +517,7 @@ async def admin_give_all(request: Request):
     body = await request.json()
     field = body["field"]
     amount = int(body.get("amount", 0))
+    msg = body.get("msg", "")
 
     saves_res = await db_select("saves", "uid", None)
     us_res = await db_select("user_settings", "uid,settings", None)
@@ -530,6 +531,8 @@ async def admin_give_all(request: Request):
         settings = dict(us_map.get(uid) or {})
         pending = dict(settings.get("pending_give") or {})
         pending[field] = int(pending.get(field, 0)) + amount
+        if msg:
+            pending["msg"] = msg
         settings["pending_give"] = pending
         await db_upsert("user_settings", {"uid": uid, "settings": settings})
         count += 1

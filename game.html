@@ -2241,9 +2241,10 @@ async function giveToAllUsers(field, amount) {
   if (!confirm(`모든 유저에게 ${field === 'gold' ? '💰골드' : '💎보석'} +${formatNum(amount)} 지급?`)) return;
   showFloatText(`⏳ 전체 지급 중...`, '#f1c40f');
   try {
+    const msg = (document.getElementById('serverGiveMsg')?.value || '').trim();
     const res = await authFetch('/api/admin/give-all', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ field, amount })
+      body: JSON.stringify({ field, amount, msg: msg || undefined })
     });
     const data = await res.json();
     G[field] = (G[field] || 0) + amount;
@@ -2330,6 +2331,7 @@ async function syncGame() {
     // pending 지급 수령
     if (data.pending) {
       const p = data.pending;
+      if (p.msg) { setTimeout(() => alert('📢 ' + p.msg), 300); }
       if (p.gold) { G.gold += p.gold; showFloatText(`🎁 💰+${formatNum(p.gold)} 지급!`, '#4CAF50'); }
       if (p.dia) { G.dia += p.dia; showFloatText(`🎁 💎+${formatNum(p.dia)} 지급!`, '#4CAF50'); }
       updateTopBar();
