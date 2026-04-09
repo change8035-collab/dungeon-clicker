@@ -19,39 +19,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-        </dependency>
     </dependencies>
     <build>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-resources-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>copy-game</id>
-                        <phase>generate-resources</phase>
-                        <goals><goal>copy-resources</goal></goals>
-                        <configuration>
-                            <outputDirectory>${project.build.outputDirectory}/static</outputDirectory>
-                            <resources>
-                                <resource>
-                                    <directory>${project.basedir}</directory>
-                                    <includes>
-                                        <include>game.html</include>
-                                        <include>assets/**</include>
-                                    </includes>
-                                </resource>
-                            </resources>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>
