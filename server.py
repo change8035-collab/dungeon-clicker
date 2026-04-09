@@ -63,7 +63,11 @@ async def db_select(table: str, columns: str, filter_: str | None) -> list[dict]
     try:
         path = f"/{table}?select={columns}" + (f"&{filter_}" if filter_ else "")
         r = await client.get(REST_URL + path, headers=_headers())
-        return r.json()
+        data = r.json()
+        if isinstance(data, list):
+            return data
+        print(f"[WARN] Supabase select {table} unexpected: {str(data)[:200]}")
+        return []
     except Exception as e:
         print(f"[ERROR] Supabase select {table}: {e}")
         return []
@@ -115,13 +119,17 @@ async def get_user(request: Request) -> dict | None:
     uid = request.headers.get("X-User-Id", "")
     if not uid:
         return None
-    rows = await db_select("saves", "uid,name,email", f"uid=eq.{uid}")
-    if not rows:
+    try:
+        rows = await db_select("saves", "uid,name,email", f"uid=eq.{uid}")
+        if not rows or not isinstance(rows, list) or len(rows) == 0:
+            return None
+        user = dict(rows[0])
+        email = user.get("email", "")
+        user["is_admin"] = email in set(ADMIN_EMAILS.split(","))
+        return user
+    except Exception as e:
+        print(f"[ERROR] get_user: {e}")
         return None
-    user = dict(rows[0])
-    email = user.get("email", "")
-    user["is_admin"] = email in set(ADMIN_EMAILS.split(","))
-    return user
 
 
 def is_admin(user: dict | None) -> bool:
