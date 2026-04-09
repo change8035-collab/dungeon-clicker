@@ -59,14 +59,20 @@ def _headers(extra: dict | None = None) -> dict:
     return h
 
 
+def _get_headers() -> dict:
+    return {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+    }
+
 async def db_select(table: str, columns: str, filter_: str | None) -> list[dict]:
     try:
         path = f"/{table}?select={columns}" + (f"&{filter_}" if filter_ else "")
-        r = await client.get(REST_URL + path, headers=_headers())
+        r = await client.get(REST_URL + path, headers=_get_headers())
         data = r.json()
         if isinstance(data, list):
             return data
-        print(f"[WARN] Supabase select {table} unexpected: {str(data)[:200]}")
+        print(f"[WARN] Supabase select {table} status={r.status_code} body={str(data)[:200]}")
         return []
     except Exception as e:
         print(f"[ERROR] Supabase select {table}: {e}")
@@ -77,8 +83,11 @@ async def db_select_ordered(table: str, columns: str, order_col: str, desc: bool
     try:
         direction = "desc" if desc else "asc"
         path = f"/{table}?select={columns}&order={order_col}.{direction}&limit={limit}"
-        r = await client.get(REST_URL + path, headers=_headers())
-        return r.json()
+        r = await client.get(REST_URL + path, headers=_get_headers())
+        data = r.json()
+        if isinstance(data, list):
+            return data
+        return []
     except Exception as e:
         print(f"[ERROR] Supabase selectOrdered {table}: {e}")
         return []
