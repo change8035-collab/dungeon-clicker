@@ -547,11 +547,12 @@ function getCachedStats() {
   return _cachedStats;
 }
 function attack() {
+  try {
   if (!G.monster) { spawnMonster(); return; }
   if (!_battleEl) initDomRefs();
   const stats = getCachedStats();
   let dmg = stats.atk;
-  if (!isFinite(dmg) || isNaN(dmg)) dmg = 1;
+  if (!dmg || !isFinite(dmg) || isNaN(dmg)) { console.error('ATK ERROR:', stats); dmg = 1; }
   let isCrit = Math.random() < stats.crit;
   if (isCrit) dmg = Math.ceil(dmg * stats.critDmg);
   if (!isFinite(dmg) || isNaN(dmg)) dmg = G.monsterMaxHp;
@@ -573,11 +574,11 @@ function attack() {
     _battleEl.classList.remove('shake'); void _battleEl.offsetWidth; _battleEl.classList.add('shake');
   }
   if (G.monsterHp <= 0) {
-    G.monster = null;
-    setTimeout(() => onMonsterKill(), 120);
+    onMonsterKill();
   } else {
     updateMonsterHp();
   }
+  } catch(e) { console.error('ATTACK ERROR:', e); }
 }
 function onMonsterKill() {
   const stats = getPlayerStats();
@@ -1677,12 +1678,14 @@ document.querySelector('.tab-bar').addEventListener('click', (e) => {
   renderTab(activeTab);
 });
 let lastTick = Date.now();
+let _atkCount = 0;
 function gameLoop() {
   const now = Date.now();
   const dt = now - lastTick;
   G.attackTimer += dt;
   if (G.attackTimer >= G.attackSpeed) {
     G.attackTimer -= G.attackSpeed;
+    _atkCount++;
     attack();
   }
   lastTick = now;
