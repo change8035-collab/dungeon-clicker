@@ -1933,7 +1933,7 @@ async function _doCloudSave() {
   } catch(e) {
   }
 }
-let _cpCache = null, _cpDirty = true;
+var _cpCache = null, _cpDirty = true;
 function invalidateCombatPower() { _cpDirty = true; }
 function getCombatPower() {
   if (!_cpDirty && _cpCache !== null) return _cpCache;
