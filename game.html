@@ -740,6 +740,7 @@ function equipItem(item) {
   }
   G.equipment[item.slot] = item;
   G.inventory = G.inventory.filter(i => i.id !== item.id);
+  invalidateCombatPower();
   updateAllUI();
   closeItemPopup();
 }
@@ -816,6 +817,7 @@ function unequipItem(slot) {
   if (G.equipment[slot]) {
     G.inventory.push(G.equipment[slot]);
     G.equipment[slot] = null;
+    invalidateCombatPower();
     updateAllUI();
     closeItemPopup();
   }
@@ -1382,7 +1384,7 @@ function buyAutoMine(type) {
 setInterval(() => {
   if (G.autoMineGold) mineClick('gold');
   if (G.autoMineDia) mineClick('dia');
-}, 1000);
+}, 3000);
 function buySSPackage() {
   if (G.gold < 999000000) { showFloatText('💰 골드가 부족합니다!', '#e74c3c'); return; }
   if (!confirm('999M 골드로 신화 SS 풀세트를 구매하시겠습니까?')) return;
@@ -1842,10 +1844,10 @@ function saveCloudGame() {
   if (!currentUser) return;
   saveGame();
   const now = Date.now();
-  if (now - _lastSaveTime < 2000) {
+  if (now - _lastSaveTime < 5000) {
     if (!_savePending) {
       _savePending = true;
-      setTimeout(() => { _savePending = false; _doCloudSave(); }, 2000 - (now - _lastSaveTime));
+      setTimeout(() => { _savePending = false; _doCloudSave(); }, 5000 - (now - _lastSaveTime));
     }
     return;
   }
@@ -1872,27 +1874,29 @@ async function _doCloudSave() {
   } catch(e) {
   }
 }
+let _cpCache = null, _cpDirty = true;
+function invalidateCombatPower() { _cpDirty = true; }
 function getCombatPower() {
-  let equipAtk = 0, equipAtkPct = 0, equipCrit = 0, equipCritDmg = 0, equipSpd = 0;
+  if (!_cpDirty && _cpCache !== null) return _cpCache;
+  let equipAtk = 0, equipAtkPct = 0, equipCritDmg = 0, equipSpd = 0;
   Object.values(G.equipment).forEach(item => {
     if (!item) return;
     const enhMul = 1 + (item.enhanceLevel || 0) * 0.1;
     const val = item.statValue * enhMul;
     if (item.statType === 'atk') equipAtk += val;
     if (item.statType === 'atkPct') equipAtkPct += val;
-    if (item.statType === 'crit') equipCrit += val;
     if (item.statType === 'critDmg') equipCritDmg += val;
     if (item.statType === 'spd') equipSpd += val;
   });
-  const cp = Math.floor(
+  _cpCache = Math.floor(
     equipAtk * 2.0 +
     equipAtkPct * 40 +
-    equipCrit * 50 +
     equipCritDmg * 30 +
     equipSpd * 40 +
     getLevel() * 10
   );
-  return cp;
+  _cpDirty = false;
+  return _cpCache;
 }
 function updateCombatPower() {
   const cp = getCombatPower();
@@ -1928,8 +1932,8 @@ async function _fetchRankings(el) {
   _rankLoading = false;
 }
 setInterval(() => {
-  _fetchRankings(activeTab === 'ranking' ? document.getElementById('tabContent') : null);
-}, 10000);
+  if (activeTab === 'ranking') _fetchRankings(document.getElementById('tabContent'));
+}, 30000);
 function _renderRankHTML(el, allRanks) {
     if (!allRanks.length) {
       el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--dim);">아직 랭킹 데이터가 없습니다</div>';
@@ -2226,7 +2230,7 @@ async function syncGame() {
     saveGame();
   } catch(e) { console.warn('Sync failed:', e); }
 }
-setInterval(syncGame, 5000);
+setInterval(syncGame, 15000);
 window.addEventListener('beforeunload', () => {
   saveGame();
   if (currentUser) {

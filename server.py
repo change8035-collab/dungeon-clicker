@@ -1,7 +1,21 @@
-import os, json, secrets, threading, requests as http_requests
+import os, json, secrets, threading, time, requests as http_requests
 from flask import Flask, request, jsonify, send_from_directory
 from flask_compress import Compress
 from supabase import create_client
+
+# Simple in-memory rate limiter
+_rate_limits = {}
+def check_rate_limit(key, interval=10):
+    now = time.time()
+    last = _rate_limits.get(key, 0)
+    if now - last < interval:
+        return False
+    _rate_limits[key] = now
+    # Clean old entries every 100 calls
+    if len(_rate_limits) > 500:
+        cutoff = now - 60
+        _rate_limits.clear()
+    return True
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 Compress(app)  # gzip 압축 (140KB → ~30KB)
@@ -46,7 +60,8 @@ def api_google_login():
         info = verify_res.json()
         if info.get('aud') != GOOGLE_CLIENT_ID:
             return jsonify({'error': 'wrong audience'}), 401
-    except:
+    except Exception as e:
+        print(f'[ERROR] Google token verify: {e}')
         return jsonify({'error': 'verification failed'}), 500
 
     uid = info['sub']  # Google unique user ID
@@ -142,6 +157,8 @@ def api_sync():
     if not user: return jsonify({'error': 'not logged in'}), 401
     data = request.json or {}
     uid = user['uid']
+    if not check_rate_limit(f'sync:{uid}', 10):
+        return jsonify({'ok': True, 'pending': {}, 'serverSettings': get_server_settings()})
     gs = data.get('gameState')
     if gs:
         # Save + get latest in one flow (2 DB calls instead of 4)
@@ -158,7 +175,7 @@ def api_sync():
                     'rogue_stage': data.get('rogueStage', 0),
                     'class_name': data.get('className', ''), 'class_stage': data.get('classStage', '')
                 }, on_conflict='uid').execute()
-            except: pass
+            except Exception as e: print(f'[ERROR] Rank update: {e}')
         threading.Thread(target=_update_rank, daemon=True).start()
     # Check pending give (from admin)
     pending = {}
@@ -177,7 +194,7 @@ def api_sync():
                     supabase.table('saves').update({'game_state': curr_gs}).eq('uid', uid).execute()
                 # Clear pending
                 supabase.table('user_settings').update({'settings': settings}).eq('uid', uid).execute()
-    except: pass
+    except Exception as e: print(f'[ERROR] Pending give: {e}')
     return jsonify({'ok': True, 'pending': pending, 'serverSettings': get_server_settings()})
 
 # Keep old save endpoint for compatibility
