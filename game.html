@@ -1649,8 +1649,16 @@ function saveGame() {
 function loadGame() {
   try {
     if (!localStorage.getItem('_reset_done_v4')) {
+      const savedUid = localStorage.getItem('userUid');
+      const savedNick = localStorage.getItem('userNick');
+      const savedEmail = localStorage.getItem('userEmail');
+      const savedAdmin = localStorage.getItem('isAdmin');
       localStorage.clear();
       localStorage.setItem('_reset_done_v4', '1');
+      if (savedUid) localStorage.setItem('userUid', savedUid);
+      if (savedNick) localStorage.setItem('userNick', savedNick);
+      if (savedEmail) localStorage.setItem('userEmail', savedEmail);
+      if (savedAdmin) localStorage.setItem('isAdmin', savedAdmin);
       return;
     }
     const raw = localStorage.getItem(getSaveKey());
