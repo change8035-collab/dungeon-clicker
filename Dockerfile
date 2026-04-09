@@ -1,13 +1,9 @@
-FROM maven:3.9-eclipse-temurin-17 AS build
+FROM python:3.12-slim
 WORKDIR /app
-COPY pom.xml .
-RUN mvn dependency:go-offline -B
-COPY src ./src
-COPY game.html ./src/main/resources/static/game.html
-COPY assets ./src/main/resources/static/assets
-RUN mvn package -DskipTests -B
-
-FROM eclipse-temurin:17-jre-alpine
-WORKDIR /app
-COPY --from=build /app/target/dungeon-clicker-1.0.0.jar app.jar
-ENTRYPOINT ["java", "-Xmx256m", "-Xms128m", "-jar", "app.jar"]
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY server.py .
+COPY game.html .
+COPY assets ./assets
+EXPOSE 10000
+CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "10000"]
