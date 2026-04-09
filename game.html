@@ -875,7 +875,7 @@ function updateTopBar() {
   document.getElementById('expFill').style.width = (getXp() / getXpToNextForClass() * 100) + '%';
   document.getElementById('expLabel').textContent = `EXP ${getXp()}/${getXpToNextForClass()}`;
   document.getElementById('dpsLabel').textContent = `ATK ${formatNum(stats.atk)} | DPS ${formatNum(Math.ceil(stats.atk * stats.spdBonus * (1 + stats.crit)))}`;
-  G.attackSpeed = Math.max(200, Math.ceil(1000 / Math.min(stats.spdBonus, 5)));
+  G.attackSpeed = Math.max(200, Math.ceil(1000 / Math.min(stats.spdBonus, 2.5)));
 }
 function updateAllUI() {
   markStatsDirty();
@@ -1384,10 +1384,10 @@ function renderShop(el) {
       </div>
       <div style="margin-top:16px;background:var(--card2);border:2px solid #4CAF50;border-radius:12px;padding:16px;text-align:center;">
         <div style="font-size:14px;font-weight:900;color:#4CAF50;margin-bottom:4px;">🤖 자동 채굴</div>
-        <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">💎 5,000 보석으로 영구 자동 채굴 해금 (1초마다 자동 클릭)</div>
+        <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">💎 10,000 보석으로 영구 자동 채굴 해금 (3초마다 자동 클릭)</div>
         <div style="display:flex;gap:8px;justify-content:center;">
-          <button onclick="buyAutoMine('gold')" style="background:${G.autoMineGold?'#333':'linear-gradient(135deg,var(--gold),#e67e22)'};color:#fff;border:none;padding:10px 16px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;" ${G.autoMineGold?'disabled':''}>${G.autoMineGold?'✅ 금광산 해금됨':'💰 금광산 💎5,000'}</button>
-          <button onclick="buyAutoMine('dia')" style="background:${G.autoMineDia?'#333':'linear-gradient(135deg,var(--purple),#6c3ec1)'};color:#fff;border:none;padding:10px 16px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;" ${G.autoMineDia?'disabled':''}>${G.autoMineDia?'✅ 보석광산 해금됨':'💎 보석광산 💎5,000'}</button>
+          <button onclick="buyAutoMine('gold')" style="background:${G.autoMineGold?'#333':'linear-gradient(135deg,var(--gold),#e67e22)'};color:#fff;border:none;padding:10px 16px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;" ${G.autoMineGold?'disabled':''}>${G.autoMineGold?'✅ 금광산 해금됨':'💰 금광산 💎10,000'}</button>
+          <button onclick="buyAutoMine('dia')" style="background:${G.autoMineDia?'#333':'linear-gradient(135deg,var(--purple),#6c3ec1)'};color:#fff;border:none;padding:10px 16px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;" ${G.autoMineDia?'disabled':''}>${G.autoMineDia?'✅ 보석광산 해금됨':'💎 보석광산 💎10,000'}</button>
         </div>
       </div>
     </div>`;
@@ -1422,11 +1422,11 @@ function mineClick(type) {
   if (label) label.textContent = G[key] + '/100';
 }
 function buyAutoMine(type) {
-  if (G.dia < 5000) { showFloatText('💎 보석이 부족합니다!', '#e74c3c'); return; }
+  if (G.dia < 10000) { showFloatText('💎 보석이 부족합니다!', '#e74c3c'); return; }
   const key = type === 'gold' ? 'autoMineGold' : 'autoMineDia';
   if (G[key]) return;
-  if (!confirm(`💎 5,000 보석으로 ${type === 'gold' ? '금' : '보석'}광산 자동 채굴을 해금하시겠습니까?`)) return;
-  G.dia -= 5000;
+  if (!confirm(`💎 10,000 보석으로 ${type === 'gold' ? '금' : '보석'}광산 자동 채굴을 해금하시겠습니까?`)) return;
+  G.dia -= 10000;
   G[key] = true;
   showFloatText(`🤖 ${type === 'gold' ? '금' : '보석'}광산 자동 채굴 해금!`, '#4CAF50');
   updateTopBar();
