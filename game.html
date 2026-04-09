@@ -114,9 +114,12 @@ const RARITIES = [
   { id:'admin', name:'🖤 절대자', color:'#000000', weight:0, statMul:999999999 },
 ];
 const DUNGEON_BOSSES = {
-  easy: { name:'🐉 화염 드래곤', hp:700000000, goldReward:50000000, diaReward:5, color:'#2cb67d', label:'이지' },
-  hard: { name:'💀 죽음의 기사', hp:10000000000, goldReward:200000000, diaReward:20, color:'#f1c40f', label:'하드' },
-  extreme: { name:'👹 심연의 마왕', hp:500000000000, goldReward:5000000000, diaReward:50, color:'#ff4444', label:'익스트림' }
+  easy_gold: { name:'🐉 화염 드래곤', hp:700000000, goldReward:50000000, diaReward:0, color:'#2cb67d', label:'이지', type:'gold' },
+  easy_dia: { name:'🐲 얼음 드래곤', hp:700000000, goldReward:0, diaReward:5, color:'#2ec4b6', label:'이지', type:'dia' },
+  hard_gold: { name:'💀 죽음의 기사', hp:10000000000, goldReward:200000000, diaReward:0, color:'#f1c40f', label:'하드', type:'gold' },
+  hard_dia: { name:'☠️ 암흑 기사', hp:10000000000, goldReward:0, diaReward:20, color:'#e67e22', label:'하드', type:'dia' },
+  extreme_gold: { name:'👹 심연의 마왕', hp:500000000000, goldReward:5000000000, diaReward:0, color:'#ff4444', label:'익스트림', type:'gold' },
+  extreme_dia: { name:'😈 혼돈의 군주', hp:500000000000, goldReward:0, diaReward:50, color:'#aa0000', label:'익스트림', type:'dia' },
 };
 const EQUIP_SLOTS = [
   { id:'weapon', name:'무기', icon:'⚔️', statType:'atk' },
@@ -1395,22 +1398,32 @@ function renderShop(el) {
   const tabs = `<div class="sub-tabs"><button class="sub-tab ${shopSubTab==='shop'?'active':''}" onclick="switchShopTab('shop')">🏪 상점</button><button class="sub-tab ${shopSubTab==='dungeon'?'active':''}" onclick="switchShopTab('dungeon')">🏰 던전</button></div>`;
   if (shopSubTab === 'dungeon') {
     let cardsHtml = '';
-    for (const [diff, boss] of Object.entries(DUNGEON_BOSSES)) {
-      const locked = G.dungeonLocked[diff];
-      cardsHtml += `
-        <div style="background:linear-gradient(135deg,#1a1a3e,#2a1a4e);border:2px solid ${boss.color};border-radius:12px;padding:16px;margin-bottom:12px;text-align:center;${locked?'opacity:0.5;':''}">
-          <div style="font-size:14px;font-weight:900;color:${boss.color};margin-bottom:4px;">[${boss.label}] ${boss.name}</div>
-          <div style="font-size:11px;color:var(--dim);margin-bottom:6px;">HP: ${formatNum(boss.hp)}</div>
-          <div style="font-size:11px;color:var(--gold);margin-bottom:2px;">보상: 💰 ${formatNum(boss.goldReward)}</div>
-          <div style="font-size:11px;color:var(--purple);margin-bottom:6px;">보상: 💎 ${boss.diaReward}개</div>
-          <div style="font-size:10px;color:var(--dim);margin-bottom:8px;">제한시간: 60초</div>
-          <button onclick="startDungeon('${diff}')" style="background:${locked?'#333':'linear-gradient(135deg,'+boss.color+',#6c3ec1)'};color:#fff;border:none;padding:10px 20px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;" ${locked||G.dungeonActive?'disabled':''}>${locked?'🔒 잠김':'⚔️ 도전'}</button>
-        </div>`;
+    const tiers = [
+      { label:'이지', color:'#2cb67d', keys:['easy_gold','easy_dia'] },
+      { label:'하드', color:'#f1c40f', keys:['hard_gold','hard_dia'] },
+      { label:'익스트림', color:'#ff4444', keys:['extreme_gold','extreme_dia'] },
+    ];
+    for (const tier of tiers) {
+      cardsHtml += `<div style="font-size:13px;font-weight:900;color:${tier.color};margin:12px 0 6px;">[ ${tier.label} ]</div>`;
+      cardsHtml += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">';
+      for (const key of tier.keys) {
+        const boss = DUNGEON_BOSSES[key];
+        const locked = G.dungeonLocked[key];
+        const reward = boss.type==='gold' ? `💰 ${formatNum(boss.goldReward)}` : `💎 ${boss.diaReward}개`;
+        cardsHtml += `
+          <div style="background:linear-gradient(135deg,#1a1a3e,#2a1a4e);border:2px solid ${boss.color};border-radius:10px;padding:10px;text-align:center;${locked?'opacity:0.4;':''}">
+            <div style="font-size:12px;font-weight:900;color:${boss.color};margin-bottom:3px;">${boss.name}</div>
+            <div style="font-size:9px;color:var(--dim);">HP ${formatNum(boss.hp)}</div>
+            <div style="font-size:11px;font-weight:700;color:${boss.type==='gold'?'var(--gold)':'var(--purple)'};margin:4px 0;">${reward}</div>
+            <button onclick="startDungeon('${key}')" style="background:${locked?'#333':'linear-gradient(135deg,'+boss.color+',#6c3ec1)'};color:#fff;border:none;padding:6px 12px;border-radius:6px;font-weight:700;font-size:11px;cursor:pointer;font-family:inherit;width:100%;" ${locked||G.dungeonActive?'disabled':''}>${locked?'🔒':'⚔️ 도전'}</button>
+          </div>`;
+      }
+      cardsHtml += '</div>';
     }
     el.innerHTML = `<div style="padding:12px;">${tabs}
       <div style="text-align:center;margin-bottom:16px;">
         <div style="font-size:16px;font-weight:900;color:var(--gold);margin-bottom:4px;">🏰 던전 보스</div>
-        <div style="font-size:11px;color:var(--dim);">60초 안에 보스를 처치하세요! (5초 이내 클리어 시 난이도 잠김)</div>
+        <div style="font-size:11px;color:var(--dim);">⏱️ 제한시간 60초</div>
       </div>
       ${cardsHtml}
     </div>`;
@@ -1444,7 +1457,7 @@ function updateDungeonTimerDisplay() {
   if (!overlay && G.dungeonActive) {
     overlay = document.createElement('div');
     overlay.id = 'dungeonOverlay';
-    overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:15;pointer-events:none;';
+    overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:15;';
     document.getElementById('battleArea').appendChild(overlay);
   }
   if (!overlay) return;
@@ -1459,6 +1472,7 @@ function updateDungeonTimerDisplay() {
       </div>
       <div style="font-size:10px;color:#fff;text-shadow:0 0 4px #000;">HP ${formatNum(Math.max(0,Math.ceil(G.dungeonHp)))} / ${formatNum(G.dungeonMaxHp)}</div>
       <div style="font-size:18px;font-weight:900;color:${G.dungeonTimer<10000?'#ff4444':'#fff'};margin-top:4px;text-shadow:0 0 8px rgba(0,0,0,0.8);">⏱️ ${timeLeft}s</div>
+      <button onclick="failDungeon()" style="margin-top:8px;background:rgba(100,100,100,0.8);color:#fff;border:1px solid #666;padding:4px 14px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;pointer-events:auto;">🚪 나가기</button>
     </div>
   `;
 }
