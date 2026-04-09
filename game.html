@@ -1201,8 +1201,8 @@ async function doResetAccount() {
 function getEnhanceCost(item) {
   const enhLv = item.enhanceLevel || 0;
   const ri = RARITIES.findIndex(r => r.id === item.rarityId);
-  const rarityMul = [1, 3, 8, 20, 50, 150, 300, 500, 800, 1200, 2000][ri] || 1;
-  return Math.ceil(100 * Math.pow(2, enhLv) * rarityMul);
+  const rarityMul = [1, 5, 25, 100, 500, 5000, 50000, 500000, 5000000, 50000000, 500000000, 1][ri] || 1;
+  return Math.ceil(50 * Math.pow(3, enhLv) * rarityMul);
 }
 function enhanceItem(itemId) {
   const item = findItem(itemId);
