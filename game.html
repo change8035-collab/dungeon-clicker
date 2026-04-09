@@ -114,12 +114,12 @@ const RARITIES = [
   { id:'admin', name:'🖤 절대자', color:'#000000', weight:0, statMul:999999999 },
 ];
 const DUNGEON_BOSSES = {
-  easy_gold: { name:'🐉 화염 드래곤', hp:700000000, goldReward:50000000, diaReward:0, color:'#2cb67d', label:'이지', type:'gold' },
-  easy_dia: { name:'🐲 얼음 드래곤', hp:700000000, goldReward:0, diaReward:5, color:'#2ec4b6', label:'이지', type:'dia' },
-  hard_gold: { name:'💀 죽음의 기사', hp:10000000000, goldReward:200000000, diaReward:0, color:'#f1c40f', label:'하드', type:'gold' },
-  hard_dia: { name:'☠️ 암흑 기사', hp:10000000000, goldReward:0, diaReward:20, color:'#e67e22', label:'하드', type:'dia' },
-  extreme_gold: { name:'👹 심연의 마왕', hp:500000000000, goldReward:5000000000, diaReward:0, color:'#ff4444', label:'익스트림', type:'gold' },
-  extreme_dia: { name:'😈 혼돈의 군주', hp:500000000000, goldReward:0, diaReward:50, color:'#aa0000', label:'익스트림', type:'dia' },
+  easy_gold: { name:'화염 드래곤', hp:700000000, goldReward:50000000, diaReward:0, color:'#2cb67d', label:'이지', type:'gold', sprite:'assets/dungeon/fire_dragon.png' },
+  easy_dia: { name:'얼음 드래곤', hp:700000000, goldReward:0, diaReward:5, color:'#2ec4b6', label:'이지', type:'dia', sprite:'assets/dungeon/ice_dragon.png' },
+  hard_gold: { name:'죽음의 기사', hp:10000000000, goldReward:200000000, diaReward:0, color:'#f1c40f', label:'하드', type:'gold', sprite:'assets/dungeon/death_knight.png' },
+  hard_dia: { name:'암흑 기사', hp:10000000000, goldReward:0, diaReward:20, color:'#e67e22', label:'하드', type:'dia', sprite:'assets/dungeon/dark_rider.png' },
+  extreme_gold: { name:'심연의 마왕', hp:500000000000, goldReward:5000000000, diaReward:0, color:'#ff4444', label:'익스트림', type:'gold', sprite:'assets/dungeon/abyss_lord.png' },
+  extreme_dia: { name:'혼돈의 군주', hp:500000000000, goldReward:0, diaReward:50, color:'#aa0000', label:'익스트림', type:'dia', sprite:'assets/dungeon/chaos_lord.png' },
 };
 const EQUIP_SLOTS = [
   { id:'weapon', name:'무기', icon:'⚔️', statType:'atk' },
@@ -979,7 +979,11 @@ function renderLamp(el) {
       </button>
       </div>
       <div style="margin-top:16px; font-size:11px; color:var(--dim); text-align:center;">
-      ${RARITIES.filter(r => r.weight > 0).map(r => `<span style="color:${r.color}">${r.name}</span>`).join(' · ')}
+      ${(() => {
+        const gachaR = RARITIES.filter(r => r.weight > 0);
+        const total = gachaR.reduce((s,r) => s + r.weight, 0);
+        return gachaR.map(r => `<span style="color:${r.color}">${r.name} <span style="opacity:0.7">${(r.weight/total*100).toFixed(r.weight<1?2:1)}%</span></span>`).join(' · ');
+      })()}
       <div style="margin-top:4px;font-size:10px;color:#666;">※ 신화 S 이상은 합성에서만 획득 가능</div>
       </div>
     `;
@@ -1412,7 +1416,8 @@ function renderShop(el) {
         const reward = boss.type==='gold' ? `💰 ${formatNum(boss.goldReward)}` : `💎 ${boss.diaReward}개`;
         cardsHtml += `
           <div style="background:linear-gradient(135deg,#1a1a3e,#2a1a4e);border:2px solid ${boss.color};border-radius:10px;padding:10px;text-align:center;${locked?'opacity:0.4;':''}">
-            <div style="font-size:12px;font-weight:900;color:${boss.color};margin-bottom:3px;">${boss.name}</div>
+            <img src="${boss.sprite}" style="width:60px;height:50px;object-fit:contain;margin-bottom:4px;">
+          <div style="font-size:12px;font-weight:900;color:${boss.color};margin-bottom:3px;">${boss.name}</div>
             <div style="font-size:9px;color:var(--dim);">HP ${formatNum(boss.hp)}</div>
             <div style="font-size:11px;font-weight:700;color:${boss.type==='gold'?'var(--gold)':'var(--purple)'};margin:4px 0;">${reward}</div>
             <button onclick="startDungeon('${key}')" style="background:${locked?'#333':'linear-gradient(135deg,'+boss.color+',#6c3ec1)'};color:#fff;border:none;padding:6px 12px;border-radius:6px;font-weight:700;font-size:11px;cursor:pointer;font-family:inherit;width:100%;" ${locked||G.dungeonActive?'disabled':''}>${locked?'🔒':'⚔️ 도전'}</button>
@@ -1449,6 +1454,11 @@ function startDungeon(difficulty) {
   G.dungeonMaxHp = boss.hp;
   G.dungeonTimer = 60000;
   G.dungeonStartTime = Date.now();
+  // Show boss sprite in monster area
+  const monsterEl = document.getElementById('monsterSprite');
+  const monsterName = document.getElementById('monsterName');
+  if (monsterEl) { monsterEl.src = boss.sprite; monsterEl.style.width = '120px'; monsterEl.style.height = '120px'; }
+  if (monsterName) monsterName.textContent = boss.name;
   showFloatText(`⚔️ ${boss.label} 던전 도전!`, boss.color);
   updateDungeonTimerDisplay();
 }
@@ -1495,6 +1505,7 @@ function onDungeonBossKill() {
   saveCloudGame();
   const overlay = document.getElementById('dungeonOverlay');
   if (overlay) overlay.remove();
+  spawnMonster();
   if (shopSubTab === 'dungeon') renderShop(document.getElementById('tabContent'));
 }
 function failDungeon() {
@@ -1503,6 +1514,7 @@ function failDungeon() {
   showFloatText('💀 시간 초과! 던전 실패...', '#e74c3c');
   const overlay = document.getElementById('dungeonOverlay');
   if (overlay) overlay.remove();
+  spawnMonster();
 }
 function buySSPackage() {
   if (G.gold < 999000000) { showFloatText('💰 골드가 부족합니다!', '#e74c3c'); return; }
@@ -2327,21 +2339,25 @@ async function addPending(uid, field, amount) {
   settings.pending_give = pending;
   await sbPost('/user_settings', {uid, settings});
 }
+let _givingAll = false;
 async function giveToAllUsers(field, amount) {
+  if (_givingAll) return;
   if (!amount || amount <= 0) { showFloatText('수량을 입력하세요', '#e74c3c'); return; }
   if (!confirm(`모든 유저에게 ${field === 'gold' ? '💰골드' : '💎보석'} +${formatNum(amount)} 지급?`)) return;
+  _givingAll = true;
   showFloatText(`⏳ 전체 지급 중...`, '#f1c40f');
   try {
     const msg = (document.getElementById('serverGiveMsg')?.value || '').trim();
     const res = await authFetch('/api/admin/give-all', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ field, amount, msg: msg || undefined })
-    });
+    }, 30000);
     const data = await res.json();
     G[field] = (G[field] || 0) + amount;
     updateTopBar();
     showFloatText(`✅ ${data.count || 0}명에게 ${field === 'gold' ? '💰' : '💎'}+${formatNum(amount)} 지급 완료!`, '#4CAF50');
   } catch(e) { showFloatText('❌ 지급 실패: ' + e.message, '#ff4444'); }
+  _givingAll = false;
 }
 async function giveToUser(field, amount) {
   const uid = document.getElementById('targetUid').value;
