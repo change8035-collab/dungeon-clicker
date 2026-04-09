@@ -298,6 +298,7 @@ function preloadImg(src) {
 }
 MONSTERS.forEach(m => preloadImg(m.sprite));
 BOSSES.forEach(m => preloadImg(m.sprite));
+Object.values(DUNGEON_BOSSES).forEach(b => preloadImg(b.sprite));
 function drawCharacter(canvas, classId, stageNum) {
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1419,7 +1420,7 @@ function renderShop(el) {
         const reward = boss.type==='gold' ? `💰 ${formatNum(boss.goldReward)}` : `💎 ${boss.diaReward}개`;
         cardsHtml += `
           <div style="background:linear-gradient(135deg,#1a1a3e,#2a1a4e);border:2px solid ${boss.color};border-radius:10px;padding:10px;text-align:center;${onCooldown?'opacity:0.5;':''}">
-            <img src="${boss.sprite}" style="width:60px;height:50px;object-fit:contain;margin-bottom:4px;">
+            <img src="${boss.sprite}" loading="lazy" style="width:90px;height:75px;object-fit:contain;margin-bottom:4px;">
           <div style="font-size:12px;font-weight:900;color:${boss.color};margin-bottom:3px;">${boss.name}</div>
             <div style="font-size:9px;color:var(--dim);">HP ${formatNum(boss.hp)}</div>
             <div style="font-size:11px;font-weight:700;color:${boss.type==='gold'?'var(--gold)':'var(--purple)'};margin:4px 0;">${reward}</div>
@@ -1461,7 +1462,7 @@ function startDungeon(difficulty) {
   // Show boss sprite in monster area
   const monsterEl = document.getElementById('monsterSprite');
   const monsterName = document.getElementById('monsterName');
-  if (monsterEl) { monsterEl.src = boss.sprite; monsterEl.style.width = '120px'; monsterEl.style.height = '120px'; }
+  if (monsterEl) { monsterEl.src = boss.sprite; monsterEl.style.width = '160px'; monsterEl.style.height = '160px'; }
   if (monsterName) monsterName.textContent = boss.name;
   showFloatText(`⚔️ ${boss.label} 던전 도전!`, boss.color);
   updateDungeonTimerDisplay();
@@ -1471,7 +1472,7 @@ function updateDungeonTimerDisplay() {
   if (!overlay && G.dungeonActive) {
     overlay = document.createElement('div');
     overlay.id = 'dungeonOverlay';
-    overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:15;';
+    overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:15;pointer-events:none;';
     document.getElementById('battleArea').appendChild(overlay);
   }
   if (!overlay) return;
