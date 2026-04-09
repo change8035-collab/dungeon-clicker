@@ -1464,7 +1464,7 @@ function startDungeon(difficulty) {
   const monsterName = document.getElementById('monsterName');
   if (monsterEl) { monsterEl.src = boss.sprite; monsterEl.style.width = '240px'; monsterEl.style.height = '240px'; }
   const mc = document.getElementById('monsterContainer');
-  if (mc) { mc.style.bottom = '5px'; mc.style.right = '60px'; }
+  if (mc) { mc.style.bottom = '5px'; mc.style.right = '120px'; }
   if (monsterName) monsterName.textContent = boss.name;
   showFloatText(`⚔️ ${boss.label} 던전 도전!`, boss.color);
   updateDungeonTimerDisplay();
