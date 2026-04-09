@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: dungeon-clicker
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
