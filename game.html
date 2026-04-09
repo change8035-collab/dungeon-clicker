@@ -1639,9 +1639,9 @@ function saveGame() {
 }
 function loadGame() {
   try {
-    if (!localStorage.getItem('_reset_done_v3')) {
+    if (!localStorage.getItem('_reset_done_v4')) {
       localStorage.clear();
-      localStorage.setItem('_reset_done_v3', '1');
+      localStorage.setItem('_reset_done_v4', '1');
       return;
     }
     const raw = localStorage.getItem(getSaveKey());
