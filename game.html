@@ -480,7 +480,7 @@ function generateItem(lampLv) {
   const rarityNames = nameMap[rarityBase] || nameMap['common'];
   const nameIdx = Math.floor(Math.random() * rarityNames.length);
   const ridx = RARITIES.indexOf(rarity);
-  const BASE = { atk:[5,15,50,150,500,2500,15000,100000,800000,8000000,99999999,99999999999], atkPct:[5,15,50,150,500,2500,15000,100000,800000,8000000,99999999,99999999999], critDmg:[5,15,50,150,500,2500,15000,100000,800000,8000000,99999999,99999999999], spd:[5,15,50,150,500,2500,15000,100000,800000,8000000,99999999,99999999999] };
+  const BASE = { atk:[1,3,10,30,100,500,3000,20000,160000,1600000,20000000,99999999999], atkPct:[1,3,10,30,100,500,3000,20000,160000,1600000,20000000,99999999999], critDmg:[1,3,10,30,100,500,3000,20000,160000,1600000,20000000,99999999999], spd:[1,3,10,30,100,500,3000,20000,160000,1600000,20000000,99999999999] };
   const stageBonus = 1 + G.stage * 0.02;
   const typeKey = BASE[slot.statType] ? slot.statType : 'atk';
   const minVal = (BASE[typeKey][ridx] || BASE[typeKey][0]) * stageBonus;
@@ -1249,7 +1249,7 @@ function fuseItems(item1Id, item2Id) {
   const fusionNames = nameMap[fusionRarityBase] || nameMap['common'];
   const nameIdx = Math.floor(Math.random() * fusionNames.length);
   const nridx = RARITIES.indexOf(nextRarity);
-  const BASE_F = { atk:[5,15,50,150,500,2500,15000,100000,800000,8000000,99999999,99999999999], atkPct:[5,15,50,150,500,2500,15000,100000,800000,8000000,99999999,99999999999], critDmg:[5,15,50,150,500,2500,15000,100000,800000,8000000,99999999,99999999999], spd:[5,15,50,150,500,2500,15000,100000,800000,8000000,99999999,99999999999] };
+  const BASE_F = { atk:[1,3,10,30,100,500,3000,20000,160000,1600000,20000000,99999999999], atkPct:[1,3,10,30,100,500,3000,20000,160000,1600000,20000000,99999999999], critDmg:[1,3,10,30,100,500,3000,20000,160000,1600000,20000000,99999999999], spd:[1,3,10,30,100,500,3000,20000,160000,1600000,20000000,99999999999] };
   const stgB = 1 + G.stage * 0.02;
   const tKey = BASE_F[slot.statType] ? slot.statType : 'atk';
   const mnV = (BASE_F[tKey][nridx] || BASE_F[tKey][0]) * stgB;
@@ -1608,7 +1608,7 @@ async function resetAllUsers() {
 function migrateEquipStats() {
   const allItems = [...G.inventory, ...Object.values(G.equipment).filter(Boolean)];
   if (allItems.length === 0) return;
-  const MIG_BASE = { atk:[5,15,50,150,500,2500,15000,100000,800000,8000000,99999999,99999999999], atkPct:[5,15,50,150,500,2500,15000,100000,800000,8000000,99999999,99999999999], critDmg:[5,15,50,150,500,2500,15000,100000,800000,8000000,99999999,99999999999], spd:[5,15,50,150,500,2500,15000,100000,800000,8000000,99999999,99999999999] };
+  const MIG_BASE = { atk:[1,3,10,30,100,500,3000,20000,160000,1600000,20000000,99999999999], atkPct:[1,3,10,30,100,500,3000,20000,160000,1600000,20000000,99999999999], critDmg:[1,3,10,30,100,500,3000,20000,160000,1600000,20000000,99999999999], spd:[1,3,10,30,100,500,3000,20000,160000,1600000,20000000,99999999999] };
   const MIG_LABELS = { atk:'공격력', atkPct:'공격력%', critDmg:'치명타피해%', spd:'공격속도%' };
   const SLOT_STAT = { weapon:'atk', helmet:'atkPct', armor:'critDmg', boots:'spd', ring:'critDmg', necklace:'atkPct' };
   let changed = false;
