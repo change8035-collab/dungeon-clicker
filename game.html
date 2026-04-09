@@ -135,7 +135,7 @@ function getEquipIcon(item, size) {
     item.sprite = 'assets/equip/' + item.slot + '_' + rarityBase + '_' + variant + '.png';
     item._spriteFixed = true;
   }
-  if (item.sprite) return '<img src="'+item.sprite+'" style="width:'+s+'px;height:'+s+'px;object-fit:contain;border-radius:4px;">';
+  if (item.sprite) return '<img src="'+item.sprite+'" loading="lazy" style="width:'+s+'px;height:'+s+'px;object-fit:contain;border-radius:4px;">';
   return '<span style="font-size:'+(s-8)+'px;">'+item.icon+'</span>';
 }
 const WEAPON_NAMES = {
@@ -1004,6 +1004,8 @@ function renderLamp(el) {
   }
 }
 let equipSubTab = 'equip';
+let invPage = 0;
+const INV_PAGE_SIZE = 40;
 function renderEquip(el) {
   const subTabs = `<div style="display:flex;gap:0;margin-bottom:12px;border-bottom:1px solid #333;">
     <button onclick="equipSubTab='equip';renderEquip(document.getElementById('tabContent'))" style="flex:1;padding:8px;border:none;border-bottom:2px solid ${equipSubTab==='equip'?'var(--accent)':'transparent'};background:none;color:${equipSubTab==='equip'?'var(--accent)':'var(--dim)'};font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">🎒 장비</button>
@@ -1036,12 +1038,13 @@ function renderEquip(el) {
       </div>
     </div>`;
   }).join('');
-  const sorted = [...G.inventory].sort((a, b) => {
-    const ai = RARITIES.findIndex(r => r.id === a.rarityId);
-    const bi = RARITIES.findIndex(r => r.id === b.rarityId);
-    return bi - ai;
-  });
-  let invHtml = sorted.map(item => {
+  const _rarityIdx = {};
+  RARITIES.forEach((r,i) => _rarityIdx[r.id] = i);
+  const sorted = [...G.inventory].sort((a, b) => (_rarityIdx[b.rarityId]||0) - (_rarityIdx[a.rarityId]||0));
+  const totalPages = Math.max(1, Math.ceil(sorted.length / INV_PAGE_SIZE));
+  if (invPage >= totalPages) invPage = totalPages - 1;
+  const pageItems = sorted.slice(invPage * INV_PAGE_SIZE, (invPage + 1) * INV_PAGE_SIZE);
+  let invHtml = pageItems.map(item => {
     const eLv = item.enhanceLevel || 0;
     const eStr = eLv > 0 ? ` +${eLv}` : '';
     return `
@@ -1051,6 +1054,13 @@ function renderEquip(el) {
       <div class="item-stat">${item.statLabel} +${item.statValue}</div>
     </div>
   `;}).join('');
+  const pageNav = totalPages > 1 ? `<div style="display:flex;justify-content:center;align-items:center;gap:8px;padding:8px 0;">
+    <button onclick="invPage=0;renderEquip(document.getElementById('tabContent'))" style="font-size:11px;padding:4px 8px;border:1px solid #444;background:${invPage===0?'#333':'none'};color:#fff;border-radius:4px;cursor:pointer;" ${invPage===0?'disabled':''}>◀◀</button>
+    <button onclick="invPage=Math.max(0,invPage-1);renderEquip(document.getElementById('tabContent'))" style="font-size:11px;padding:4px 8px;border:1px solid #444;background:none;color:#fff;border-radius:4px;cursor:pointer;" ${invPage===0?'disabled':''}>◀</button>
+    <span style="color:var(--dim);font-size:12px;">${invPage+1} / ${totalPages}</span>
+    <button onclick="invPage=Math.min(${totalPages-1},invPage+1);renderEquip(document.getElementById('tabContent'))" style="font-size:11px;padding:4px 8px;border:1px solid #444;background:none;color:#fff;border-radius:4px;cursor:pointer;" ${invPage>=totalPages-1?'disabled':''}>▶</button>
+    <button onclick="invPage=${totalPages-1};renderEquip(document.getElementById('tabContent'))" style="font-size:11px;padding:4px 8px;border:1px solid #444;background:${invPage>=totalPages-1?'#333':'none'};color:#fff;border-radius:4px;cursor:pointer;" ${invPage>=totalPages-1?'disabled':''}>▶▶</button>
+  </div>` : '';
   const commonCount = G.inventory.filter(i => i.rarityId === 'common').length;
   el.innerHTML = subTabs + `
     <div class="equip-section">
@@ -1070,6 +1080,7 @@ function renderEquip(el) {
       </div>
       </div>
       <div class="inv-grid">${invHtml || '<div style="grid-column:span 4;text-align:center;color:var(--dim);padding:20px;">인벤토리가 비어있습니다</div>'}</div>
+      ${pageNav}
     </div>
   `;
 }
