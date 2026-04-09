@@ -1464,7 +1464,7 @@ function startDungeon(difficulty) {
   const monsterName = document.getElementById('monsterName');
   if (monsterEl) { monsterEl.src = boss.sprite; monsterEl.style.width = '240px'; monsterEl.style.height = '240px'; }
   const mc = document.getElementById('monsterContainer');
-  if (mc) mc.style.bottom = '5px';
+  if (mc) { mc.style.bottom = '5px'; mc.style.right = '60px'; }
   if (monsterName) monsterName.textContent = boss.name;
   showFloatText(`⚔️ ${boss.label} 던전 도전!`, boss.color);
   updateDungeonTimerDisplay();
@@ -1513,7 +1513,7 @@ function onDungeonBossKill() {
   G.dungeonActive = false;
   G.dungeonDifficulty = null;
   const mc = document.getElementById('monsterContainer');
-  if (mc) mc.style.bottom = '50px';
+  if (mc) { mc.style.bottom = '50px'; mc.style.right = '30px'; }
   updateTopBar();
   saveCloudGame();
   const overlay = document.getElementById('dungeonOverlay');
@@ -1534,7 +1534,7 @@ function failDungeon() {
   G.dungeonMaxHp = 0;
   G.dungeonTimer = 0;
   const mc = document.getElementById('monsterContainer');
-  if (mc) mc.style.bottom = '50px';
+  if (mc) { mc.style.bottom = '50px'; mc.style.right = '30px'; }
   showFloatText(wasTimeout ? '💀 시간 초과! 던전 실패...' : '🚪 던전에서 나왔습니다', wasTimeout ? '#e74c3c' : '#aaa');
   const overlay = document.getElementById('dungeonOverlay');
   if (overlay) overlay.remove();
