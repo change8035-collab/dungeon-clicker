@@ -369,7 +369,7 @@ const SKILLS = [
     effect:(lv) => ({ spdPct: lv * 0.05 }) },
 ];
 let G = {
-  gold: 1000, dia: 10,
+  gold: 1000, dia: 100,
   classLevels: { knight: 1, archer: 1, rogue: 1 },
   classXp: { knight: 0, archer: 0, rogue: 0 },
   stage: 1, subStage: 1, maxStage: 1,
@@ -1884,11 +1884,13 @@ async function syncWithServer() {
       updateAllUI();
       await loadServerSettings();
     }
+    _cloudLoaded = true;
   } catch(e) {
+    _cloudLoaded = true;
   }
 }
 function resetGameState() {
-  G.gold = 0; G.dia = 100;
+  G.gold = 1000; G.dia = 100;
   G.classLevels = { knight: 1, archer: 1, rogue: 1 };
   G.classXp = { knight: 0, archer: 0, rogue: 0 };
   G.stage = 1; G.subStage = 1; G.maxStage = 1;
@@ -2289,8 +2291,9 @@ async function resetGame() {
     location.reload();
   } catch(e) { alert('초기화 실패: ' + e.message); }
 }
+let _cloudLoaded = false;
 async function syncGame() {
-  if (!currentUser) return;
+  if (!currentUser || !_cloudLoaded) return;
   try {
     const info = getClassInfo(G.selectedClass, getLevel());
     const res = await authFetch('/api/sync', {
