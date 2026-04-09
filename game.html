@@ -563,7 +563,7 @@ function getCachedStats() {
 }
 function attack() {
   try {
-  if (!G.monster) { spawnMonster(); return; }
+  if (!G.monster) { try { spawnMonster(); } catch(e) { console.error('SPAWN ERROR:', e); } return; }
   if (!_battleEl) initDomRefs();
   if (G.dungeonActive) {
     const stats = getCachedStats();
@@ -1541,10 +1541,14 @@ function failDungeon() {
   const exitBtn = document.getElementById('dungeonExitBtn');
   if (exitBtn) exitBtn.remove();
   G.monster = null;
+  G.attackTimer = 0;
+  G.attackSpeed = 1000;
+  markStatsDirty();
   spawnMonster();
   initDomRefs();
   updateTopBar();
   updateMonsterHp();
+  updateAllUI();
   if (shopSubTab === 'dungeon') renderShop(document.getElementById('tabContent'));
 }
 function buySSPackage() {
