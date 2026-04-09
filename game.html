@@ -54,6 +54,9 @@
   </div>
   <!-- BATTLE AREA -->
   <div class="battle-area" id="battleArea">
+    <div id="dungeonTimer" style="display:none;position:absolute;top:30px;left:0;width:100%;text-align:center;z-index:9;font-size:14px;font-weight:900;color:#ff8906;">
+      ⏱️ 던전 <span id="dungeonTimerLabel">60.0</span>초 | <span id="dungeonBossName">보스</span>
+    </div>
     <div id="burningIcons" style="position:absolute;top:6px;left:8px;z-index:10;display:flex;gap:4px;"></div>
     <div class="stage-info">🏰 스테이지 <span id="stageDisplay">1-1</span></div>
     <div class="char-container" id="charContainer">
@@ -110,6 +113,11 @@ const RARITIES = [
   { id:'mythic_sss', name:'신화 SSS', color:'#880000', weight:0, statMul:20000000 },
   { id:'admin', name:'🖤 절대자', color:'#000000', weight:0, statMul:999999999 },
 ];
+const DUNGEON_BOSSES = {
+  easy: { name:'🐉 화염 드래곤', hp:700000000, goldReward:50000000, diaReward:5, color:'#2cb67d', label:'이지' },
+  hard: { name:'💀 죽음의 기사', hp:10000000000, goldReward:200000000, diaReward:20, color:'#f1c40f', label:'하드' },
+  extreme: { name:'👹 심연의 마왕', hp:500000000000, goldReward:5000000000, diaReward:50, color:'#ff4444', label:'익스트림' }
+};
 const EQUIP_SLOTS = [
   { id:'weapon', name:'무기', icon:'⚔️', statType:'atk' },
   { id:'helmet', name:'투구', icon:'🪖', statType:'atkPct' },
@@ -388,6 +396,7 @@ let G = {
   lastSave: Date.now(),
   monster: null, monsterHp: 0, monsterMaxHp: 0,
   attackTimer: 0, attackSpeed: 1000,
+  dungeonLocked: {}, dungeonActive: false, dungeonDifficulty: null, dungeonHp: 0, dungeonMaxHp: 0, dungeonTimer: 0, dungeonStartTime: 0,
 };
 let nextItemId = 1;
 let activeTab = 'lamp';
@@ -552,6 +561,27 @@ function attack() {
   try {
   if (!G.monster) { spawnMonster(); return; }
   if (!_battleEl) initDomRefs();
+  if (G.dungeonActive) {
+    const stats = getCachedStats();
+    let dmg = stats.atk;
+    if (!dmg || !isFinite(dmg) || isNaN(dmg)) dmg = 1;
+    let isCrit = Math.random() < stats.crit;
+    if (isCrit) dmg = Math.ceil(dmg * stats.critDmg);
+    if (!isFinite(dmg) || isNaN(dmg)) dmg = G.dungeonMaxHp;
+    G.dungeonHp -= dmg;
+    showDamage(dmg, isCrit);
+    if (_charEl) {
+      const atkAnim = G.selectedClass === 'archer' ? 'atk-shoot' : G.selectedClass === 'rogue' ? 'atk-stab' : 'atk-slash';
+      _charEl.classList.remove('atk-slash', 'atk-shoot', 'atk-stab', 'atk-crit');
+      void _charEl.offsetWidth;
+      _charEl.classList.add(atkAnim);
+      if (isCrit) _charEl.classList.add('atk-crit');
+    }
+    drawEffectSprite(G.selectedClass, getEvolution().stage);
+    updateDungeonTimerDisplay();
+    if (G.dungeonHp <= 0) { onDungeonBossKill(); }
+    return;
+  }
   const stats = getCachedStats();
   let dmg = stats.atk;
   if (!dmg || !isFinite(dmg) || isNaN(dmg)) { console.error('ATK ERROR:', stats); dmg = 1; }
@@ -1362,45 +1392,27 @@ function clearFusionSlots() {
 let shopSubTab = 'shop';
 function switchShopTab(tab) { shopSubTab = tab; renderShop(document.getElementById('tabContent')); }
 function renderShop(el) {
-  const tabs = `<div class="sub-tabs"><button class="sub-tab ${shopSubTab==='shop'?'active':''}" onclick="switchShopTab('shop')">🏪 상점</button><button class="sub-tab ${shopSubTab==='mine'?'active':''}" onclick="switchShopTab('mine')">⛏️ 광산</button></div>`;
-  if (shopSubTab === 'mine') {
-    if (!G.mineGold) G.mineGold = 0;
-    if (!G.mineDia) G.mineDia = 0;
+  const tabs = `<div class="sub-tabs"><button class="sub-tab ${shopSubTab==='shop'?'active':''}" onclick="switchShopTab('shop')">🏪 상점</button><button class="sub-tab ${shopSubTab==='dungeon'?'active':''}" onclick="switchShopTab('dungeon')">🏰 던전</button></div>`;
+  if (shopSubTab === 'dungeon') {
+    let cardsHtml = '';
+    for (const [diff, boss] of Object.entries(DUNGEON_BOSSES)) {
+      const locked = G.dungeonLocked[diff];
+      cardsHtml += `
+        <div style="background:linear-gradient(135deg,#1a1a3e,#2a1a4e);border:2px solid ${boss.color};border-radius:12px;padding:16px;margin-bottom:12px;text-align:center;${locked?'opacity:0.5;':''}">
+          <div style="font-size:14px;font-weight:900;color:${boss.color};margin-bottom:4px;">[${boss.label}] ${boss.name}</div>
+          <div style="font-size:11px;color:var(--dim);margin-bottom:6px;">HP: ${formatNum(boss.hp)}</div>
+          <div style="font-size:11px;color:var(--gold);margin-bottom:2px;">보상: 💰 ${formatNum(boss.goldReward)}</div>
+          <div style="font-size:11px;color:var(--purple);margin-bottom:6px;">보상: 💎 ${boss.diaReward}개</div>
+          <div style="font-size:10px;color:var(--dim);margin-bottom:8px;">제한시간: 60초</div>
+          <button onclick="startDungeon('${diff}')" style="background:${locked?'#333':'linear-gradient(135deg,'+boss.color+',#6c3ec1)'};color:#fff;border:none;padding:10px 20px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;" ${locked||G.dungeonActive?'disabled':''}>${locked?'🔒 잠김':'⚔️ 도전'}</button>
+        </div>`;
+    }
     el.innerHTML = `<div style="padding:12px;">${tabs}
-      <div style="text-align:center;margin-bottom:20px;">
-        <div style="font-size:16px;font-weight:900;color:var(--gold);margin-bottom:4px;">⛏️ 광산</div>
-        <div style="font-size:11px;color:var(--dim);">클릭 100번 = 보상 획득!</div>
+      <div style="text-align:center;margin-bottom:16px;">
+        <div style="font-size:16px;font-weight:900;color:var(--gold);margin-bottom:4px;">🏰 던전 보스</div>
+        <div style="font-size:11px;color:var(--dim);">60초 안에 보스를 처치하세요! (5초 이내 클리어 시 난이도 잠김)</div>
       </div>
-      <div style="display:flex;gap:12px;">
-        <div style="flex:1;background:linear-gradient(135deg,#3a2a1a,#2a1a0a);border:2px solid var(--gold);border-radius:12px;padding:16px;text-align:center;">
-          <div style="font-size:36px;cursor:pointer;user-select:none;" onclick="mineClick('gold')" id="mineGoldBtn">💰</div>
-          <div style="font-size:13px;font-weight:900;color:var(--gold);margin-top:8px;">금광산</div>
-          <div style="margin-top:8px;background:#1a1a3e;border-radius:6px;height:12px;overflow:hidden;">
-            <div id="mineGoldBar" style="width:${G.mineGold}%;height:100%;background:linear-gradient(90deg,var(--gold),#e67e22);border-radius:6px;transition:width 0.1s;"></div>
-          </div>
-          <div style="font-size:10px;color:var(--dim);margin-top:4px;" id="mineGoldLabel">${G.mineGold}/100</div>
-          <div style="font-size:11px;color:var(--gold);margin-top:6px;">보상: 💰 50M</div>
-          <div style="margin-top:6px;font-size:10px;color:${G.autoMineGold?'#4CAF50':'var(--dim)'};">${G.autoMineGold?'🤖 자동 채굴 중':'수동'}</div>
-        </div>
-        <div style="flex:1;background:linear-gradient(135deg,#1a1a3e,#2a1a4e);border:2px solid var(--purple);border-radius:12px;padding:16px;text-align:center;">
-          <div style="font-size:36px;cursor:pointer;user-select:none;" onclick="mineClick('dia')" id="mineDiaBtn">💎</div>
-          <div style="font-size:13px;font-weight:900;color:var(--purple);margin-top:8px;">보석광산</div>
-          <div style="margin-top:8px;background:#1a1a3e;border-radius:6px;height:12px;overflow:hidden;">
-            <div id="mineDiaBar" style="width:${G.mineDia}%;height:100%;background:linear-gradient(90deg,var(--purple),#6c3ec1);border-radius:6px;transition:width 0.1s;"></div>
-          </div>
-          <div style="font-size:10px;color:var(--dim);margin-top:4px;" id="mineDiaLabel">${G.mineDia}/100</div>
-          <div style="font-size:11px;color:var(--purple);margin-top:6px;">보상: 💎 50개</div>
-          <div style="margin-top:6px;font-size:10px;color:${G.autoMineDia?'#4CAF50':'var(--dim)'};">${G.autoMineDia?'🤖 자동 채굴 중':'수동'}</div>
-        </div>
-      </div>
-      <div style="margin-top:16px;background:var(--card2);border:2px solid #4CAF50;border-radius:12px;padding:16px;text-align:center;">
-        <div style="font-size:14px;font-weight:900;color:#4CAF50;margin-bottom:4px;">🤖 자동 채굴</div>
-        <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">💎 10,000 보석으로 영구 자동 채굴 해금 (3초마다 자동 클릭)</div>
-        <div style="display:flex;gap:8px;justify-content:center;">
-          <button onclick="buyAutoMine('gold')" style="background:${G.autoMineGold?'#333':'linear-gradient(135deg,var(--gold),#e67e22)'};color:#fff;border:none;padding:10px 16px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;" ${G.autoMineGold?'disabled':''}>${G.autoMineGold?'✅ 금광산 해금됨':'💰 금광산 💎10,000'}</button>
-          <button onclick="buyAutoMine('dia')" style="background:${G.autoMineDia?'#333':'linear-gradient(135deg,var(--purple),#6c3ec1)'};color:#fff;border:none;padding:10px 16px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;" ${G.autoMineDia?'disabled':''}>${G.autoMineDia?'✅ 보석광산 해금됨':'💎 보석광산 💎10,000'}</button>
-        </div>
-      </div>
+      ${cardsHtml}
     </div>`;
     return;
   }
@@ -1414,40 +1426,70 @@ function renderShop(el) {
     </div>`}
   </div>`;
 }
-function mineClick(type) {
-  const key = type === 'gold' ? 'mineGold' : 'mineDia';
-  if (!G[key]) G[key] = 0;
-  G[key]++;
-  const btn = document.getElementById(type === 'gold' ? 'mineGoldBtn' : 'mineDiaBtn');
-  if (btn) { btn.style.transform = 'scale(0.8)'; setTimeout(() => btn.style.transform = 'scale(1)', 80); }
-  if (G[key] >= 100) {
-    G[key] = 0;
-    if (type === 'gold') { G.gold += 50000000; showFloatText('⛏️ 금광산 완료! 💰+50M', '#f1c40f'); }
-    else { G.dia += 50; showFloatText('⛏️ 보석광산 완료! 💎+50', '#7f5af0'); }
-    updateTopBar();
-    saveCloudGame();
-  }
-  const bar = document.getElementById(type === 'gold' ? 'mineGoldBar' : 'mineDiaBar');
-  const label = document.getElementById(type === 'gold' ? 'mineGoldLabel' : 'mineDiaLabel');
-  if (bar) bar.style.width = G[key] + '%';
-  if (label) label.textContent = G[key] + '/100';
+function startDungeon(difficulty) {
+  if (G.dungeonLocked[difficulty]) { showFloatText('🔒 이 난이도는 잠겼습니다!', '#e74c3c'); return; }
+  if (G.dungeonActive) return;
+  const boss = DUNGEON_BOSSES[difficulty];
+  G.dungeonActive = true;
+  G.dungeonDifficulty = difficulty;
+  G.dungeonHp = boss.hp;
+  G.dungeonMaxHp = boss.hp;
+  G.dungeonTimer = 60000;
+  G.dungeonStartTime = Date.now();
+  showFloatText(`⚔️ ${boss.label} 던전 도전!`, boss.color);
+  updateDungeonTimerDisplay();
 }
-function buyAutoMine(type) {
-  if (G.dia < 10000) { showFloatText('💎 보석이 부족합니다!', '#e74c3c'); return; }
-  const key = type === 'gold' ? 'autoMineGold' : 'autoMineDia';
-  if (G[key]) return;
-  if (!confirm(`💎 10,000 보석으로 ${type === 'gold' ? '금' : '보석'}광산 자동 채굴을 해금하시겠습니까?`)) return;
-  G.dia -= 10000;
-  G[key] = true;
-  showFloatText(`🤖 ${type === 'gold' ? '금' : '보석'}광산 자동 채굴 해금!`, '#4CAF50');
+function updateDungeonTimerDisplay() {
+  let overlay = document.getElementById('dungeonOverlay');
+  if (!overlay && G.dungeonActive) {
+    overlay = document.createElement('div');
+    overlay.id = 'dungeonOverlay';
+    overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:15;pointer-events:none;';
+    document.getElementById('battleArea').appendChild(overlay);
+  }
+  if (!overlay) return;
+  const boss = DUNGEON_BOSSES[G.dungeonDifficulty];
+  const hpPct = Math.max(0, G.dungeonHp / G.dungeonMaxHp * 100);
+  const timeLeft = Math.max(0, G.dungeonTimer / 1000).toFixed(1);
+  overlay.innerHTML = `
+    <div style="position:absolute;top:30px;left:50%;transform:translateX(-50%);text-align:center;z-index:16;">
+      <div style="font-size:11px;font-weight:900;color:${boss.color};text-shadow:0 0 8px rgba(0,0,0,0.8);">${boss.name}</div>
+      <div style="width:200px;height:10px;background:#333;border-radius:5px;overflow:hidden;margin:4px auto;">
+        <div style="width:${hpPct}%;height:100%;background:linear-gradient(90deg,${boss.color},#ff6b6b);transition:width 0.1s;border-radius:5px;"></div>
+      </div>
+      <div style="font-size:10px;color:#fff;text-shadow:0 0 4px #000;">HP ${formatNum(Math.max(0,Math.ceil(G.dungeonHp)))} / ${formatNum(G.dungeonMaxHp)}</div>
+      <div style="font-size:18px;font-weight:900;color:${G.dungeonTimer<10000?'#ff4444':'#fff'};margin-top:4px;text-shadow:0 0 8px rgba(0,0,0,0.8);">⏱️ ${timeLeft}s</div>
+    </div>
+  `;
+}
+function onDungeonBossKill() {
+  const diff = G.dungeonDifficulty;
+  const boss = DUNGEON_BOSSES[diff];
+  const clearTime = Date.now() - G.dungeonStartTime;
+  G.gold += boss.goldReward;
+  G.dia += boss.diaReward;
+  G.totalGold += boss.goldReward;
+  if (clearTime <= 5000) {
+    G.dungeonLocked[diff] = true;
+    showFloatText(`⚡ ${(clearTime/1000).toFixed(1)}초 클리어! 🔒 난이도 잠김!`, '#ff4444');
+  } else {
+    showFloatText(`✅ ${(clearTime/1000).toFixed(1)}초 클리어! 💰+${formatNum(boss.goldReward)} 💎+${boss.diaReward}`, '#4CAF50');
+  }
+  G.dungeonActive = false;
+  G.dungeonDifficulty = null;
   updateTopBar();
   saveCloudGame();
-  if (shopSubTab === 'mine') renderShop(document.getElementById('tabContent'));
+  const overlay = document.getElementById('dungeonOverlay');
+  if (overlay) overlay.remove();
+  if (shopSubTab === 'dungeon') renderShop(document.getElementById('tabContent'));
 }
-setInterval(() => {
-  if (G.autoMineGold) mineClick('gold');
-  if (G.autoMineDia) mineClick('dia');
-}, 3000);
+function failDungeon() {
+  G.dungeonActive = false;
+  G.dungeonDifficulty = null;
+  showFloatText('💀 시간 초과! 던전 실패...', '#e74c3c');
+  const overlay = document.getElementById('dungeonOverlay');
+  if (overlay) overlay.remove();
+}
 function buySSPackage() {
   if (G.gold < 999000000) { showFloatText('💰 골드가 부족합니다!', '#e74c3c'); return; }
   if (!confirm('999M 골드로 신화 SS 풀세트를 구매하시겠습니까?')) return;
@@ -1721,6 +1763,11 @@ function gameLoop() {
     _atkCount++;
     attack();
   }
+  if (G.dungeonActive) {
+    G.dungeonTimer -= dt;
+    if (G.dungeonTimer <= 0) { failDungeon(); }
+    else { updateDungeonTimerDisplay(); }
+  }
   lastTick = now;
   requestAnimationFrame(gameLoop);
 }
@@ -1920,6 +1967,9 @@ function resetGameState() {
   G.skillLevels = {}; G.kills = 0; G.totalGold = 0;
   G.monster = null; G.monsterHp = 0; G.monsterMaxHp = 0;
   G.attackTimer = 0; G.attackSpeed = 1000;
+  G.dungeonLocked = {}; G.dungeonActive = false;
+  G.dungeonDifficulty = null; G.dungeonHp = 0; G.dungeonMaxHp = 0;
+  G.dungeonTimer = 0; G.dungeonStartTime = 0;
   G.lastSave = Date.now();
   nextItemId = 1;
 }
@@ -2027,7 +2077,7 @@ async function _fetchRankings(el) {
 }
 setInterval(() => {
   if (activeTab === 'ranking') _fetchRankings(document.getElementById('tabContent'));
-}, 30000);
+}, 10000);
 function _renderRankHTML(el, allRanks) {
     if (!allRanks.length) {
       el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--dim);">아직 랭킹 데이터가 없습니다</div>';
