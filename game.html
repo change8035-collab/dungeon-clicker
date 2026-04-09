@@ -1797,6 +1797,14 @@ async function changeNickname() {
     showFloatText('✅ 닉네임 변경: ' + data.nickname, '#4CAF50');
   } catch(e) { alert('변경 실패: ' + e.message); }
 }
+function doLogout() {
+  if (!confirm('정말 로그아웃 하시겠습니까?')) return;
+  localStorage.clear();
+  localStorage.setItem('_reset_done_v4', '1');
+  currentUser = null;
+  isAdmin = false;
+  location.reload();
+}
 async function checkAuth() {
   // uid가 있으면 로컬 데이터로 즉시 시작 (서버 기다리지 않음!)
   if (userUid) {
