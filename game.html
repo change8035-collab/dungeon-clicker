@@ -2197,9 +2197,9 @@ function selectUser(uid, name, email) {
   document.getElementById('targetUid').value = uid;
   document.getElementById('targetUserInfo').textContent = '선택: ' + name + ' (' + email + ')';
 }
-const SB_URL = 'https://pvwcpowcsstdcvcghjff.supabase.co/rest/v1';
+const SB_URL = 'https://yzcwgzgnfeeutkhxwmhu.supabase.co/rest/v1';
 const SB_KEY = 'sb_publishable_ebJU9uhgII5x2kNrcQxcFg_Xu4Gg0rl';
-const SB_HDR = { 'apikey': SB_KEY, 'Authorization': 'Bearer sb_secret_NvQiIbELqA7FGe9W6wq8YA_yAxTiQf0', 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' };
+const SB_HDR = { 'apikey': SB_KEY, 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6Y3dnemduZmVldXRraHh3bWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3MTY0ODEsImV4cCI6MjA5MTI5MjQ4MX0.9hebqqAWjPajKH2_Sim6kog7dw8_xQD2Ru3vbQd31PM', 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' };
 async function sbGet(path) { const r = await fetch(SB_URL+path, {headers:SB_HDR}); return r.json(); }
 async function sbPost(path, body) { const r = await fetch(SB_URL+path, {method:'POST',headers:SB_HDR,body:JSON.stringify(body)}); return r; }
 async function sbPatch(path, body) { const r = await fetch(SB_URL+path, {method:'PATCH',headers:{...SB_HDR,'Prefer':'return=minimal'},body:JSON.stringify(body)}); return r; }
