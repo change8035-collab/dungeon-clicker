@@ -1806,10 +1806,13 @@ async function changeNickname() {
     showFloatText('✅ 닉네임 변경: ' + data.nickname, '#4CAF50');
   } catch(e) { alert('변경 실패: ' + e.message); }
 }
-function doLogout() {
+async function doLogout() {
   if (!confirm('정말 로그아웃 하시겠습니까?')) return;
   saveGame();
-  saveCloudGame();
+  try { await authFetch('/api/save', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ gameState: G, combatPower: getCombatPower(), level: getLevel(), stage: G.stage })
+  }, 10000); } catch(e) {}
   localStorage.removeItem('userUid');
   localStorage.removeItem('userNick');
   localStorage.removeItem('isAdmin');
@@ -1855,13 +1858,6 @@ async function syncWithServer() {
     });
     let data = await res.json();
     if (!data.ok) {
-      const nick = localStorage.getItem('userNick') || '모험가';
-      try {
-      await fetch('/api/register', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ nickname: nick })
-      });
-      } catch(e) {}
       return;
     }
     if (data.ok) {
