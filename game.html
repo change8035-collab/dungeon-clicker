@@ -1520,7 +1520,10 @@ function onDungeonBossKill() {
   if (overlay) overlay.remove();
   const exitBtn = document.getElementById('dungeonExitBtn');
   if (exitBtn) exitBtn.remove();
+  G.monster = null;
   spawnMonster();
+  initDomRefs();
+  updateMonsterHp();
   if (shopSubTab === 'dungeon') renderShop(document.getElementById('tabContent'));
 }
 function failDungeon() {
@@ -1537,8 +1540,11 @@ function failDungeon() {
   if (overlay) overlay.remove();
   const exitBtn = document.getElementById('dungeonExitBtn');
   if (exitBtn) exitBtn.remove();
+  G.monster = null;
   spawnMonster();
+  initDomRefs();
   updateTopBar();
+  updateMonsterHp();
   if (shopSubTab === 'dungeon') renderShop(document.getElementById('tabContent'));
 }
 function buySSPackage() {
