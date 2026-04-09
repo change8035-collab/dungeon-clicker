@@ -1873,13 +1873,10 @@ async function syncWithServer() {
       if (loadData && loadData.gameState) {
       const saved = typeof loadData.gameState === 'string' ? JSON.parse(loadData.gameState) : loadData.gameState;
       if (saved && Object.keys(saved).length > 2) {
-      const cloudStage = Math.max(...Object.values(saved.classMaxStages || {knight:1}));
-      const localStage = Math.max(...Object.values(G.classMaxStages || {knight:1}));
-      if (cloudStage > localStage || (cloudStage === localStage && (saved.gold||0) > G.gold)) {
       for (const key of Object.keys(saved)) G[key] = saved[key];
       G.monster = null;
+      saveGame();
       spawnMonster();
-      }
       }
       }
       migrateEquipStats();
