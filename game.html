@@ -762,6 +762,28 @@ function sellAllCommon() {
   G.inventory = G.inventory.filter(i => i.rarityId !== 'common');
   updateAllUI();
 }
+function bulkDeleteByRarity(rarityId) {
+  const targets = G.inventory.filter(i => i.rarityId === rarityId && i.rarityId !== 'admin');
+  if (!targets.length) { showFloatText('삭제할 장비가 없습니다', '#e74c3c'); return; }
+  let total = 0;
+  targets.forEach(i => { total += getSellValue(i); });
+  G.gold += total;
+  G.totalGold += total;
+  G.inventory = G.inventory.filter(i => i.rarityId !== rarityId || i.rarityId === 'admin');
+  showFloatText(`${targets.length}개 판매! +${formatNum(total)}G`, 'var(--gold)');
+  updateAllUI();
+}
+function bulkDeleteAll() {
+  const targets = G.inventory.filter(i => i.rarityId !== 'admin');
+  if (!targets.length) { showFloatText('삭제할 장비가 없습니다', '#e74c3c'); return; }
+  let total = 0;
+  targets.forEach(i => { total += getSellValue(i); });
+  G.gold += total;
+  G.totalGold += total;
+  G.inventory = G.inventory.filter(i => i.rarityId === 'admin');
+  showFloatText(`${targets.length}개 전부 판매! +${formatNum(total)}G`, 'var(--gold)');
+  updateAllUI();
+}
 function getEffectiveStatValue(item) {
   const enhLv = item.enhanceLevel || 0;
   return item.statValue + Math.ceil(item.statValue * enhLv * 0.1);
@@ -1039,7 +1061,13 @@ function renderEquip(el) {
       <div class="equip-slots">${slotsHtml}</div>
       <div class="inv-title">
       🎒 인벤토리 (${G.inventory.length})
-      ${commonCount > 0 ? `<button style="font-size:11px;background:var(--red);color:#fff;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:inherit;" onclick="sellAllCommon()">일반 전부 판매 (${commonCount}개)</button>` : ''}
+      <div style="display:flex;gap:4px;flex-wrap:wrap;">
+      ${commonCount > 0 ? `<button style="font-size:10px;background:var(--red);color:#fff;border:none;padding:3px 8px;border-radius:5px;cursor:pointer;font-family:inherit;" onclick="sellAllCommon()">일반 판매(${commonCount})</button>` : ''}
+      <button style="font-size:10px;background:#555;color:#fff;border:none;padding:3px 8px;border-radius:5px;cursor:pointer;font-family:inherit;" onclick="bulkDeleteByRarity('uncommon')">고급 판매</button>
+      <button style="font-size:10px;background:#555;color:#fff;border:none;padding:3px 8px;border-radius:5px;cursor:pointer;font-family:inherit;" onclick="bulkDeleteByRarity('rare')">희귀 판매</button>
+      <button style="font-size:10px;background:#555;color:#fff;border:none;padding:3px 8px;border-radius:5px;cursor:pointer;font-family:inherit;" onclick="bulkDeleteByRarity('epic')">영웅 판매</button>
+      <button style="font-size:10px;background:var(--red);color:#fff;border:none;padding:3px 8px;border-radius:5px;cursor:pointer;font-family:inherit;font-weight:700;" onclick="if(confirm('인벤토리 전체를 판매합니다. 절대자 장비 제외.'))bulkDeleteAll()">⚠️ 전체 판매</button>
+      </div>
       </div>
       <div class="inv-grid">${invHtml || '<div style="grid-column:span 4;text-align:center;color:var(--dim);padding:20px;">인벤토리가 비어있습니다</div>'}</div>
     </div>
@@ -1523,7 +1551,9 @@ function giveAdminItems() {
   const adminRarity = RARITIES.find(r => r.id === 'admin');
   const ridx = RARITIES.indexOf(adminRarity);
   EQUIP_SLOTS.forEach(slot => {
-    const statVal = 99999999999;
+    const sssMax = 9999999999 * 1.4;
+    const sssPlus10 = sssMax * (1 + 10 * 0.1);
+    const statVal = Math.ceil(sssPlus10 * 10);
     const item = {
       id: nextItemId++,
       slot: slot.id,
