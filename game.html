@@ -1799,8 +1799,11 @@ async function changeNickname() {
 }
 function doLogout() {
   if (!confirm('정말 로그아웃 하시겠습니까?')) return;
-  localStorage.clear();
-  localStorage.setItem('_reset_done_v4', '1');
+  saveGame();
+  saveCloudGame();
+  localStorage.removeItem('userUid');
+  localStorage.removeItem('userNick');
+  localStorage.removeItem('isAdmin');
   currentUser = null;
   isAdmin = false;
   location.reload();
