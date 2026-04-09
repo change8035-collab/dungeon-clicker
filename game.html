@@ -14,8 +14,7 @@
   let isAdmin = false;
   let serverSettings = {};
   let userSettings = {};
-  var _cpCache = null, _cpDirty = true;
-  function invalidateCombatPower() { _cpDirty = true; }
+  function invalidateCombatPower() { }
 </script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -1936,7 +1935,6 @@ async function _doCloudSave() {
   }
 }
 function getCombatPower() {
-  if (!_cpDirty && _cpCache !== null) return _cpCache;
   let equipAtk = 0, equipAtkPct = 0, equipCritDmg = 0, equipSpd = 0;
   Object.values(G.equipment).forEach(item => {
     if (!item) return;
@@ -1947,15 +1945,13 @@ function getCombatPower() {
     if (item.statType === 'critDmg') equipCritDmg += val;
     if (item.statType === 'spd') equipSpd += val;
   });
-  _cpCache = Math.floor(
+  return Math.floor(
     equipAtk * 2.0 +
     equipAtkPct * 40 +
     equipCritDmg * 30 +
     equipSpd * 40 +
     getLevel() * 10
   );
-  _cpDirty = false;
-  return _cpCache;
 }
 function updateCombatPower() {
   const cp = getCombatPower();
