@@ -324,14 +324,8 @@ async def sync(request: Request):
             settings = dict(us_res[0].get("settings") or {})
             pg = settings.pop("pending_give", None)
             if pg:
-                pending = pg
-                gs_res = await db_select("saves", "game_state", f"uid=eq.{uid}")
-                if gs_res:
-                    curr_gs = dict(gs_res[0].get("game_state") or {})
-                    for k, v in pending.items():
-                        curr_val = float(curr_gs.get(k, 0))
-                        curr_gs[k] = curr_val + float(v)
-                    await db_update("saves", {"game_state": curr_gs}, f"uid=eq.{uid}")
+                pending = dict(pg)
+                # Clear pending from DB immediately
                 await db_update("user_settings", {"settings": settings}, f"uid=eq.{uid}")
     except Exception as e:
         print(f"[ERROR] Pending give: {e}")
