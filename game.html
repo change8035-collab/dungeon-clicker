@@ -565,18 +565,16 @@ function attack() {
     _charEl.classList.add(atkAnim);
     if (isCrit) _charEl.classList.add('atk-crit');
   }
-  // 스킬 이펙트
-  if (!attack._lastFx || Date.now() - attack._lastFx > 200) {
-    attack._lastFx = Date.now();
-    drawEffectSprite(G.selectedClass, getEvolution().stage);
-  }
+  // 스킬 이펙트 (항상 표시)
+  drawEffectSprite(G.selectedClass, getEvolution().stage);
   // 몬스터 피격 이펙트
   if (_msEl) { _msEl.classList.remove('hit'); void _msEl.offsetWidth; _msEl.classList.add('hit'); }
   if (isCrit && _battleEl) {
     _battleEl.classList.remove('shake'); void _battleEl.offsetWidth; _battleEl.classList.add('shake');
   }
   if (G.monsterHp <= 0) {
-    onMonsterKill();
+    G.monster = null;
+    setTimeout(() => onMonsterKill(), 120);
   } else {
     updateMonsterHp();
   }
