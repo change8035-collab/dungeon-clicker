@@ -1420,7 +1420,7 @@ function renderShop(el) {
         const reward = boss.type==='gold' ? `💰 ${formatNum(boss.goldReward)}` : `💎 ${boss.diaReward}개`;
         cardsHtml += `
           <div style="background:linear-gradient(135deg,#1a1a3e,#2a1a4e);border:2px solid ${boss.color};border-radius:10px;padding:10px;text-align:center;${onCooldown?'opacity:0.5;':''}">
-            <img src="${boss.sprite}" loading="lazy" style="width:120px;height:100px;object-fit:contain;margin-bottom:4px;">
+            <img src="${boss.sprite}" loading="lazy" style="width:140px;height:120px;object-fit:contain;margin-bottom:4px;">
           <div style="font-size:12px;font-weight:900;color:${boss.color};margin-bottom:3px;">${boss.name}</div>
             <div style="font-size:9px;color:var(--dim);">HP ${formatNum(boss.hp)}</div>
             <div style="font-size:11px;font-weight:700;color:${boss.type==='gold'?'var(--gold)':'var(--purple)'};margin:4px 0;">${reward}</div>
