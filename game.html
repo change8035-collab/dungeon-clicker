@@ -399,7 +399,7 @@ let G = {
   lastSave: Date.now(),
   monster: null, monsterHp: 0, monsterMaxHp: 0,
   attackTimer: 0, attackSpeed: 1000,
-  dungeonLocked: {}, dungeonActive: false, dungeonDifficulty: null, dungeonHp: 0, dungeonMaxHp: 0, dungeonTimer: 0, dungeonStartTime: 0,
+  dungeonCooldown: {}, dungeonActive: false, dungeonDifficulty: null, dungeonHp: 0, dungeonMaxHp: 0, dungeonTimer: 0, dungeonStartTime: 0,
 };
 let nextItemId = 1;
 let activeTab = 'lamp';
@@ -1412,15 +1412,18 @@ function renderShop(el) {
       cardsHtml += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">';
       for (const key of tier.keys) {
         const boss = DUNGEON_BOSSES[key];
-        const locked = G.dungeonLocked[key];
+        const cd = G.dungeonCooldown[key] || 0;
+        const now = Date.now();
+        const onCooldown = cd > now;
+        const cdLeft = onCooldown ? Math.ceil((cd - now) / 60000) : 0;
         const reward = boss.type==='gold' ? `💰 ${formatNum(boss.goldReward)}` : `💎 ${boss.diaReward}개`;
         cardsHtml += `
-          <div style="background:linear-gradient(135deg,#1a1a3e,#2a1a4e);border:2px solid ${boss.color};border-radius:10px;padding:10px;text-align:center;${locked?'opacity:0.4;':''}">
+          <div style="background:linear-gradient(135deg,#1a1a3e,#2a1a4e);border:2px solid ${boss.color};border-radius:10px;padding:10px;text-align:center;${onCooldown?'opacity:0.5;':''}">
             <img src="${boss.sprite}" style="width:60px;height:50px;object-fit:contain;margin-bottom:4px;">
           <div style="font-size:12px;font-weight:900;color:${boss.color};margin-bottom:3px;">${boss.name}</div>
             <div style="font-size:9px;color:var(--dim);">HP ${formatNum(boss.hp)}</div>
             <div style="font-size:11px;font-weight:700;color:${boss.type==='gold'?'var(--gold)':'var(--purple)'};margin:4px 0;">${reward}</div>
-            <button onclick="startDungeon('${key}')" style="background:${locked?'#333':'linear-gradient(135deg,'+boss.color+',#6c3ec1)'};color:#fff;border:none;padding:6px 12px;border-radius:6px;font-weight:700;font-size:11px;cursor:pointer;font-family:inherit;width:100%;" ${locked||G.dungeonActive?'disabled':''}>${locked?'🔒':'⚔️ 도전'}</button>
+            <button onclick="startDungeon('${key}')" style="background:${onCooldown?'#333':'linear-gradient(135deg,'+boss.color+',#6c3ec1)'};color:#fff;border:none;padding:6px 12px;border-radius:6px;font-weight:700;font-size:11px;cursor:pointer;font-family:inherit;width:100%;" ${onCooldown||G.dungeonActive?'disabled':''}>${onCooldown?'⏳ '+cdLeft+'분':'⚔️ 도전'}</button>
           </div>`;
       }
       cardsHtml += '</div>';
@@ -1445,7 +1448,8 @@ function renderShop(el) {
   </div>`;
 }
 function startDungeon(difficulty) {
-  if (G.dungeonLocked[difficulty]) { showFloatText('🔒 이 난이도는 잠겼습니다!', '#e74c3c'); return; }
+  const cd = G.dungeonCooldown[difficulty] || 0;
+  if (cd > Date.now()) { showFloatText('⏳ 쿨다운 중입니다!', '#e74c3c'); return; }
   if (G.dungeonActive) return;
   const boss = DUNGEON_BOSSES[difficulty];
   G.dungeonActive = true;
@@ -1493,12 +1497,9 @@ function onDungeonBossKill() {
   G.gold += boss.goldReward;
   G.dia += boss.diaReward;
   G.totalGold += boss.goldReward;
-  if (clearTime <= 5000) {
-    G.dungeonLocked[diff] = true;
-    showFloatText(`⚡ ${(clearTime/1000).toFixed(1)}초 클리어! 🔒 난이도 잠김!`, '#ff4444');
-  } else {
-    showFloatText(`✅ ${(clearTime/1000).toFixed(1)}초 클리어! 💰+${formatNum(boss.goldReward)} 💎+${boss.diaReward}`, '#4CAF50');
-  }
+  G.dungeonCooldown[diff] = Date.now() + 20 * 60 * 1000; // 20분 쿨다운
+  const reward = boss.type === 'gold' ? `💰+${formatNum(boss.goldReward)}` : `💎+${boss.diaReward}`;
+  showFloatText(`✅ ${(clearTime/1000).toFixed(1)}초 클리어! ${reward} (⏳20분 쿨다운)`, '#4CAF50');
   G.dungeonActive = false;
   G.dungeonDifficulty = null;
   updateTopBar();
@@ -1993,7 +1994,7 @@ function resetGameState() {
   G.skillLevels = {}; G.kills = 0; G.totalGold = 0;
   G.monster = null; G.monsterHp = 0; G.monsterMaxHp = 0;
   G.attackTimer = 0; G.attackSpeed = 1000;
-  G.dungeonLocked = {}; G.dungeonActive = false;
+  G.dungeonCooldown = {}; G.dungeonActive = false;
   G.dungeonDifficulty = null; G.dungeonHp = 0; G.dungeonMaxHp = 0;
   G.dungeonTimer = 0; G.dungeonStartTime = 0;
   G.lastSave = Date.now();
