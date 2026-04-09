@@ -158,7 +158,7 @@ async def keep_alive_loop():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global client
-    client = httpx.AsyncClient(timeout=30)
+    client = httpx.AsyncClient(timeout=httpx.Timeout(30, connect=10))
     task = asyncio.create_task(keep_alive_loop())
     yield
     task.cancel()
@@ -190,10 +190,13 @@ async def google_login(request: Request):
     if not token:
         return JSONResponse({"error": "no token"}, status_code=400)
     try:
-        r = await client.get(f"https://oauth2.googleapis.com/tokeninfo?id_token={token}")
+        r = await client.get(f"https://oauth2.googleapis.com/tokeninfo?id_token={token}", timeout=15)
+        print(f"[DEBUG] Google tokeninfo status: {r.status_code}")
         if r.status_code != 200:
+            print(f"[DEBUG] Google tokeninfo error: {r.text[:200]}")
             return JSONResponse({"error": "invalid token"}, status_code=401)
         info = r.json()
+        print(f"[DEBUG] Google aud: {info.get('aud')}, expected: {GOOGLE_CLIENT_ID}")
         if info.get("aud") != GOOGLE_CLIENT_ID:
             return JSONResponse({"error": "wrong audience"}, status_code=401)
 
@@ -210,7 +213,9 @@ async def google_login(request: Request):
         await db_insert("saves", {"uid": uid, "name": name, "email": email, "photo": photo, "game_state": {}})
         return JSONResponse({"ok": True, "uid": uid, "nickname": name, "email": email, "is_admin": admin, "new": True})
     except Exception as e:
+        import traceback
         print(f"[ERROR] Google login: {e}")
+        traceback.print_exc()
         return JSONResponse({"error": "verification failed"}, status_code=500)
 
 
