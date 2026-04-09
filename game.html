@@ -458,6 +458,7 @@ function getEvolution() {
   const info = getClassInfo(G.selectedClass, getLevel());
   return { name: info.name, stage: info.stage };
 }
+const BASE = { atk:[1,3,10,30,100,500,3000,20000,160000,1600000,20000000,99999999999], atkPct:[1,3,10,30,100,500,3000,20000,160000,1600000,20000000,99999999999], critDmg:[1,3,10,30,100,500,3000,20000,160000,1600000,20000000,99999999999], spd:[1,3,10,30,100,500,3000,20000,160000,1600000,20000000,99999999999] };
 function generateItem(lampLv) {
   const weights = RARITIES.map((r, i) => {
     if (r.weight === 0) return 0; // fusion-only rarities cannot appear in gacha
@@ -480,7 +481,6 @@ function generateItem(lampLv) {
   const rarityNames = nameMap[rarityBase] || nameMap['common'];
   const nameIdx = Math.floor(Math.random() * rarityNames.length);
   const ridx = RARITIES.indexOf(rarity);
-  const BASE = { atk:[1,3,10,30,100,500,3000,20000,160000,1600000,20000000,99999999999], atkPct:[1,3,10,30,100,500,3000,20000,160000,1600000,20000000,99999999999], critDmg:[1,3,10,30,100,500,3000,20000,160000,1600000,20000000,99999999999], spd:[1,3,10,30,100,500,3000,20000,160000,1600000,20000000,99999999999] };
   const stageBonus = 1 + G.stage * 0.02;
   const typeKey = BASE[slot.statType] ? slot.statType : 'atk';
   const minVal = (BASE[typeKey][ridx] || BASE[typeKey][0]) * stageBonus;
