@@ -2137,11 +2137,12 @@ async function renderAdmin(el) {
       <div style="font-size:13px;font-weight:700;margin:16px 0 8px;color:#ffb74d;">🎁 개별 유저 지급/설정</div>
       <div class="admin-row"><label>대상 UID</label><input type="text" id="targetUid" placeholder="위에서 선택" style="flex:2"></div>
       <div id="targetUserInfo" style="font-size:11px;color:var(--dim);margin-bottom:8px;"></div>
-      <div class="admin-row"><label>골드 지급</label><input type="text" id="targetGold" value="10000"><button onclick="giveToUser('gold',Number(document.getElementById('targetGold').value))">지급</button></div>
-      <div class="admin-row"><label>보석 지급</label><input type="text" id="targetDia" value="100"><button onclick="giveToUser('dia',Number(document.getElementById('targetDia').value))">지급</button></div>
-      <div class="admin-row"><label>EXP 배율</label><input type="text" id="targetExpMul" value="1"><button onclick="setUserSetting('expMul',Number(document.getElementById('targetExpMul').value))">적용</button></div>
-      <div class="admin-row"><label>골드 배율</label><input type="text" id="targetGoldMul" value="1"><button onclick="setUserSetting('goldMul',Number(document.getElementById('targetGoldMul').value))">적용</button></div>
-      <div class="admin-row"><label>공격력 배율</label><input type="text" id="targetAtkMul" value="1"><button onclick="setUserSetting('atkMul',Number(document.getElementById('targetAtkMul').value))">적용</button></div>
+      <div class="admin-row"><label>💰 골드</label><input type="number" id="targetGold" value="10000"><button onclick="giveToUser('gold',Number(document.getElementById('targetGold').value))" style="background:#4CAF50;color:#fff;">지급</button></div>
+      <div class="admin-row"><label>💎 보석</label><input type="number" id="targetDia" value="100"><button onclick="giveToUser('dia',Number(document.getElementById('targetDia').value))" style="background:#7f5af0;color:#fff;">지급</button></div>
+      <div style="font-size:13px;font-weight:700;margin:12px 0 8px;color:#4fc3f7;">📊 개인 배율</div>
+      <div class="admin-row"><label>EXP 배율</label><input type="number" id="targetExpMul" value="1" step="0.1"><button onclick="setUserSetting('expMul',Number(document.getElementById('targetExpMul').value))">적용</button></div>
+      <div class="admin-row"><label>골드 배율</label><input type="number" id="targetGoldMul" value="1" step="0.1"><button onclick="setUserSetting('goldMul',Number(document.getElementById('targetGoldMul').value))">적용</button></div>
+      <div class="admin-row"><label>공격력 배율</label><input type="number" id="targetAtkMul" value="1" step="0.1"><button onclick="setUserSetting('atkMul',Number(document.getElementById('targetAtkMul').value))">적용</button></div>
     `;
   }
   el.innerHTML = `
@@ -2212,25 +2213,31 @@ async function addPending(uid, field, amount) {
   await sbPost('/user_settings', {uid, settings});
 }
 async function giveToAllUsers(field, amount) {
+  if (!amount || amount <= 0) { showFloatText('수량을 입력하세요', '#e74c3c'); return; }
   if (!confirm(`모든 유저에게 ${field === 'gold' ? '💰골드' : '💎보석'} +${formatNum(amount)} 지급?`)) return;
   showFloatText(`⏳ 전체 지급 중...`, '#f1c40f');
   try {
-    const users = await sbGet('/saves?select=uid');
-    let ok = 0;
-    for (const u of users) {
-      await addPending(u.uid, field, amount);
-      ok++;
-    }
+    const res = await authFetch('/api/admin/give-all', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ field, amount })
+    });
+    const data = await res.json();
     G[field] = (G[field] || 0) + amount;
     updateTopBar();
-    showFloatText(`✅ ${ok}명에게 ${field === 'gold' ? '💰' : '💎'}+${formatNum(amount)} 지급 완료!`, '#4CAF50');
+    showFloatText(`✅ ${data.count || 0}명에게 ${field === 'gold' ? '💰' : '💎'}+${formatNum(amount)} 지급 완료!`, '#4CAF50');
   } catch(e) { showFloatText('❌ 지급 실패: ' + e.message, '#ff4444'); }
 }
 async function giveToUser(field, amount) {
   const uid = document.getElementById('targetUid').value;
-  if (!uid) { alert('대상 UID를 선택하세요'); return; }
+  if (!uid) { showFloatText('대상 유저를 선택하세요', '#e74c3c'); return; }
+  if (!amount || amount <= 0) { showFloatText('수량을 입력하세요', '#e74c3c'); return; }
+  const name = document.getElementById('targetUserInfo').textContent;
+  if (!confirm(`${name}에게 ${field === 'gold' ? '💰골드' : '💎보석'} +${formatNum(amount)} 지급?`)) return;
   try {
-    await addPending(uid, field, amount);
+    await authFetch('/api/admin/give', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ uid, field, amount })
+    });
     if (uid === currentUser.uid) { G[field] = (G[field] || 0) + amount; updateTopBar(); }
     showFloatText(`✅ ${field === 'gold' ? '💰' : '💎'}+${formatNum(amount)} 지급 완료!`, '#4CAF50');
   } catch(e) { showFloatText('❌ 지급 실패: ' + e.message, '#ff4444'); }
