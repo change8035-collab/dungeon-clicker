@@ -1815,12 +1815,15 @@ document.querySelector('.tab-bar').addEventListener('click', (e) => {
 });
 let lastTick = Date.now();
 let _atkCount = 0;
+let _hiddenStart = 0;
 function gameLoop() {
   const now = Date.now();
-  const dt = now - lastTick;
+  let dt = now - lastTick;
+  if (dt > 500) dt = 16; // 탭 백그라운드 시 누적 방지
   G.attackTimer += dt;
   if (G.attackTimer >= G.attackSpeed) {
     G.attackTimer -= G.attackSpeed;
+    if (G.attackTimer > G.attackSpeed) G.attackTimer = 0; // 쌓인 것 리셋
     _atkCount++;
     attack();
   }
@@ -1832,6 +1835,39 @@ function gameLoop() {
   lastTick = now;
   requestAnimationFrame(gameLoop);
 }
+// 탭 전환 시 방치 보상 처리
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    _hiddenStart = Date.now();
+  } else if (_hiddenStart > 0) {
+    const awaySec = (Date.now() - _hiddenStart) / 1000;
+    _hiddenStart = 0;
+    lastTick = Date.now();
+    G.attackTimer = 0;
+    if (awaySec >= 30 && G.monster) {
+      const stats = getCachedStats();
+      const dps = stats.atk * (1000 / Math.max(200, G.attackSpeed || 1000)) * (1 + stats.crit * (stats.critDmg - 1));
+      const monsterHp = G.monsterMaxHp || 100;
+      const killsPerSec = Math.min(5, dps / monsterHp);
+      const totalKills = Math.floor(killsPerSec * awaySec);
+      if (totalKills > 0) {
+        const goldPerKill = getMonsterGold(G.stage) * (G.monster.goldMul || 1) * stats.goldBonus * ss('goldMul',1);
+        const xpPerKill = (5 + G.stage * 2) * ss('expMul',1);
+        const offGold = Math.ceil(goldPerKill * totalKills);
+        const offXp = Math.ceil(xpPerKill * totalKills);
+        G.gold += offGold;
+        G.totalGold += offGold;
+        G.classXp[G.selectedClass] = (G.classXp[G.selectedClass] || 0) + offXp;
+        G.kills += totalKills;
+        updateAllUI();
+        saveCloudGame();
+        const min = Math.floor(awaySec / 60);
+        const sec = Math.floor(awaySec % 60);
+        setTimeout(() => alert(`⏰ 방치 보상!\n${min}분 ${sec}초 동안 ${formatNum(totalKills)}마리 처치\n💰 +${formatNum(offGold)}\n⭐ EXP +${formatNum(offXp)}`), 100);
+      }
+    }
+  }
+});
 let userUid = localStorage.getItem('userUid') || '';
 function authHeaders() {
   return { 'X-User-Id': userUid || localStorage.getItem('userUid') || '' };
